@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+}
+
+enum LeadStatus {
+  NEW
+  IN_PROGRESS
+  VOUCHER_CHECK
+  SUCCESS
+  ARCHIVED
+}
+
+enum EmploymentStatus {
+  employed
+  unemployed
+  UNEMPLOYED
+  EMPLOYED_OFFICIAL
+  EMPLOYED_UNOFFICIAL
+  STUDENT
+  student
+  STUDENT_EXTERNAL
+  SCHOOL_STUDENT
+  HOUSEWIFE
+  housewife
+}
+
+enum CourseInterest {
+  VIDEOGRAPHY
+  VIDEO_EDITING
+  SMM
+  TARGET_PRO
+  COMPUTER_GRAPHICS
+  COMPUTER_LITERACY
+  GRAPHIC_DESIGN
+  WEB_DEVELOPMENT
+  PYTHON
+  AUTOCAD
+  THREE_D_MAX
+  OTHER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role         Role     @default(OPERATOR)
+  isActive     Boolean  @default(true)
+  workingHours String?  @default("09:00 - 18:00")
+  createdAt    DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads    Lead[]    @relation("AssignedLeads")
+  comments Comment[]
+
+  @@map("users")
+}
+
+model Lead {
+  id               String           @id @default(cuid())
+  name             String
+  phone            String
+  phone2           String?
+  courseInterest   String           @default("Boshqa")
+  employmentStatus String           @default("Ishsiz")
+  isGrantEligible  Boolean          @default(false)
+  status           LeadStatus       @default(NEW)
+  source           String?          @default("manual")
+  nextContactDate  DateTime?
+  slaDeadline      DateTime?
+  slaBreached      Boolean          @default(false)
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  assignedTo   User?   @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId String?
+
+  comments Comment[]
+
+  @@map("leads")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  lead     Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId   String
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+
+  @@map("comments")
+}
+
+model Setting {
+  id               String   @id @default(cuid())
+  key              String   @unique
+  value            String
+  description      String?
+  updatedAt        DateTime @updatedAt
+
+  @@map("settings")
+}
