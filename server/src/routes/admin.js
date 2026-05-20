@@ -232,4 +232,59 @@ router.get('/kpi', async (req, res) => {
   }
 });
 
+// GET /api/admin/operators/:id/activity - Get detailed operator activity
+router.get('/operators/:id/activity', async (req, res) => {
+  try {
+    const operator = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isActive: true,
+      }
+    });
+
+    if (!operator) {
+      return res.status(404).json({ error: 'Operator not found' });
+    }
+
+    const leads = await prisma.lead.findMany({
+      where: { assignedToId: req.params.id },
+      include: {
+        comments: {
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          include: {
+            author: { select: { name: true } }
+          }
+        }
+      },
+      orderBy: [
+        { status: 'asc' },
+        { updatedAt: 'desc' }
+      ]
+    });
+
+    // Also get all comments left by this operator regardless of lead assignment
+    const recentComments = await prisma.comment.findMany({
+      where: { authorId: req.params.id },
+      include: {
+        lead: { select: { name: true, phone: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+
+    res.json({
+      operator,
+      leads,
+      recentComments
+    });
+  } catch (error) {
+    console.error('Operator activity error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

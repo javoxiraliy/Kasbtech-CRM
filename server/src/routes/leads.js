@@ -40,6 +40,7 @@ router.get('/', async (req, res) => {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
+        { phone2: { contains: search } },
       ];
     }
 

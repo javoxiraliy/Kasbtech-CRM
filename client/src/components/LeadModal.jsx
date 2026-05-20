@@ -39,6 +39,8 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showCourseSelector, setShowCourseSelector] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState('');
   const { addNotification } = useNotification();
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
     try {
       const res = await api.get(`/leads/${leadId}`);
       setLead(res.data.lead);
+      setSelectedCourse(res.data.lead.courseInterest || 'OTHER');
     } catch (error) {
       addNotification('error', "Lid ma'lumotlarini yuklashda xatolik");
       onClose();
@@ -88,6 +91,23 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
       onClose();
     } catch (error) {
       addNotification('error', "Xatolik yuz berdi");
+    }
+  };
+
+  const handleConfirmInProgress = async () => {
+    setSubmitting(true);
+    try {
+      await api.patch(`/leads/${lead.id}`, { 
+        status: 'IN_PROGRESS',
+        courseInterest: selectedCourse 
+      });
+      addNotification('success', "Lid jarayonga olindi va kursi belgilandi");
+      onUpdate();
+      onClose();
+    } catch (error) {
+      addNotification('error', "Xatolik yuz berdi");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -140,6 +160,12 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
                   <div className="text-xs text-dark-400 mb-1 flex items-center gap-1"><User className="w-3 h-3" /> Manba</div>
                   <div className="text-sm text-white font-medium break-words capitalize">{lead.source}</div>
                 </div>
+                <div className="bg-dark-800/50 p-3 rounded-lg border border-dark-700/50 overflow-hidden">
+                  <div className="text-xs text-dark-400 mb-1 flex items-center gap-1"><Clock className="w-3 h-3" /> Qo'shilgan vaqti</div>
+                  <div className="text-sm text-white font-medium">
+                    {new Date(lead.createdAt).toLocaleString('uz-UZ', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
                 {lead.notes && (
                   <div className="bg-dark-800/50 p-3 rounded-lg border border-dark-700/50 overflow-hidden">
                     <div className="text-xs text-dark-400 mb-1 flex items-center gap-1"><FileText className="w-3 h-3" /> Qo'shimcha</div>
@@ -158,12 +184,48 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
 
             <div>
               <h3 className="text-sm font-medium text-dark-400 uppercase tracking-wider mb-3">Amallar</h3>
-              <div className="space-y-2">
-                <button onClick={() => handleStatusChange('IN_PROGRESS')} className="w-full btn-secondary justify-center border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10">Jarayonga olish</button>
-                <button onClick={() => handleStatusChange('VOUCHER_CHECK')} className="w-full btn-secondary justify-center border-purple-500/30 text-purple-400 hover:bg-purple-500/10">Vaucher tekshiruvi</button>
-                <button onClick={() => handleStatusChange('SUCCESS')} className="w-full btn-secondary justify-center border-green-500/30 text-green-400 hover:bg-green-500/10">Muvaffaqiyatli</button>
-                <button onClick={() => handleStatusChange('ARCHIVED')} className="w-full btn-secondary justify-center border-red-500/30 text-red-400 hover:bg-red-500/10">Rad etish</button>
-              </div>
+              {showCourseSelector ? (
+                <div className="space-y-3 bg-dark-800/40 p-3 rounded-lg border border-yellow-500/20 animate-fade-in">
+                  <label className="text-xs font-medium text-yellow-400 block mb-1">Mijoz tanlagan kurs:</label>
+                  <select
+                    className="w-full bg-dark-800 text-white rounded-lg border border-dark-700 p-2 text-sm focus:outline-none focus:border-yellow-500"
+                    value={selectedCourse}
+                    onChange={e => setSelectedCourse(e.target.value)}
+                  >
+                    {Object.entries(COURSE_LABELS).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={handleConfirmInProgress}
+                      disabled={submitting}
+                      className="flex-1 btn-primary py-2 text-xs font-semibold justify-center bg-yellow-500 hover:bg-yellow-600 text-dark-950 border-none shadow-lg shadow-yellow-500/10"
+                    >
+                      {submitting ? 'Kutilmoqda...' : 'Tasdiqlash'}
+                    </button>
+                    <button
+                      onClick={() => setShowCourseSelector(false)}
+                      disabled={submitting}
+                      className="btn-secondary py-2 text-xs font-semibold justify-center border-dark-700 hover:bg-dark-800 text-dark-300"
+                    >
+                      Bekor qilish
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <button 
+                    onClick={() => setShowCourseSelector(true)} 
+                    className="w-full btn-secondary justify-center border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                  >
+                    Jarayonga olish
+                  </button>
+                  <button onClick={() => handleStatusChange('VOUCHER_CHECK')} className="w-full btn-secondary justify-center border-purple-500/30 text-purple-400 hover:bg-purple-500/10">Vaucher tekshiruvi</button>
+                  <button onClick={() => handleStatusChange('SUCCESS')} className="w-full btn-secondary justify-center border-green-500/30 text-green-400 hover:bg-green-500/10">Muvaffaqiyatli</button>
+                  <button onClick={() => handleStatusChange('ARCHIVED')} className="w-full btn-secondary justify-center border-red-500/30 text-red-400 hover:bg-red-500/10">Rad etish</button>
+                </div>
+              )}
             </div>
           </div>
 

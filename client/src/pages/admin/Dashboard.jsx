@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { Users, Target, Clock, TrendingUp, AlertTriangle } from 'lucide-react';
 import api from '../../lib/api';
+import OperatorActivityModal from '../../components/OperatorActivityModal';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
 
@@ -36,6 +37,7 @@ function StatCard({ title, value, icon: Icon, trend, colorClass }) {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedOperatorId, setSelectedOperatorId] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -196,14 +198,18 @@ export default function Dashboard() {
                 else if (convRate > 10) ratingColor = 'text-yellow-400';
 
                 return (
-                  <tr key={op.id} className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors">
-                    <td className="py-3 text-white font-medium">{op.name}</td>
+                  <tr 
+                    key={op.id} 
+                    onClick={() => setSelectedOperatorId(op.id)}
+                    className="border-b border-dark-800/50 hover:bg-dark-800/80 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3 text-white font-medium pl-2">{op.name}</td>
                     <td className="py-3 text-center text-dark-300">{op.totalLeads}</td>
                     <td className="py-3 text-center text-yellow-500/80">{op.activeLeads || 0}</td>
                     <td className="py-3 text-center text-green-400">{op.successLeads}</td>
                     <td className="py-3 text-center text-red-400/70">{op.archivedLeads || 0}</td>
                     <td className={`py-3 text-center ${op.slaBreached > 0 ? 'text-red-500 font-bold' : 'text-dark-500'}`}>{op.slaBreached}</td>
-                    <td className={`py-3 text-right font-bold ${ratingColor}`}>
+                    <td className={`py-3 text-right font-bold pr-2 ${ratingColor}`}>
                       {convRate.toFixed(1)}%
                     </td>
                   </tr>
@@ -220,6 +226,13 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
+
+      {selectedOperatorId && (
+        <OperatorActivityModal 
+          operatorId={selectedOperatorId} 
+          onClose={() => setSelectedOperatorId(null)} 
+        />
+      )}
     </div>
   );
 }

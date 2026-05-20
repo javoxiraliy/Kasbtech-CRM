@@ -80,7 +80,7 @@ export default function Database() {
   const fetchLeads = async (search = '') => {
     setLoading(true);
     try {
-      const res = await api.get(`/leads?search=${search}`);
+      const res = await api.get(`/leads?search=${encodeURIComponent(search)}`);
       setLeads(res.data.leads);
     } catch (error) {
       addNotification('error', "Lidlarni yuklashda xatolik");
@@ -407,7 +407,7 @@ export default function Database() {
                     {l.assignedTo?.name || <span className="text-dark-500 italic">Biriktirilmagan</span>}
                   </td>
                   <td className="px-4 py-3 text-dark-400 text-xs">
-                    {new Date(l.createdAt).toLocaleDateString('uz-UZ')}
+                    {new Date(l.createdAt).toLocaleString('uz-UZ', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">

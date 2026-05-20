@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, Phone, User, Calendar, MessageSquare } from 'lucide-react';
+import { Clock, Phone, User, Calendar, MessageSquare, Search } from 'lucide-react';
 import { formatDistanceToNow, isPast } from 'date-fns';
 import { uz } from 'date-fns/locale';
 import api from '../../lib/api';
@@ -57,6 +57,7 @@ const COLUMNS = [
   { id: 'IN_PROGRESS', title: 'Jarayonda', color: 'border-yellow-500' },
   { id: 'VOUCHER_CHECK', title: 'Vaucher tekshiruvi', color: 'border-purple-500' },
   { id: 'SUCCESS', title: 'Muvaffaqiyatli', color: 'border-green-500' },
+  { id: 'ARCHIVED', title: 'Rad etildi', color: 'border-red-500' },
 ];
 
 // Sortable Lead Card Component
@@ -115,6 +116,11 @@ function SortableLeadCard({ lead, onClick }) {
           {lead.phone}
         </div>
         
+        <div className="flex items-center text-xs text-dark-400 gap-2">
+          <Clock className="w-3 h-3" />
+          Qo'shildi: {new Date(lead.createdAt).toLocaleString('uz-UZ', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+        </div>
+        
         {lead.status === 'NEW' && lead.slaDeadline && (
           <div className={`flex items-center text-xs gap-2 ${lead.slaBreached ? 'text-red-400' : 'text-dark-300'}`}>
             <Clock className="w-3 h-3" />
@@ -129,6 +135,25 @@ function SortableLeadCard({ lead, onClick }) {
           </div>
         )}
       </div>
+
+      {(lead.notes || (lead.comments && lead.comments.length > 0)) && (
+        <div className="mt-3 pt-2 border-t border-dark-700/50">
+          {lead.notes && (
+            <p className="text-xs text-dark-300 line-clamp-2 mb-1.5" title={lead.notes}>
+              <span className="text-dark-400">Izoh:</span> {lead.notes}
+            </p>
+          )}
+          {lead.comments && lead.comments.length > 0 && (
+            <div className="flex items-start gap-1.5 text-xs text-dark-300">
+              <MessageSquare className="w-3 h-3 mt-0.5 shrink-0 text-primary-500/70" />
+              <p className="line-clamp-2" title={lead.comments[0].content}>
+                <span className="text-primary-400/80 mr-1">{lead.comments[0].author?.name || 'Operator'}:</span> 
+                {lead.comments[0].content}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -137,6 +162,7 @@ export default function Kanban() {
   const [leads, setLeads] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { addNotification } = useNotification();
 
   const sensors = useSensors(
@@ -148,13 +174,18 @@ export default function Kanban() {
     fetchLeads();
   }, []);
 
-  const fetchLeads = async () => {
+  const fetchLeads = async (search = '') => {
     try {
-      const res = await api.get('/leads');
+      const res = await api.get(`/leads?search=${encodeURIComponent(search)}`);
       setLeads(res.data.leads);
     } catch (error) {
       addNotification('error', "Lidlarni yuklashda xatolik");
     }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchLeads(searchTerm);
   };
 
   const handleDragStart = (event) => {
@@ -209,11 +240,23 @@ export default function Kanban() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Ish stoli</h1>
           <p className="text-dark-400 text-sm">Lidlarni boshqarish (Kanban)</p>
         </div>
+        <form onSubmit={handleSearch} className="relative w-full sm:max-w-xs">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-dark-500" />
+          </div>
+          <input
+            type="text"
+            className="input pl-10 h-10 text-sm bg-dark-900/50 border-dark-800"
+            placeholder="Ism yoki telefon..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </form>
       </div>
 
       <DndContext 
