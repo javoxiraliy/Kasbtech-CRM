@@ -30,7 +30,7 @@ export default function Tasks() {
     setLoading(true);
     try {
       const [tasksRes, usersRes] = await Promise.all([
-        api.get('/api/tasks/admin'),
+        api.get('/tasks/admin'),
         api.get('/admin/users')
       ]);
       setTasks(tasksRes.data.tasks);
@@ -80,7 +80,7 @@ export default function Tasks() {
 
     setSubmitting(true);
     try {
-      await api.post('/api/tasks/admin', {
+      await api.post('/tasks/admin', {
         title: formData.title,
         description: formData.description,
         dueDate: formData.dueDate || null,

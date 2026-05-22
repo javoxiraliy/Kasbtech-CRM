@@ -33,7 +33,7 @@ export default function Calendar() {
 
   const fetchAdminTasks = async () => {
     try {
-      const res = await api.get('/api/tasks/operator');
+      const res = await api.get('/tasks/operator');
       setAdminTasks(res.data.tasks);
     } catch (error) {
       console.error('Fetch admin tasks error:', error);
@@ -47,7 +47,7 @@ export default function Calendar() {
     // Mark as read immediately in the DB if unread
     if (!task.isRead) {
       try {
-        await api.patch(`/api/tasks/operator/${task.id}/read`);
+        await api.patch(`/tasks/operator/${task.id}/read`);
         // Refresh local task list
         fetchAdminTasks();
         
@@ -62,7 +62,7 @@ export default function Calendar() {
   const handleToggleComplete = async (e, taskId) => {
     e.stopPropagation(); // prevent expanding/collapsing when checking/unchecking
     try {
-      const res = await api.patch(`/api/tasks/operator/${taskId}/complete`);
+      const res = await api.patch(`/tasks/operator/${taskId}/complete`);
       addNotification('success', res.data.task.isCompleted ? "Topshiriq bajarildi deb belgilandi" : "Topshiriq qayta ochildi");
       fetchAdminTasks();
     } catch (error) {

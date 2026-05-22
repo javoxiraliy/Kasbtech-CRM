@@ -21,7 +21,7 @@ export default function OperatorLayout() {
 
   const fetchUnreadTasks = async () => {
     try {
-      const res = await api.get('/api/tasks/operator');
+      const res = await api.get('/tasks/operator');
       const unread = res.data.tasks.filter(t => !t.isRead);
       setUnreadTasks(unread);
     } catch (error) {
@@ -58,7 +58,7 @@ export default function OperatorLayout() {
 
   const handleNotificationClick = async (task) => {
     try {
-      await api.patch(`/api/tasks/operator/${task.id}/read`);
+      await api.patch(`/tasks/operator/${task.id}/read`);
       fetchUnreadTasks();
       setIsBellOpen(false);
       
@@ -76,7 +76,7 @@ export default function OperatorLayout() {
     if (unreadTasks.length === 0) return;
     try {
       await Promise.all(
-        unreadTasks.map(t => api.patch(`/api/tasks/operator/${t.id}/read`))
+        unreadTasks.map(t => api.patch(`/tasks/operator/${t.id}/read`))
       );
       fetchUnreadTasks();
       
