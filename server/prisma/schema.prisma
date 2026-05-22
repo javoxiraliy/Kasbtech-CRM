@@ -65,6 +65,7 @@ model User {
 
   leads    Lead[]    @relation("AssignedLeads")
   comments Comment[]
+  tasks    Task[]    @relation("OperatorTasks")
 
   @@map("users")
 }
@@ -116,3 +117,19 @@ model Setting {
 
   @@map("settings")
 }
+
+model Task {
+  id           String    @id @default(cuid())
+  title        String
+  description  String
+  isCompleted  Boolean   @default(false)
+  isRead       Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  dueDate      DateTime?
+  
+  assignedToId String
+  assignedTo   User      @relation("OperatorTasks", fields: [assignedToId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+

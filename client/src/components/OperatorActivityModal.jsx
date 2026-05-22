@@ -104,7 +104,12 @@ export default function OperatorActivityModal({ operatorId, onClose }) {
                         <div className="space-y-2 mb-4 flex-1">
                           <div className="flex items-center text-xs text-dark-300 gap-2">
                             <Phone className="w-3.5 h-3.5 text-dark-400" />
-                            {lead.phone}
+                            <a 
+                               href={`tel:${lead.phone}`} 
+                               className="hover:text-primary-400 hover:underline transition-colors font-medium text-primary-400"
+                             >
+                               {lead.phone}
+                             </a>
                           </div>
                           <div className="flex items-center text-xs text-dark-300 gap-2">
                             <Briefcase className="w-3.5 h-3.5 text-dark-400" />
@@ -166,7 +171,9 @@ export default function OperatorActivityModal({ operatorId, onClose }) {
                               {new Date(comment.createdAt).toLocaleString('uz-UZ')}
                             </span>
                           </div>
-                          <p className="text-xs text-dark-300 mb-2">Telefon: {comment.lead.phone}</p>
+                          <p className="text-xs text-dark-300 mb-2">
+                             Telefon: <a href={`tel:${comment.lead.phone}`} className="text-primary-400 hover:text-primary-300 hover:underline transition-colors font-medium">{comment.lead.phone}</a>
+                           </p>
                           <div className="bg-dark-900/50 rounded-lg p-3 text-sm text-dark-200">
                             {comment.content}
                           </div>

@@ -9,7 +9,8 @@ import {
   LogOut,
   ShieldAlert,
   Menu,
-  X
+  X,
+  CheckSquare
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -26,6 +27,7 @@ export default function AdminLayout() {
   const navItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/admin/users', icon: Users, label: 'Xodimlar' },
+    { to: '/admin/tasks', icon: CheckSquare, label: 'Vazifalar' },
     { to: '/admin/kpi', icon: TrendingUp, label: 'KPI & Hisobot' },
     { to: '/admin/database', icon: Database, label: 'Lidlar Bazasi' },
     { to: '/admin/settings', icon: Settings, label: 'Sozlamalar' },

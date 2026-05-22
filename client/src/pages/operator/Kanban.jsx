@@ -112,8 +112,14 @@ function SortableLeadCard({ lead, onClick }) {
       
       <div className="space-y-1.5 mt-3">
         <div className="flex items-center text-xs text-dark-300 gap-2">
-          <Phone className="w-3 h-3" />
-          {lead.phone}
+          <Phone className="w-3 h-3 text-primary-400" />
+          <a 
+            href={`tel:${lead.phone}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:text-primary-400 hover:underline transition-colors font-medium"
+          >
+            {lead.phone}
+          </a>
         </div>
         
         <div className="flex items-center text-xs text-dark-400 gap-2">

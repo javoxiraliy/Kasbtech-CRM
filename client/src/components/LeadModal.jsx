@@ -130,9 +130,23 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
         <div className="p-4 border-b border-dark-800 bg-dark-900/50 flex items-start justify-between">
           <div>
             <h2 className="text-xl font-bold text-white mb-1">{lead.name}</h2>
-            <div className="flex flex-col gap-1 text-sm text-dark-300 mt-2">
-              <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary-400" /> {lead.phone}</span>
-              {lead.phone2 && <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary-400" /> {lead.phone2}</span>}
+            <div className="flex flex-col gap-1.5 text-sm text-dark-300 mt-2">
+              <a 
+                href={`tel:${lead.phone}`} 
+                className="flex items-center gap-2 text-primary-400 hover:text-primary-300 hover:underline transition-colors w-fit"
+              >
+                <Phone className="w-4 h-4" /> 
+                <span>{lead.phone}</span>
+              </a>
+              {lead.phone2 && (
+                <a 
+                  href={`tel:${lead.phone2}`} 
+                  className="flex items-center gap-2 text-primary-400 hover:text-primary-300 hover:underline transition-colors w-fit"
+                >
+                  <Phone className="w-4 h-4" /> 
+                  <span>{lead.phone2}</span>
+                </a>
+              )}
               <span className="flex items-center gap-2 mt-1"><GraduationCap className="w-4 h-4 text-purple-400" /> {COURSE_LABELS[lead.courseInterest] || lead.courseInterest}</span>
             </div>
           </div>
@@ -230,7 +244,7 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
           </div>
 
           {/* Right Column: History & Comments */}
-          <div className="md:col-span-2 flex flex-col h-full bg-dark-900/30 rounded-xl border border-dark-800 overflow-hidden">
+          <div className="md:col-span-2 flex flex-col h-[450px] md:h-full bg-dark-900/30 rounded-xl border border-dark-800 overflow-hidden">
             <div className="p-3 border-b border-dark-800 bg-dark-800/50 flex items-center gap-2">
               <FileText className="w-4 h-4 text-dark-300" />
               <h3 className="text-sm font-medium text-dark-100">Suhbat tarixi</h3>

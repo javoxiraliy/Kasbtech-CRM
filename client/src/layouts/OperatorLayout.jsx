@@ -1,16 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, LogOut, CalendarDays, Bell, User as UserIcon, Menu, X } from 'lucide-react';
+import { LayoutDashboard, LogOut, CalendarDays, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle } from 'lucide-react';
+import api from '../lib/api';
 
 export default function OperatorLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Notification states
+  const [unreadTasks, setUnreadTasks] = useState([]);
+  const [isBellOpen, setIsBellOpen] = useState(false);
+  const bellRef = useRef(null);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const fetchUnreadTasks = async () => {
+    try {
+      const res = await api.get('/api/tasks/operator');
+      const unread = res.data.tasks.filter(t => !t.isRead);
+      setUnreadTasks(unread);
+    } catch (error) {
+      console.error('Fetch layout notifications error:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadTasks();
+    
+    // Background polling every 10 seconds for real-time notifications
+    const pollInterval = setInterval(fetchUnreadTasks, 10000);
+
+    // Event listener for manual updates from the Calendar page
+    const handleTasksUpdate = () => {
+      fetchUnreadTasks();
+    };
+    window.addEventListener('tasks_updated', handleTasksUpdate);
+
+    // Click outside handler to close dropdown
+    const handleClickOutside = (e) => {
+      if (bellRef.current && !bellRef.current.contains(e.target)) {
+        setIsBellOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('tasks_updated', handleTasksUpdate);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleNotificationClick = async (task) => {
+    try {
+      await api.patch(`/api/tasks/operator/${task.id}/read`);
+      fetchUnreadTasks();
+      setIsBellOpen(false);
+      
+      // Dispatch event to refresh calendar tasks list immediately if the page is open
+      window.dispatchEvent(new Event('tasks_updated'));
+      
+      // Redirect to Calendar page
+      navigate('/operator/calendar');
+    } catch (error) {
+      console.error('Read task layout error:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (unreadTasks.length === 0) return;
+    try {
+      await Promise.all(
+        unreadTasks.map(t => api.patch(`/api/tasks/operator/${t.id}/read`))
+      );
+      fetchUnreadTasks();
+      
+      // Dispatch event to refresh calendar tasks list immediately
+      window.dispatchEvent(new Event('tasks_updated'));
+    } catch (error) {
+      console.error('Mark all read error:', error);
+    }
   };
 
   const navItems = [
@@ -96,10 +170,70 @@ export default function OperatorLayout() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-dark-400 hover:text-white transition-colors rounded-lg hover:bg-dark-800">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-dark-900"></span>
-            </button>
+            {/* Dynamic Notification Bell Container */}
+            <div className="relative" ref={bellRef}>
+              <button 
+                onClick={() => setIsBellOpen(!isBellOpen)}
+                className={`relative p-2 text-dark-400 hover:text-white transition-colors rounded-lg hover:bg-dark-800 ${
+                  isBellOpen ? 'text-white bg-dark-800' : ''
+                }`}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadTasks.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-dark-900 animate-ping"></span>
+                )}
+                {unreadTasks.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-dark-900"></span>
+                )}
+              </button>
+
+              {/* Glassmorphic Dropdown */}
+              {isBellOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-dark-900/95 border border-dark-800 rounded-xl glass shadow-2xl z-50 overflow-hidden animate-slide-in">
+                  <div className="p-3 border-b border-dark-800 bg-dark-900/50 flex items-center justify-between">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">Bildirishnomalar</span>
+                    {unreadTasks.length > 0 && (
+                      <button 
+                        onClick={handleMarkAllAsRead}
+                        className="text-[10px] text-primary-400 hover:text-primary-300 font-bold flex items-center gap-1 hover:underline transition-all"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        Barchasini o'qildi qilish
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-72 overflow-y-auto divide-y divide-dark-800/40">
+                    {unreadTasks.length === 0 ? (
+                      <div className="p-6 text-center text-dark-500 flex flex-col items-center gap-2">
+                        <AlertCircle className="w-7 h-7 text-dark-600" />
+                        <p className="text-xs font-medium">Yangi bildirishnomalar mavjud emas</p>
+                      </div>
+                    ) : (
+                      unreadTasks.map(task => (
+                        <div 
+                          key={task.id}
+                          onClick={() => handleNotificationClick(task)}
+                          className="p-3 hover:bg-dark-850 cursor-pointer transition-colors block text-left group"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold text-primary-400 group-hover:text-primary-300 truncate max-w-[170px]">
+                              {task.title}
+                            </span>
+                            <span className="text-[9px] text-dark-500 shrink-0">
+                              {new Date(task.createdAt).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-xs text-dark-300 line-clamp-2 leading-relaxed">
+                            {task.description}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div className="h-8 w-px bg-dark-800 mx-2 hidden sm:block" />
             

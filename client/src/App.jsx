@@ -14,6 +14,7 @@ import AdminUsers from './pages/admin/Users';
 import AdminDatabase from './pages/admin/Database';
 import AdminSettings from './pages/admin/Settings';
 import AdminKPI from './pages/admin/KPI';
+import AdminTasks from './pages/admin/Tasks';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -78,6 +79,7 @@ function App() {
               <Route path="database" element={<AdminDatabase />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="kpi" element={<AdminKPI />} />
+              <Route path="tasks" element={<AdminTasks />} />
             </Route>
 
           </Routes>

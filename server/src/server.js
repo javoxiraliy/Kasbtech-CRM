@@ -25,6 +25,7 @@ const leadRoutes = require('./routes/leads');
 const commentRoutes = require('./routes/comments');
 const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
+const taskRoutes = require('./routes/tasks');
 
 
 app.use('/api/auth', authRoutes);
@@ -32,6 +33,7 @@ app.use('/api/leads', leadRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/tasks', taskRoutes);
 
 
 // Health check
