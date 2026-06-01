@@ -41,6 +41,7 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
   const [submitting, setSubmitting] = useState(false);
   const [showCourseSelector, setShowCourseSelector] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedEmploymentStatus, setSelectedEmploymentStatus] = useState('');
   const { addNotification } = useNotification();
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
       const res = await api.get(`/leads/${leadId}`);
       setLead(res.data.lead);
       setSelectedCourse(res.data.lead.courseInterest || 'OTHER');
+      setSelectedEmploymentStatus(res.data.lead.employmentStatus || 'UNEMPLOYED');
     } catch (error) {
       addNotification('error', "Lid ma'lumotlarini yuklashda xatolik");
       onClose();
@@ -99,9 +101,10 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
     try {
       await api.patch(`/leads/${lead.id}`, { 
         status: 'IN_PROGRESS',
-        courseInterest: selectedCourse 
+        courseInterest: selectedCourse,
+        employmentStatus: selectedEmploymentStatus
       });
-      addNotification('success', "Lid jarayonga olindi va kursi belgilandi");
+      addNotification('success', "Lid jarayonga olindi va ma'lumotlari belgilandi");
       onUpdate();
       onClose();
     } catch (error) {
@@ -200,16 +203,32 @@ export default function LeadModal({ leadId, onClose, onUpdate }) {
               <h3 className="text-sm font-medium text-dark-400 uppercase tracking-wider mb-3">Amallar</h3>
               {showCourseSelector ? (
                 <div className="space-y-3 bg-dark-800/40 p-3 rounded-lg border border-yellow-500/20 animate-fade-in">
-                  <label className="text-xs font-medium text-yellow-400 block mb-1">Mijoz tanlagan kurs:</label>
-                  <select
-                    className="w-full bg-dark-800 text-white rounded-lg border border-dark-700 p-2 text-sm focus:outline-none focus:border-yellow-500"
-                    value={selectedCourse}
-                    onChange={e => setSelectedCourse(e.target.value)}
-                  >
-                    {Object.entries(COURSE_LABELS).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
+                  <div>
+                    <label className="text-xs font-medium text-yellow-400 block mb-1">Mijoz tanlagan kurs:</label>
+                    <select
+                      className="w-full bg-dark-800 text-white rounded-lg border border-dark-700 p-2 text-sm focus:outline-none focus:border-yellow-500"
+                      value={selectedCourse}
+                      onChange={e => setSelectedCourse(e.target.value)}
+                    >
+                      {Object.entries(COURSE_LABELS).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-yellow-400 block mb-1">Bandlik holati:</label>
+                    <select
+                      className="w-full bg-dark-800 text-white rounded-lg border border-dark-700 p-2 text-sm focus:outline-none focus:border-yellow-500"
+                      value={selectedEmploymentStatus}
+                      onChange={e => setSelectedEmploymentStatus(e.target.value)}
+                    >
+                      {Object.entries(EMPLOYMENT_LABELS)
+                        .filter(([key]) => key === key.toUpperCase())
+                        .map(([key, label]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                    </select>
+                  </div>
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={handleConfirmInProgress}

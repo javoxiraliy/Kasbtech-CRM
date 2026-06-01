@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, Phone, User, Calendar, MessageSquare, Search } from 'lucide-react';
+import { Clock, Phone, User, Calendar, MessageSquare, Search, Download, Loader2 } from 'lucide-react';
 import { formatDistanceToNow, isPast } from 'date-fns';
 import { uz } from 'date-fns/locale';
 import api from '../../lib/api';
@@ -169,7 +169,33 @@ export default function Kanban() {
   const [activeId, setActiveId] = useState(null);
   const [selectedLeadId, setSelectedLeadId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [exporting, setExporting] = useState(false);
   const { addNotification } = useNotification();
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      let url = '/leads/export/excel';
+      if (searchTerm) {
+        url += `?search=${encodeURIComponent(searchTerm)}`;
+      }
+      const response = await api.get(url, {
+        responseType: 'blob',
+      });
+      const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = urlBlob;
+      link.setAttribute('download', 'mening_lidlarim.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      addNotification('success', "Sizga biriktirilgan lidlar Excel fayl bo'lib yuklab olindi");
+    } catch (error) {
+      addNotification('error', "Eksport qilishda xatolik");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -251,18 +277,28 @@ export default function Kanban() {
           <h1 className="text-2xl font-bold text-white mb-1">Ish stoli</h1>
           <p className="text-dark-400 text-sm">Lidlarni boshqarish (Kanban)</p>
         </div>
-        <form onSubmit={handleSearch} className="relative w-full sm:max-w-xs">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-dark-500" />
-          </div>
-          <input
-            type="text"
-            className="input pl-10 h-10 text-sm bg-dark-900/50 border-dark-800"
-            placeholder="Ism yoki telefon..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </form>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <form onSubmit={handleSearch} className="relative flex-1 sm:flex-initial sm:max-w-xs">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-dark-500" />
+            </div>
+            <input
+              type="text"
+              className="input pl-10 h-10 text-sm bg-dark-900/50 border-dark-800"
+              placeholder="Ism yoki telefon..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </form>
+          <button 
+            onClick={handleExport}
+            disabled={exporting}
+            className="btn-primary h-10 px-4 text-sm font-semibold justify-center bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 shrink-0 shadow-lg shadow-green-500/10 border-none"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span>Excelga yuklash</span>
+          </button>
+        </div>
       </div>
 
       <DndContext 

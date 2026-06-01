@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
       },
     });
 
-    const { status, search } = req.query;
+    const { status, search, startDate, endDate } = req.query;
 
     const where = {};
     if (req.user.role === 'OPERATOR') {
@@ -42,6 +42,19 @@ router.get('/', async (req, res) => {
         { phone: { contains: search } },
         { phone2: { contains: search } },
       ];
+    }
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        where.createdAt.gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
     }
 
     const leads = await prisma.lead.findMany({
@@ -251,6 +264,109 @@ router.delete('/delete-all/confirmed', async (req, res) => {
   }
 });
 
+const COURSE_LABELS = {
+  VIDEOGRAPHY: 'Videomontaj "videografiya"',
+  SMM: 'SMM',
+  TARGET_PRO: 'Target pro',
+  COMPUTER_GRAPHICS: 'Kompyuter grafikasi',
+  COMPUTER_LITERACY: 'Kompyuter savodxonligi',
+  GRAPHIC_DESIGN: 'Grafik dizayn',
+  AUTOCAD: 'AutoCAD',
+  THREE_D_MAX: '3D MAX',
+  OTHER: 'Boshqa',
+  VIDEO_EDITING: 'Video montaj',
+  WEB_DEVELOPMENT: 'Web dasturlash',
+  PYTHON: 'Python'
+};
+
+const EMPLOYMENT_LABELS = {
+  UNEMPLOYED: 'Ishsiz',
+  EMPLOYED_OFFICIAL: 'Rasmiy band',
+  EMPLOYED_UNOFFICIAL: 'Rasmiy band emas',
+  STUDENT: 'Talaba',
+  STUDENT_EXTERNAL: 'Talaba "sirtqi"',
+  SCHOOL_STUDENT: 'Maktab o\'quvchisi',
+  HOUSEWIFE: 'Uy bekasi',
+  employed: 'Ishlaydi',
+  unemployed: 'Ishsiz',
+  housewife: 'Uy bekasi',
+  student: 'Talaba'
+};
+
+const normalizeCourse = (val) => {
+  if (!val) return 'OTHER';
+  const s = String(val).toLowerCase().trim();
+  if (s.includes('smm')) return 'SMM';
+  if (s.includes('target') || s.includes('targ')) return 'TARGET_PRO';
+  if (s.includes('savod') || s.includes('literacy')) return 'COMPUTER_LITERACY';
+  if (s.includes('grafik dizayn') || s.includes('dizayn') || s.includes('design')) return 'GRAPHIC_DESIGN';
+  if (s.includes('videografiya') || s.includes('videography')) return 'VIDEOGRAPHY';
+  if (s.includes('video') || s.includes('montaj') || s.includes('editing')) return 'VIDEO_EDITING';
+  if (s.includes('web') || s.includes('dastur') || s.includes('web dasturlash') || s.includes('development')) return 'WEB_DEVELOPMENT';
+  if (s.includes('python') || s.includes('payton')) return 'PYTHON';
+  if (s.includes('autocad') || s.includes('avtokad')) return 'AUTOCAD';
+  if (s.includes('3d') || s.includes('max') || s.includes('3ds')) return 'THREE_D_MAX';
+  if (s.includes('kompyuter grafikasi') || s.includes('graphics')) return 'COMPUTER_GRAPHICS';
+  
+  const upper = val.toUpperCase().trim().replace(/[\s-]/g, '_');
+  if (COURSE_LABELS[upper]) return upper;
+
+  return val;
+};
+
+const normalizeEmployment = (val) => {
+  if (!val) return 'UNEMPLOYED';
+  const s = String(val).toLowerCase().trim();
+  if (s.includes('ishsiz') || s.includes('unemployed') || s.includes('ishlamaydi') || s.includes('ishlamiman')) return 'UNEMPLOYED';
+  if (s.includes('rasmiy band emas') || s.includes('norasmiy') || s.includes('unofficial')) return 'EMPLOYED_UNOFFICIAL';
+  if (s.includes('rasmiy') || s.includes('official') || s.includes('ishlaydi') || s.includes('ishlidi')) return 'EMPLOYED_OFFICIAL';
+  if (s.includes('sirtqi')) return 'STUDENT_EXTERNAL';
+  if (s.includes('maktab') || s.includes('o\'quvchi') || s.includes('oquvchi') || s.includes('school')) return 'SCHOOL_STUDENT';
+  if (s.includes('talaba') || s.includes('student')) return 'STUDENT';
+  if (s.includes('uy bekasi') || s.includes('housewife') || s.includes('beka')) return 'HOUSEWIFE';
+  
+  const upper = val.toUpperCase().trim().replace(/[\s-]/g, '_');
+  if (EMPLOYMENT_LABELS[upper]) return upper;
+
+  return val;
+};
+
+const parseExcelDate = (val) => {
+  if (!val) return new Date();
+  
+  if (typeof val === 'number') {
+    return new Date(Math.round((val - 25569) * 86400 * 1000));
+  }
+  
+  const str = String(val).trim();
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) return parsed;
+  
+  const dateParts = str.match(/^(\d{1,2})[./-]\s*(\d{1,2})[./-]\s*(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  if (dateParts) {
+    const day = parseInt(dateParts[1], 10);
+    const month = parseInt(dateParts[2], 10) - 1;
+    const year = parseInt(dateParts[3], 10);
+    const hour = parseInt(dateParts[4] || 0, 10);
+    const minute = parseInt(dateParts[5] || 0, 10);
+    const second = parseInt(dateParts[6] || 0, 10);
+    return new Date(year, month, day, hour, minute, second);
+  }
+  
+  const dateParts2 = str.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  if (dateParts2) {
+    const year = parseInt(dateParts2[1], 10);
+    const month = parseInt(dateParts2[2], 10) - 1;
+    const day = parseInt(dateParts2[3], 10);
+    const hour = parseInt(dateParts2[4] || 0, 10);
+    const minute = parseInt(dateParts2[5] || 0, 10);
+    const second = parseInt(dateParts2[6] || 0, 10);
+    return new Date(year, month, day, hour, minute, second);
+  }
+  
+  return new Date();
+};
+
 // POST /api/leads/import - Import leads from Excel
 router.post('/import/excel', upload.single('file'), async (req, res) => {
   try {
@@ -291,72 +407,71 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
 
     const leads = [];
     for (const row of data) {
+      const allKeys = Object.keys(row);
+
       // Find Name
-      let name = row['ismi'] || row['ism'] || row['name'] || row['fio'] || row['full name'];
+      let name = row['ismi'] || row['ism'] || row['name'] || row['fio'] || row['full name'] || row['ism sharif'] || row['f.i.o'] || row['f.i.o.'];
       if (!name) {
-        const nameKey = Object.keys(row).find(k => k.includes('ism') || k.includes('name') || k.includes('fio'));
+        const nameKey = allKeys.find(k => k.includes('ism') || k.includes('name') || k.includes('fio') || k.includes('фио') || k.includes('имя'));
         if (nameKey) name = row[nameKey];
       }
-      name = name || 'Noma\'lum';
+      name = name ? String(name).trim() : 'Noma\'lum';
 
       // Find Phone
-      let phone = row['telefon raqam 1'] || row['telefon_raqami 1'] || row['telefon'] || row['phone'] || row['tel'] || row['telefon raqami'];
+      let phone = row['telefon raqam 1'] || row['telefon_raqami 1'] || row['telefon'] || row['phone'] || row['tel'] || row['telefon raqami'] || row['nomer'] || row['nomer 1'] || row['nomer1'] || row['aloqa'];
       if (!phone) {
-        const phoneKey = Object.keys(row).find(k => (k.includes('tel') || k.includes('phone')) && !k.includes('2'));
+        const phoneKey = allKeys.find(k => (k.includes('tel') || k.includes('phone') || k.includes('nomer') || k.includes('raqam') || k.includes('aloqa')) && !k.includes('2'));
         if (phoneKey) phone = row[phoneKey];
       }
-
+      
       // Skip row if no phone and no name (or name is Noma'lum)
       if (!phone && name === 'Noma\'lum') continue;
       
-      // Normalize phone to string
-      phone = phone ? String(phone) : '';
+      phone = phone ? String(phone).trim() : '';
 
       // Find Phone 2
-      let phone2 = row['telefon raqam 2'] || row['telefon_raqami 2'] || row['phone 2'] || row['phone2'] || row['tel 2'];
+      let phone2 = row['telefon raqam 2'] || row['telefon_raqami 2'] || row['phone 2'] || row['phone2'] || row['tel 2'] || row['tel2'] || row['nomer 2'] || row['nomer2'] || row['qoshimcha tel'] || row['qo\'shimcha tel'];
       if (!phone2) {
-        const phone2Key = Object.keys(row).find(k => (k.includes('tel') || k.includes('phone')) && k.includes('2'));
-        if (phone2Key) phone2 = row[phone2Key];
+        const phone2Key = allKeys.find(k => (k.includes('tel') || k.includes('phone') || k.includes('nomer') || k.includes('raqam') || k.includes('aloqa')) && (k.includes('2') || k.includes('ikki') || k.includes('qosh') || k.includes('qo\'sh')));
+        if (phone2Key) phone2 = phone2 ? String(phone2).trim() : null;
       }
-      phone2 = phone2 ? String(phone2) : null;
+      phone2 = phone2 ? String(phone2).trim() : null;
 
-      // Direct Course and Employment from Excel - Refined Column Detection
-      const allKeys = Object.keys(row);
-      
+      // Find Course / Department / Section / Direction
       const courseKey = allKeys.find(k => {
-        const key = k.toLowerCase();
-        return key.includes('kurs') || key.includes('course') || key.includes('yonalish') || key.includes('yo\'nalish') || key.includes('qiziqish');
+        return k.includes('kurs') || k.includes('course') || k.includes('yonalish') || k.includes('yo\'nalish') || k.includes('qiziqish') || k.includes('bo\'lim') || k.includes('bolim') || k.includes('yonalishi') || k.includes('yo\'nalishi');
       });
-      const courseInterest = courseKey ? String(row[courseKey]) : 'Boshqa';
+      const courseInterestRaw = courseKey ? row[courseKey] : null;
+      const courseInterest = normalizeCourse(courseInterestRaw);
 
+      // Find Employment Status
       const empKey = allKeys.find(k => {
-        const key = k.toLowerCase();
-        if (k === courseKey) return false; // Skip the course column
-        // Specific employment keywords, avoiding 'ish' as it's too broad (matches qiziqish)
-        return key.includes('bandlik') || key.includes('bant') || key.includes('employment') || key.includes('status') || key.includes('holat');
+        if (k === courseKey) return false;
+        return k.includes('bandlik') || k.includes('bant') || k.includes('employment') || k.includes('status') || k.includes('holat') || k.includes('faoliyat') || k.includes('ishla') || k === 'ish';
       });
-      const employmentStatus = empKey ? String(row[empKey]) : 'Ishsiz';
+      const employmentStatusRaw = empKey ? row[empKey] : null;
+      const employmentStatus = normalizeEmployment(employmentStatusRaw);
 
       // Parse time
       let createdAt = new Date();
-      const timeKey = Object.keys(row).find(k => k.includes('vaqt') || k.includes('time') || k.includes('sana') || k.includes('date'));
+      const timeKey = allKeys.find(k => {
+        return k.includes('vaqt') || k.includes('time') || k.includes('sana') || k.includes('date') || k.includes('tushgan') || k.includes('yuklangan') || k.includes('yaratilgan') || k.includes('created');
+      });
       if (timeKey && row[timeKey]) {
-        // Excel often stores dates as numbers (days since 1900)
-        if (typeof row[timeKey] === 'number') {
-          // convert Excel serial date to JS date
-          createdAt = new Date(Math.round((row[timeKey] - 25569) * 86400 * 1000));
-        } else {
-          const parsedDate = new Date(row[timeKey]);
-          if (!isNaN(parsedDate.getTime())) createdAt = parsedDate;
-        }
+        createdAt = parseExcelDate(row[timeKey]);
       }
       
-      // Safety check: if date is before 2020, it's likely an error, use current date
       if (createdAt.getFullYear() < 2020) {
         createdAt = new Date();
       }
 
-      const notes = row['o\'qiydi (ha-yo\'q)'] || row['izoh'] || row['notes'] || row['comment'];
+      // Find Notes / comments
+      const notesKey = allKeys.find(k => k.includes('izoh') || k.includes('notes') || k.includes('comment') || k.includes('o\'qiydi') || k.includes('oqiydi'));
+      const notes = notesKey ? String(row[notesKey]) : undefined;
+
+      // Find Grant
+      const grantKey = allKeys.find(k => k.includes('grant'));
+      const isGrantEligible = grantKey ? (row[grantKey] === 'ha' || row[grantKey] === true || String(row[grantKey]).toLowerCase().trim() === 'ha') : false;
 
       let assignedToId = null;
       if (operators.length > 0) {
@@ -370,11 +485,11 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
         phone2,
         courseInterest,
         employmentStatus,
-        isGrantEligible: row['grant'] === 'ha' || row['grant'] === true || false,
+        isGrantEligible,
         source: 'excel_import',
         status: 'NEW',
         slaDeadline: new Date(Date.now() + slaMinutes * 60 * 1000),
-        notes: notes ? String(notes) : undefined,
+        notes: notes || undefined,
         createdAt,
         assignedToId
       });
@@ -415,32 +530,72 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
   }
 });
 
-// GET /api/leads/export/excel - Export leads to Excel
+// GET /api/leads/export/excel - Export leads to Excel (both ADMIN and OPERATOR)
 router.get('/export/excel', async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Admin access required' });
+    const { status, search, startDate, endDate } = req.query;
+
+    const where = {};
+    if (req.user.role === 'OPERATOR') {
+      where.assignedToId = req.user.id;
+    }
+    if (status) {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search } },
+        { phone2: { contains: search } },
+      ];
+    }
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        where.createdAt.gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
     }
 
     const leads = await prisma.lead.findMany({
-      include: { assignedTo: { select: { name: true } } },
+      where,
+      include: { 
+        assignedTo: { select: { name: true } },
+        comments: {
+          include: { author: { select: { name: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      },
       orderBy: { createdAt: 'desc' },
     });
 
-    const data = leads.map(l => ({
-      'ID': l.id,
-      'Ism': l.name,
-      'Telefon 1': l.phone,
-      'Telefon 2': l.phone2 || '',
-      'Kurs': l.courseInterest,
-      'Bandlik': l.employmentStatus,
-      'Grant': l.isGrantEligible ? 'Ha' : "Yo'q",
-      'Holat': l.status,
-      'O\'qiydi (ha-yo\'q)': l.notes || '',
-      'Operator': l.assignedTo?.name || 'Biriktirilmagan',
-      'SLA Buzildi': l.slaBreached ? 'Ha' : "Yo'q",
-      'Yaratilgan': l.createdAt.toLocaleString('uz-UZ'),
-    }));
+    const data = leads.map(l => {
+      const commentText = l.comments && l.comments.length > 0
+        ? l.comments.map(c => `${c.author?.name || 'Operator'}: ${c.content}`).join(' | ')
+        : '';
+        
+      return {
+        'ID': l.id,
+        'Ism': l.name,
+        'Telefon 1': l.phone,
+        'Telefon 2': l.phone2 || '',
+        'Kurs / Bo\'lim': l.courseInterest,
+        'Bandlik': l.employmentStatus,
+        'Grant': l.isGrantEligible ? 'Ha' : "Yo'q",
+        'Holat': l.status,
+        'Operator Izohlari': commentText,
+        'O\'qiydi (ha-yo\'q)': l.notes || '',
+        'Operator': l.assignedTo?.name || 'Biriktirilmagan',
+        'SLA Buzildi': l.slaBreached ? 'Ha' : "Yo'q",
+        'Yaratilgan': l.createdAt.toLocaleString('uz-UZ'),
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();

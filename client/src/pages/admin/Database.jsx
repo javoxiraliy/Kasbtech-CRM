@@ -55,6 +55,8 @@ export default function Database() {
   });
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [editingLead, setEditingLead] = useState(null);
   const [operators, setOperators] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +70,11 @@ export default function Database() {
     fetchOperators();
   }, []);
 
+  // Fetch leads automatically when dates change
+  useEffect(() => {
+    fetchLeads(searchTerm, startDate, endDate);
+  }, [startDate, endDate]);
+
   const fetchOperators = async () => {
     try {
       const res = await api.get('/admin/users');
@@ -77,10 +84,13 @@ export default function Database() {
     }
   };
 
-  const fetchLeads = async (search = '') => {
+  const fetchLeads = async (search = '', start = '', end = '') => {
     setLoading(true);
     try {
-      const res = await api.get(`/leads?search=${encodeURIComponent(search)}`);
+      let url = `/leads?search=${encodeURIComponent(search)}`;
+      if (start) url += `&startDate=${start}`;
+      if (end) url += `&endDate=${end}`;
+      const res = await api.get(url);
       setLeads(res.data.leads);
     } catch (error) {
       addNotification('error', "Lidlarni yuklashda xatolik");
@@ -90,19 +100,28 @@ export default function Database() {
   };
 
   const handleSearch = (e) => {
-    e.preventDefault();
-    fetchLeads(searchTerm);
+    if (e) e.preventDefault();
+    fetchLeads(searchTerm, startDate, endDate);
   };
 
   const handleExport = async () => {
     setExporting(true);
     try {
-      const response = await api.get('/leads/export/excel', {
+      let url = '/leads/export/excel';
+      const params = [];
+      if (searchTerm) params.push(`search=${encodeURIComponent(searchTerm)}`);
+      if (startDate) params.push(`startDate=${startDate}`);
+      if (endDate) params.push(`endDate=${endDate}`);
+      if (params.length > 0) {
+        url += '?' + params.join('&');
+      }
+
+      const response = await api.get(url, {
         responseType: 'blob',
       });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = url;
+      link.href = urlBlob;
       link.setAttribute('download', 'lidlar.xlsx');
       document.body.appendChild(link);
       link.click();
@@ -305,20 +324,62 @@ export default function Database() {
 
       <div className="card glass p-0 overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
         {/* Toolbar */}
-        <div className="p-4 border-b border-dark-800 bg-dark-900/30 flex items-center justify-between gap-4">
-          <form onSubmit={handleSearch} className="relative max-w-md w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-dark-500" />
+        <div className="p-4 border-b border-dark-800 bg-dark-900/30 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-3 flex-1">
+            <div className="relative min-w-[200px] flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-dark-500" />
+              </div>
+              <input
+                type="text"
+                className="input pl-10 h-10 text-sm bg-dark-800"
+                placeholder="Qidirish (Ism/Tel)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            <input
-              type="text"
-              className="input pl-10 h-10 text-sm"
-              placeholder="Ism yoki telefon orqali qidirish..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-dark-400 font-medium whitespace-nowrap">Dan:</span>
+              <input
+                type="date"
+                className="input h-10 text-sm w-36 px-2 bg-dark-800 text-white border-dark-700"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-dark-400 font-medium whitespace-nowrap">Gacha:</span>
+              <input
+                type="date"
+                className="input h-10 text-sm w-36 px-2 bg-dark-800 text-white border-dark-700"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+
+            <button type="submit" className="btn-primary h-10 px-4 text-sm font-semibold justify-center">
+              Filtrlash
+            </button>
+            
+            {(searchTerm || startDate || endDate) && (
+              <button 
+                type="button" 
+                onClick={() => {
+                  setSearchTerm('');
+                  setStartDate('');
+                  setEndDate('');
+                  fetchLeads('', '', '');
+                }}
+                className="btn-secondary h-10 px-3 text-sm text-dark-400 hover:text-white"
+              >
+                Tozalash
+              </button>
+            )}
           </form>
-          <div className="text-sm text-dark-400 font-medium flex items-center gap-4">
+          
+          <div className="text-sm text-dark-400 font-medium flex items-center justify-between lg:justify-end gap-4 shrink-0">
             {selectedIds.length > 0 && (
               <button 
                 onClick={handleBulkDelete}
@@ -328,7 +389,7 @@ export default function Database() {
                 Tanlanganlarni o'chirish ({selectedIds.length})
               </button>
             )}
-            <div>Jami: <span className="text-white">{leads.length}</span> ta</div>
+            <div>Saralangan: <span className="text-white">{leads.length}</span> ta</div>
           </div>
         </div>
 
