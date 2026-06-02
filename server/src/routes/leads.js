@@ -295,7 +295,7 @@ const EMPLOYMENT_LABELS = {
 
 const normalizeCourse = (val) => {
   if (!val) return 'OTHER';
-  const s = String(val).toLowerCase().trim();
+  const s = String(val).toLowerCase().trim().replace(/_/g, ' ');
   if (s.includes('smm')) return 'SMM';
   if (s.includes('target') || s.includes('targ')) return 'TARGET_PRO';
   if (s.includes('savod') || s.includes('literacy')) return 'COMPUTER_LITERACY';
@@ -316,7 +316,7 @@ const normalizeCourse = (val) => {
 
 const normalizeEmployment = (val) => {
   if (!val) return 'UNEMPLOYED';
-  const s = String(val).toLowerCase().trim();
+  const s = String(val).toLowerCase().trim().replace(/_/g, ' ');
   if (s.includes('ishsiz') || s.includes('unemployed') || s.includes('ishlamaydi') || s.includes('ishlamiman')) return 'UNEMPLOYED';
   if (s.includes('rasmiy band emas') || s.includes('norasmiy') || s.includes('unofficial')) return 'EMPLOYED_UNOFFICIAL';
   if (s.includes('rasmiy') || s.includes('official') || s.includes('ishlaydi') || s.includes('ishlidi')) return 'EMPLOYED_OFFICIAL';
@@ -330,6 +330,27 @@ const normalizeEmployment = (val) => {
 
   return val;
 };
+
+const normalizePhoneNumber = (val) => {
+  if (!val) return '';
+  let digits = String(val).replace(/\D/g, '');
+  if (!digits) return '';
+
+  if (digits.length === 9) {
+    digits = '998' + digits;
+  }
+  
+  if (digits.length === 12 && digits.startsWith('998')) {
+    return '+' + digits;
+  }
+
+  const strVal = String(val).trim();
+  if (strVal.startsWith('+')) {
+    return '+' + digits;
+  }
+  return digits;
+};
+
 
 const parseExcelDate = (val) => {
   if (!val) return new Date();
@@ -410,36 +431,80 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
       const allKeys = Object.keys(row);
 
       // Find Name
-      let name = row['ismi'] || row['ism'] || row['name'] || row['fio'] || row['full name'] || row['ism sharif'] || row['f.i.o'] || row['f.i.o.'];
+      let name = row['ismi'] || row['ism'] || row['name'] || row['fio'] || row['full name'] || row['ism sharif'] || row['f.i.o'] || row['f.i.o.'] || row['ismingiz?'] || row['ismingiz'];
       if (!name) {
-        const nameKey = allKeys.find(k => k.includes('ism') || k.includes('name') || k.includes('fio') || k.includes('фио') || k.includes('имя'));
+        const nameKey = allKeys.find(k => {
+          const s = k.toLowerCase().replace(/['’`‘]/g, '');
+          return s.includes('ism') || 
+                 s.includes('name') || 
+                 s.includes('fio') || 
+                 s.includes('фио') || 
+                 s.includes('имя') || 
+                 s.includes('mijoz') || 
+                 s.includes('client') || 
+                 s.includes('klient');
+        });
         if (nameKey) name = row[nameKey];
       }
       name = name ? String(name).trim() : 'Noma\'lum';
 
-      // Find Phone
-      let phone = row['telefon raqam 1'] || row['telefon_raqami 1'] || row['telefon'] || row['phone'] || row['tel'] || row['telefon raqami'] || row['nomer'] || row['nomer 1'] || row['nomer1'] || row['aloqa'];
-      if (!phone) {
-        const phoneKey = allKeys.find(k => (k.includes('tel') || k.includes('phone') || k.includes('nomer') || k.includes('raqam') || k.includes('aloqa')) && !k.includes('2'));
-        if (phoneKey) phone = row[phoneKey];
+      // Find Phone and Phone 2 (Robust Multi-phone Extraction)
+      const phoneKeys = allKeys.filter(k => {
+        const s = k.toLowerCase().replace(/['’`‘]/g, '');
+        if (s.includes('telegram') || s.includes('email') || s.includes('mail')) return false;
+        return s.includes('tel') || 
+               s.includes('phone') || 
+               s.includes('nomer') || 
+               s.includes('raqam') || 
+               s.includes('aloqa') || 
+               s.includes('contact') || 
+               s.includes('kontak') || 
+               s.includes('тел') || 
+               s.includes('номер') || 
+               s.includes('телефон') || 
+               s.includes('связь');
+      });
+
+      const primaryKeys = [];
+      const secondaryKeys = [];
+      for (const k of phoneKeys) {
+        const s = k.toLowerCase();
+        const isSecondary = s.includes('2') || 
+                            s.includes('ikki') || 
+                            s.includes('qosh') || 
+                            s.includes('qo\'sh') || 
+                            s.includes('dop') || 
+                            s.includes('доп') || 
+                            s.includes('второй') || 
+                            s.includes('second');
+        if (isSecondary) {
+          secondaryKeys.push(k);
+        } else {
+          primaryKeys.push(k);
+        }
       }
-      
+
+      const primaryValues = primaryKeys.map(k => normalizePhoneNumber(row[k])).filter(Boolean);
+      const secondaryValues = secondaryKeys.map(k => normalizePhoneNumber(row[k])).filter(Boolean);
+      const uniquePhones = Array.from(new Set([...primaryValues, ...secondaryValues]));
+
+      let phone = uniquePhones[0] || '';
+      let phone2 = uniquePhones[1] || null;
+
       // Skip row if no phone and no name (or name is Noma'lum)
       if (!phone && name === 'Noma\'lum') continue;
-      
-      phone = phone ? String(phone).trim() : '';
-
-      // Find Phone 2
-      let phone2 = row['telefon raqam 2'] || row['telefon_raqami 2'] || row['phone 2'] || row['phone2'] || row['tel 2'] || row['tel2'] || row['nomer 2'] || row['nomer2'] || row['qoshimcha tel'] || row['qo\'shimcha tel'];
-      if (!phone2) {
-        const phone2Key = allKeys.find(k => (k.includes('tel') || k.includes('phone') || k.includes('nomer') || k.includes('raqam') || k.includes('aloqa')) && (k.includes('2') || k.includes('ikki') || k.includes('qosh') || k.includes('qo\'sh')));
-        if (phone2Key) phone2 = phone2 ? String(phone2).trim() : null;
-      }
-      phone2 = phone2 ? String(phone2).trim() : null;
 
       // Find Course / Department / Section / Direction
       const courseKey = allKeys.find(k => {
-        return k.includes('kurs') || k.includes('course') || k.includes('yonalish') || k.includes('yo\'nalish') || k.includes('qiziqish') || k.includes('bo\'lim') || k.includes('bolim') || k.includes('yonalishi') || k.includes('yo\'nalishi');
+        const s = k.toLowerCase().replace(/['’`‘]/g, '');
+        return s.includes('kurs') || 
+               s.includes('course') || 
+               s.includes('yonalish') || 
+               s.includes('yonalis') || 
+               s.includes('qiziqish') || 
+               s.includes('bolim') || 
+               s.includes('napravlen') || 
+               s.includes('направлен');
       });
       const courseInterestRaw = courseKey ? row[courseKey] : null;
       const courseInterest = normalizeCourse(courseInterestRaw);
@@ -447,7 +512,20 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
       // Find Employment Status
       const empKey = allKeys.find(k => {
         if (k === courseKey) return false;
-        return k.includes('bandlik') || k.includes('bant') || k.includes('employment') || k.includes('status') || k.includes('holat') || k.includes('faoliyat') || k.includes('ishla') || k === 'ish';
+        const s = k.toLowerCase().replace(/['’`‘]/g, '');
+        return s.includes('bandlik') || 
+               s.includes('band') || 
+               s.includes('bant') || 
+               s.includes('employment') || 
+               s.includes('status') || 
+               s.includes('holat') || 
+               s.includes('faoliyat') || 
+               s.includes('ishla') || 
+               s === 'ish' || 
+               s.includes('rabot') || 
+               s.includes('zanyat') || 
+               s.includes('занятост') || 
+               s.includes('работ');
       });
       const employmentStatusRaw = empKey ? row[empKey] : null;
       const employmentStatus = normalizeEmployment(employmentStatusRaw);
@@ -455,7 +533,8 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
       // Parse time
       let createdAt = new Date();
       const timeKey = allKeys.find(k => {
-        return k.includes('vaqt') || k.includes('time') || k.includes('sana') || k.includes('date') || k.includes('tushgan') || k.includes('yuklangan') || k.includes('yaratilgan') || k.includes('created');
+        const s = k.toLowerCase();
+        return s.includes('vaqt') || s.includes('time') || s.includes('sana') || s.includes('date') || s.includes('tushgan') || s.includes('yuklangan') || s.includes('yaratilgan') || s.includes('created');
       });
       if (timeKey && row[timeKey]) {
         createdAt = parseExcelDate(row[timeKey]);
@@ -466,11 +545,14 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
       }
 
       // Find Notes / comments
-      const notesKey = allKeys.find(k => k.includes('izoh') || k.includes('notes') || k.includes('comment') || k.includes('o\'qiydi') || k.includes('oqiydi'));
+      const notesKey = allKeys.find(k => {
+        const s = k.toLowerCase();
+        return s.includes('izoh') || s.includes('notes') || s.includes('comment') || s.includes('o\'qiydi') || s.includes('oqiydi');
+      });
       const notes = notesKey ? String(row[notesKey]) : undefined;
 
       // Find Grant
-      const grantKey = allKeys.find(k => k.includes('grant'));
+      const grantKey = allKeys.find(k => k.toLowerCase().includes('grant'));
       const isGrantEligible = grantKey ? (row[grantKey] === 'ha' || row[grantKey] === true || String(row[grantKey]).toLowerCase().trim() === 'ha') : false;
 
       let assignedToId = null;
