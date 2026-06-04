@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Shield, User, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, User, CheckCircle, XCircle, BookOpen } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -140,7 +140,13 @@ export default function Users() {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300">
-                        {u.role === 'ADMIN' ? <Shield className="w-5 h-5 text-purple-400" /> : <User className="w-5 h-5 text-blue-400" />}
+                        {u.role === 'ADMIN' ? (
+                          <Shield className="w-5 h-5 text-purple-400" />
+                        ) : u.role === 'TEACHER' ? (
+                          <BookOpen className="w-5 h-5 text-emerald-400" />
+                        ) : (
+                          <User className="w-5 h-5 text-blue-400" />
+                        )}
                       </div>
                       <div>
                         <p className="text-white font-medium">{u.name}</p>
@@ -149,8 +155,12 @@ export default function Users() {
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className={`badge ${u.role === 'ADMIN' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
-                      {u.role}
+                    <span className={`badge ${
+                      u.role === 'ADMIN' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 
+                      u.role === 'TEACHER' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                      'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                    }`}>
+                      {u.role === 'ADMIN' ? 'Admin' : u.role === 'TEACHER' ? "O'qituvchi" : 'Operator'}
                     </span>
                   </td>
                   <td className="p-4 text-dark-300">
@@ -260,6 +270,7 @@ export default function Users() {
                     onChange={e => setFormData({...formData, role: e.target.value})}
                   >
                     <option value="OPERATOR">Operator</option>
+                    <option value="TEACHER">O'qituvchi</option>
                     <option value="ADMIN">Admin</option>
                   </select>
                 </div>

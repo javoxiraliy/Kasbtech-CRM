@@ -34,8 +34,8 @@ export default function Tasks() {
         api.get('/admin/users')
       ]);
       setTasks(tasksRes.data.tasks);
-      // Filter out admins, we only want operators
-      const ops = usersRes.data.users.filter(u => u.role === 'OPERATOR' && u.isActive);
+      // Filter out admins, we only want operators and teachers
+      const ops = usersRes.data.users.filter(u => ['OPERATOR', 'TEACHER'].includes(u.role) && u.isActive);
       setOperators(ops);
     } catch (error) {
       addNotification('error', "Ma'lumotlarni yuklashda xatolik yuz berdi");
@@ -157,7 +157,7 @@ export default function Tasks() {
                         </span>
                       )}
                       <span className="bg-dark-800 border border-dark-700 text-dark-300 px-2 py-0.5 rounded text-[11px] font-semibold">
-                        {task.total} operator
+                        {task.total} xodim
                       </span>
                     </div>
                     <p className="text-dark-300 text-sm line-clamp-2 md:max-w-2xl">{task.description}</p>
@@ -199,32 +199,51 @@ export default function Tasks() {
                 {/* Expanded operators detail list */}
                 {isExpanded && (
                   <div className="border-t border-dark-800 bg-dark-900/30 p-5 space-y-3">
-                    <h5 className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">Operatorlar qamrovi</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <h5 className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">Xodimlar qamrovi va hisobotlari</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {task.operators.map((op, opIdx) => (
-                        <div key={opIdx} className="bg-dark-800/50 border border-dark-750/70 px-4 py-3 rounded-xl flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-white text-sm font-medium truncate">{op.name}</p>
-                            <p className="text-dark-500 text-[10px] truncate">{op.email}</p>
+                        <div key={opIdx} className="bg-dark-800/50 border border-dark-750/70 px-4 py-3 rounded-xl flex flex-col gap-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{op.name}</p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className={`text-[9px] font-bold px-1 rounded border ${
+                                  op.role === 'TEACHER' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                                }`}>
+                                  {op.role === 'TEACHER' ? "O'qituvchi" : 'Operator'}
+                                </span>
+                                <p className="text-dark-500 text-[10px] truncate">{op.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border flex items-center gap-1 ${
+                                op.isRead 
+                                  ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
+                                  : 'bg-dark-900/60 border-dark-700 text-dark-500'
+                              }`}>
+                                {op.isRead ? <BookOpen className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+                                {op.isRead ? "O'qildi" : "Ko'rilmadi"}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border flex items-center gap-1 ${
+                                op.isCompleted 
+                                  ? 'bg-green-500/10 border-green-500/20 text-green-400' 
+                                  : 'bg-red-500/10 border-red-500/20 text-red-400'
+                              }`}>
+                                {op.isCompleted ? <CheckCircle className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
+                                {op.isCompleted ? "Bajardi" : "Bajarilmadi"}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border flex items-center gap-1 ${
-                              op.isRead 
-                                ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
-                                : 'bg-dark-900/60 border-dark-700 text-dark-500'
-                            }`}>
-                              {op.isRead ? <BookOpen className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
-                              {op.isRead ? "O'qildi" : "Ko'rilmadi"}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border flex items-center gap-1 ${
-                              op.isCompleted 
-                                ? 'bg-green-500/10 border-green-500/20 text-green-400' 
-                                : 'bg-red-500/10 border-red-500/20 text-red-400'
-                            }`}>
-                              {op.isCompleted ? <CheckCircle className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
-                              {op.isCompleted ? "Bajardi" : "Bajarilmadi"}
-                            </span>
-                          </div>
+                          
+                          {op.isCompleted && op.reportText && (
+                            <div className="bg-dark-900/60 border border-dark-850 p-2.5 rounded-lg text-xs space-y-1">
+                              <p className="text-dark-400 font-bold uppercase text-[9px] tracking-wider">Hisobot:</p>
+                              <p className="text-white italic">"{op.reportText}"</p>
+                              {op.completedAt && (
+                                <span className="text-[9px] text-dark-500 block pt-0.5">Bajarilgan vaqt: {new Date(op.completedAt).toLocaleString('uz-UZ')}</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -306,7 +325,7 @@ export default function Tasks() {
                     onClick={() => handleSendToAllChange(true)}
                   >
                     <Users className="w-4 h-4" />
-                    Barcha operatorlarga ({operators.length} ta)
+                    Barcha xodimlarga ({operators.length} ta)
                   </button>
 
                   <button
@@ -319,7 +338,7 @@ export default function Tasks() {
                     onClick={() => handleSendToAllChange(false)}
                   >
                     <Users className="w-4 h-4" />
-                    Tanlangan operatorlarga
+                    Tanlangan xodimlarga
                   </button>
                 </div>
               </div>
@@ -346,7 +365,10 @@ export default function Tasks() {
                           }`}>
                             {op.name.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-xs font-semibold truncate flex-1">{op.name}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold truncate leading-tight">{op.name}</p>
+                            <span className="text-[9px] text-dark-500 block uppercase tracking-wider">{op.role === 'TEACHER' ? "O'qituvchi" : 'Operator'}</span>
+                          </div>
                         </div>
                       );
                     })}

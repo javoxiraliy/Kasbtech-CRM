@@ -5,6 +5,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import Login from './pages/Login';
 import OperatorLayout from './layouts/OperatorLayout';
 import AdminLayout from './layouts/AdminLayout';
+import TeacherLayout from './layouts/TeacherLayout';
 
 import OperatorKanban from './pages/operator/Kanban';
 import OperatorCalendar from './pages/operator/Calendar';
@@ -15,6 +16,8 @@ import AdminDatabase from './pages/admin/Database';
 import AdminSettings from './pages/admin/Settings';
 import AdminKPI from './pages/admin/KPI';
 import AdminTasks from './pages/admin/Tasks';
+
+import TeacherTasks from './pages/teacher/Tasks';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -46,6 +49,10 @@ function RoleBasedRedirect() {
   if (user.role === 'ADMIN') {
     return <Navigate to="/admin" replace />;
   }
+  
+  if (user.role === 'TEACHER') {
+    return <Navigate to="/teacher" replace />;
+  }
 
   return <Navigate to="/operator" replace />;
 }
@@ -67,6 +74,14 @@ function App() {
             }>
               <Route index element={<OperatorKanban />} />
               <Route path="calendar" element={<OperatorCalendar />} />
+            </Route>
+
+            <Route path="/teacher" element={
+              <ProtectedRoute allowedRoles={['TEACHER']}>
+                <TeacherLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<TeacherTasks />} />
             </Route>
 
             <Route path="/admin" element={

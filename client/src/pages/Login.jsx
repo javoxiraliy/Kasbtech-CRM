@@ -25,6 +25,8 @@ export default function Login() {
       addNotification('success', 'Tizimga muvaffaqiyatli kirdingiz');
       if (user.role === 'ADMIN') {
         navigate('/admin');
+      } else if (user.role === 'TEACHER') {
+        navigate('/teacher');
       } else {
         navigate('/operator');
       }

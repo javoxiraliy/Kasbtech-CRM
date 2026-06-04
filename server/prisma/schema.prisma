@@ -13,6 +13,7 @@ datasource db {
 enum Role {
   ADMIN
   OPERATOR
+  TEACHER
 }
 
 enum LeadStatus {
@@ -129,6 +130,10 @@ model Task {
   
   assignedToId String
   assignedTo   User      @relation("OperatorTasks", fields: [assignedToId], references: [id], onDelete: Cascade)
+
+  // Report fields
+  reportText   String?
+  completedAt  DateTime?
 
   @@map("tasks")
 }

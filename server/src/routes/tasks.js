@@ -12,7 +12,7 @@ router.get('/admin', authenticate, requireAdmin, async (req, res) => {
     const tasks = await prisma.task.findMany({
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true }
+          select: { id: true, name: true, email: true, role: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -44,8 +44,11 @@ router.get('/admin', authenticate, requireAdmin, async (req, res) => {
         id: t.assignedTo.id,
         name: t.assignedTo.name,
         email: t.assignedTo.email,
+        role: t.assignedTo.role,
         isCompleted: t.isCompleted,
-        isRead: t.isRead
+        isRead: t.isRead,
+        reportText: t.reportText,
+        completedAt: t.completedAt
       });
     });
 
@@ -56,7 +59,7 @@ router.get('/admin', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// POST /api/tasks/admin - Send task to all or specific operators
+// POST /api/tasks/admin - Send task to all or specific users (operators and teachers)
 router.post('/admin', authenticate, requireAdmin, async (req, res) => {
   try {
     const { title, description, operatorIds, dueDate } = req.body;
@@ -67,17 +70,20 @@ router.post('/admin', authenticate, requireAdmin, async (req, res) => {
 
     let targetOperatorIds = [];
     if (operatorIds === 'all' || !operatorIds || (Array.isArray(operatorIds) && operatorIds.length === 0)) {
-      const operators = await prisma.user.findMany({
-        where: { role: 'OPERATOR', isActive: true },
+      const users = await prisma.user.findMany({
+        where: { 
+          role: { in: ['OPERATOR', 'TEACHER'] }, 
+          isActive: true 
+        },
         select: { id: true }
       });
-      targetOperatorIds = operators.map(o => o.id);
+      targetOperatorIds = users.map(o => o.id);
     } else {
       targetOperatorIds = Array.isArray(operatorIds) ? operatorIds : [operatorIds];
     }
 
     if (targetOperatorIds.length === 0) {
-      return res.status(400).json({ error: 'Topshiriq yuborish uchun faol operatorlar topilmadi' });
+      return res.status(400).json({ error: 'Topshiriq yuborish uchun faol xodimlar topilmadi' });
     }
 
     const createdTasks = await Promise.all(
@@ -104,9 +110,9 @@ router.post('/admin', authenticate, requireAdmin, async (req, res) => {
 });
 
 
-// ================= OPERATOR ENDPOINTS =================
+// ================= OPERATOR / TEACHER ENDPOINTS =================
 
-// GET /api/tasks/operator - Get tasks assigned to the current operator
+// GET /api/tasks/operator - Get tasks assigned to the current user (operator or teacher)
 router.get('/operator', authenticate, async (req, res) => {
   try {
     const tasks = await prisma.task.findMany({
@@ -147,9 +153,10 @@ router.patch('/operator/:id/read', authenticate, async (req, res) => {
   }
 });
 
-// PATCH /api/tasks/operator/:id/complete - Toggle task completed
+// PATCH /api/tasks/operator/:id/complete - Toggle task completed with report
 router.patch('/operator/:id/complete', authenticate, async (req, res) => {
   try {
+    const { reportText, isCompleted } = req.body;
     const task = await prisma.task.findUnique({
       where: { id: req.params.id }
     });
@@ -162,9 +169,15 @@ router.patch('/operator/:id/complete', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Ruxsat berilmagan' });
     }
 
+    const newCompleted = isCompleted !== undefined ? isCompleted : !task.isCompleted;
+
     const updated = await prisma.task.update({
       where: { id: req.params.id },
-      data: { isCompleted: !task.isCompleted }
+      data: { 
+        isCompleted: newCompleted,
+        reportText: newCompleted ? (reportText || task.reportText || "") : null,
+        completedAt: newCompleted ? new Date() : null
+      }
     });
 
     res.json({ task: updated });

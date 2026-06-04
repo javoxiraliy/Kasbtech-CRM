@@ -45,6 +45,20 @@ async function main() {
   });
   console.log('✅ Operators created');
 
+  // Create teacher user
+  const teacherPassword = await bcrypt.hash('teacher123', 10);
+  const teacher1 = await prisma.user.upsert({
+    where: { email: 'teacher1@crm.uz' },
+    update: {},
+    create: {
+      name: 'Sherzod Asadov',
+      email: 'teacher1@crm.uz',
+      password: teacherPassword,
+      role: 'TEACHER',
+    },
+  });
+  console.log('✅ Teacher created:', teacher1.email);
+
   // Create default settings
   const settings = [
     { key: 'sla_time_minutes', value: '15', description: 'Yangi lid uchun SLA vaqti (daqiqalarda)' },
@@ -144,6 +158,7 @@ async function main() {
   console.log('   Admin: admin@crm.uz / admin123');
   console.log('   Operator 1: operator1@crm.uz / operator123');
   console.log('   Operator 2: operator2@crm.uz / operator123');
+  console.log('   Teacher 1: teacher1@crm.uz / teacher123');
 }
 
 main()
