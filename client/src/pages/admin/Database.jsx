@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Download, Upload, FileSpreadsheet, Search, Loader2, Edit2, Trash2, X, Plus, User, Phone, BookOpen, Briefcase } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const STATUS_LABELS = {
   NEW: 'Yangi',
@@ -43,6 +44,17 @@ const EMPLOYMENT_LABELS = {
 export default function Database() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+    confirmText: '',
+    cancelText: 'Bekor qilish'
+  });
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -157,16 +169,24 @@ export default function Database() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Haqiqatan ham ushbu lidni o'chirib tashlamoqchimisiz?")) return;
-    
-    try {
-      await api.delete(`/leads/${id}`);
-      addNotification('success', "Lid o'chirib tashlandi");
-      fetchLeads();
-    } catch (error) {
-      addNotification('error', "O'chirishda xatolik yuz berdi");
-    }
+  const handleDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Lidni o'chirish",
+      message: "Haqiqatan ham ushbu lidni o'chirib tashlamoqchimisiz?",
+      type: 'danger',
+      confirmText: "Ha, o'chirish",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          await api.delete(`/leads/${id}`);
+          addNotification('success', "Lid o'chirib tashlandi");
+          fetchLeads();
+        } catch (error) {
+          addNotification('error', "O'chirishda xatolik yuz berdi");
+        }
+      }
+    });
   };
 
   const handleEditSubmit = async (e) => {
@@ -240,38 +260,55 @@ export default function Database() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`${selectedIds.length} ta lidni o'chirib tashlamoqchimisiz?`)) return;
-    
-    setLoading(true);
-    try {
-      await api.post('/leads/bulk-delete', { ids: selectedIds });
-      addNotification('success', "Tanlangan lidlar o'chirildi");
-      setSelectedIds([]);
-      fetchLeads();
-    } catch (error) {
-      addNotification('error', "Xatolik yuz berdi");
-    } finally {
-      setLoading(false);
-    }
+  const handleBulkDelete = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Tanlangan lidlarni o'chirish",
+      message: `Haqiqatan ham tanlangan ${selectedIds.length} ta lidni o'chirib tashlamoqchimisiz?`,
+      type: 'danger',
+      confirmText: "Ha, o'chirish",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setLoading(true);
+        try {
+          await api.post('/leads/bulk-delete', { ids: selectedIds });
+          addNotification('success', "Tanlangan lidlar o'chirildi");
+          setSelectedIds([]);
+          fetchLeads();
+        } catch (error) {
+          addNotification('error', "Xatolik yuz berdi");
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
-  const handleDeleteAll = async () => {
-    if (!window.confirm("DIQQAT! Barcha lidlarni butunlay o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi!")) return;
-    const confirmText = window.prompt("Tasdiqlash uchun 'OCHIRISH' so'zini yozing:");
-    if (confirmText !== 'OCHIRISH') return;
+  const handleDeleteAll = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Barcha lidlarni o'chirish",
+      message: "DIQQAT! Barcha lidlarni butunlay o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi!",
+      type: 'danger',
+      confirmText: "Ha, barchasini o'chirish",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        const confirmText = window.prompt("Tasdiqlash uchun 'OCHIRISH' so'zini yozing:");
+        if (confirmText !== 'OCHIRISH') return;
 
-    setLoading(true);
-    try {
-      await api.delete('/leads/delete-all/confirmed');
-      addNotification('success', "Barcha lidlar o'chirildi");
-      setSelectedIds([]);
-      fetchLeads();
-    } catch (error) {
-      addNotification('error', "Xatolik yuz berdi");
-    } finally {
-      setLoading(false);
-    }
+        setLoading(true);
+        try {
+          await api.delete('/leads/delete-all/confirmed');
+          addNotification('success', "Barcha lidlar o'chirildi");
+          setSelectedIds([]);
+          fetchLeads();
+        } catch (error) {
+          addNotification('error', "Xatolik yuz berdi");
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   return (
@@ -779,6 +816,16 @@ export default function Database() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

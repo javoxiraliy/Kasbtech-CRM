@@ -2,11 +2,23 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Shield, User, CheckCircle, XCircle, BookOpen } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function Users() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+    confirmText: '',
+    cancelText: 'Bekor qilish'
+  });
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -36,28 +48,46 @@ export default function Users() {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`${name}ni butunlay o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi!`)) return;
-    
-    try {
-      await api.delete(`/admin/users/${id}`);
-      addNotification('success', "Xodim butunlay o'chirildi");
-      fetchUsers();
-    } catch (error) {
-      addNotification('error', error.response?.data?.error || "Xatolik yuz berdi");
-    }
+  const handleDelete = (id, name) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Xodimni o'chirish",
+      message: `${name}ni butunlay o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi!`,
+      type: 'danger',
+      confirmText: "Ha, o'chirish",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          await api.delete(`/admin/users/${id}`);
+          addNotification('success', "Xodim butunlay o'chirildi");
+          fetchUsers();
+        } catch (error) {
+          addNotification('error', error.response?.data?.error || "Xatolik yuz berdi");
+        }
+      }
+    });
   };
 
-  const handleDeactivate = async (id, currentStatus) => {
-    if (!window.confirm("Haqiqatan ham bu xodimni faolsizlantirmoqchimisiz?")) return;
-    
-    try {
-      await api.patch(`/admin/users/${id}`, { isActive: !currentStatus });
-      addNotification('success', "Xodim holati o'zgartirildi");
-      fetchUsers();
-    } catch (error) {
-      addNotification('error', "Xatolik yuz berdi");
-    }
+  const handleDeactivate = (id, currentStatus) => {
+    const actionText = currentStatus ? "faolsizlantirmoqchimisiz" : "faollashtirmoqchimisiz";
+    const statusText = currentStatus ? "Faolsizlantirish" : "Faollashtirish";
+    setConfirmModal({
+      isOpen: true,
+      title: `Xodimni ${statusText.toLowerCase()}`,
+      message: `Haqiqatan ham bu xodimni ${actionText}?`,
+      type: currentStatus ? 'warning' : 'success',
+      confirmText: `Ha, ${statusText.toLowerCase()}`,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          await api.patch(`/admin/users/${id}`, { isActive: !currentStatus });
+          addNotification('success', "Xodim holati o'zgartirildi");
+          fetchUsers();
+        } catch (error) {
+          addNotification('error', "Xatolik yuz berdi");
+        }
+      }
+    });
   };
 
   const openAddModal = () => {
@@ -298,6 +328,16 @@ export default function Users() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
