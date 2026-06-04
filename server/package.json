@@ -1,5 +1,5 @@
 {
-  "name": "crm-server",
+  "name": "kasbtech-crm-server",
   "version": "1.0.0",
   "description": "CRM Backend API",
   "main": "src/server.js",

@@ -1,5 +1,5 @@
 {
-    "name": "crm-fullstack",
+    "name": "kasbtech-crm",
     "version": "1.0.0",
     "scripts": {
           "install:client": "cd client && npm install",

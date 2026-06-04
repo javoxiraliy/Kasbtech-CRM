@@ -50,7 +50,7 @@ export default function Login() {
             <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 to-purple-500/20" />
             <Shield className="w-8 h-8 text-primary-400 relative z-10" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">TZM CRM</h1>
+          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Kasbtech CRM</h1>
           <p className="text-dark-400">Tizimga kirish uchun ma'lumotlaringizni kiriting</p>
         </div>
 

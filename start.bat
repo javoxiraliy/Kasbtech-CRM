@@ -1,6 +1,6 @@
 @echo off
 echo ==========================================
-echo       TZM CRM Tizimini Ishga Tushirish
+echo       Kasbtech CRM Tizimini Ishga Tushirish
 echo ==========================================
 echo.
 echo 1. Backend paketlari o'rnatilmoqda...
