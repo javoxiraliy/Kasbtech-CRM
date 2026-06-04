@@ -191,6 +191,11 @@ router.delete('/users/:id', async (req, res) => {
       where: { authorId: req.params.id }
     });
 
+    // Delete their tasks (foreign key constraint)
+    await prisma.task.deleteMany({
+      where: { assignedToId: req.params.id }
+    });
+
     await prisma.user.delete({
       where: { id: req.params.id },
     });
