@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
-import { Search, Filter, Shield, User, BookOpen, Smartphone } from 'lucide-react';
+import { Search, Filter, Shield, User, BookOpen, Smartphone, File, Image, ExternalLink, FileText, FileSpreadsheet } from 'lucide-react';
 
 export default function AllReports() {
   const [reports, setReports] = useState([]);
@@ -10,6 +10,38 @@ export default function AllReports() {
   const [filterRole, setFilterRole] = useState('ALL');
   const [search, setSearch] = useState('');
   const { addNotification } = useNotification();
+
+  const getAttachmentUrl = (path) => {
+    if (!path) return '';
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+    return `${base}${path}`;
+  };
+
+  const isImageFile = (url) => {
+    const ext = url.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+  };
+
+  const getFileName = (url) => {
+    return url.split('/').pop().substring(14); // Remove unique prefix timestamp
+  };
+
+  const getFileIcon = (url) => {
+    const ext = url.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+      return <Image className="w-4 h-4 text-pink-400 shrink-0" />;
+    }
+    if (ext === 'pdf') {
+      return <File className="w-4 h-4 text-red-400 shrink-0" />;
+    }
+    if (['doc', 'docx'].includes(ext)) {
+      return <FileText className="w-4 h-4 text-blue-400 shrink-0" />;
+    }
+    if (['xls', 'xlsx'].includes(ext)) {
+      return <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />;
+    }
+    return <File className="w-4 h-4 text-dark-300 shrink-0" />;
+  };
 
   useEffect(() => {
     fetchReports();
@@ -136,9 +168,38 @@ export default function AllReports() {
                 {getRoleBadge(report.author?.role)}
               </div>
 
-              <div className="flex-1 bg-dark-900/50 rounded-xl border border-dark-800 p-4 overflow-y-auto custom-scrollbar font-mono text-sm text-dark-300 whitespace-pre-wrap">
+              <div className="flex-1 bg-dark-900/50 rounded-xl border border-dark-800 p-4 overflow-y-auto custom-scrollbar font-mono text-sm text-dark-300 whitespace-pre-wrap mb-3">
                 {report.content}
               </div>
+
+              {/* Render attachments for this report */}
+              {report.attachmentUrls && report.attachmentUrls.length > 0 && (
+                <div className="space-y-1.5 shrink-0 border-t border-dark-800/65 pt-3">
+                  <p className="text-[10px] text-dark-400 uppercase font-bold tracking-wider mb-1">Biriktirilgan fayllar:</p>
+                  <div className="grid grid-cols-1 gap-1 max-h-24 overflow-y-auto custom-scrollbar pr-1">
+                    {report.attachmentUrls.map((url, uidx) => {
+                      const fileName = getFileName(url);
+                      return (
+                        <div key={uidx} className="flex items-center justify-between gap-3 p-1.5 bg-dark-900/30 rounded border border-dark-800 text-[11px]">
+                          <span className="text-dark-300 truncate flex items-center gap-1.5" title={fileName}>
+                            {getFileIcon(url)}
+                            {fileName || `Fayl_${uidx + 1}`}
+                          </span>
+                          <a 
+                            href={getAttachmentUrl(url)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary-400 hover:text-white p-1 shrink-0"
+                            title="Ko'rish"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

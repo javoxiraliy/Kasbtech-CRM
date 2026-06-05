@@ -45,6 +45,7 @@ app.get('/api/health', (req, res) => {
 
 // Serve static files from React
 app.use(express.static(path.join(__dirname, '../../client/dist')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 
 // Catch-all to serve index.html for React Router

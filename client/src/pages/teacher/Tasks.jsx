@@ -1,9 +1,35 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, Clock, CheckCircle2, XCircle, AlertCircle, BookOpen, Send, Calendar } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle2, XCircle, AlertCircle, BookOpen, Send, Calendar, Image, File, ExternalLink, FileText, FileSpreadsheet } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
 export default function TeacherTasks() {
+  const getAttachmentUrl = (path) => {
+    if (!path) return '';
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+    return `${base}${path}`;
+  };
+
+  const getFileName = (url) => {
+    return url.split('/').pop().substring(14); // Remove unique prefix timestamp
+  };
+
+  const getFileIcon = (url) => {
+    const ext = url.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+      return <Image className="w-4 h-4 text-pink-400 shrink-0" />;
+    }
+    if (ext === 'pdf') {
+      return <File className="w-4 h-4 text-red-400 shrink-0" />;
+    }
+    if (['doc', 'docx'].includes(ext)) {
+      return <FileText className="w-4 h-4 text-blue-400 shrink-0" />;
+    }
+    if (['xls', 'xlsx'].includes(ext)) {
+      return <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />;
+    }
+    return <File className="w-4 h-4 text-dark-300 shrink-0" />;
+  };
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('pending'); // 'pending', 'completed', 'all'
@@ -258,6 +284,35 @@ export default function TeacherTasks() {
                         {task.description}
                       </p>
                     </div>
+
+                    {/* Render attachments for this task */}
+                    {task.attachmentUrls && task.attachmentUrls.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <p className="text-[10px] text-dark-400 uppercase font-bold tracking-wider">Topshiriq fayllari:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {task.attachmentUrls.map((url, uidx) => {
+                            const fileName = getFileName(url);
+                            return (
+                              <div key={uidx} className="flex items-center justify-between gap-3 p-1.5 bg-dark-900/35 rounded-xl border border-dark-800 text-[11px] min-w-[150px] max-w-[240px]">
+                                <span className="text-dark-200 truncate flex items-center gap-1.5" title={fileName}>
+                                  {getFileIcon(url)}
+                                  {fileName || `Fayl_${uidx + 1}`}
+                                </span>
+                                <a 
+                                  href={getAttachmentUrl(url)} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-primary-400 hover:text-white p-1 shrink-0"
+                                  title="Ko'rish"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Report Form */}
                     {!task.isCompleted ? (

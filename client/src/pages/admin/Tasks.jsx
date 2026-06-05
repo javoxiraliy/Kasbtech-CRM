@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, CheckCircle, XCircle, Users, Clock, Send, Eye, BookOpen, AlertCircle, X, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Users, Clock, Send, Eye, BookOpen, AlertCircle, X, ChevronDown, ChevronUp, Smartphone, Paperclip, Image, File, ExternalLink, Loader2, FileText, FileSpreadsheet } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -21,6 +21,65 @@ export default function Tasks() {
   });
 
   const { addNotification } = useNotification();
+
+  // Attachment states
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const getAttachmentUrl = (path) => {
+    if (!path) return '';
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+    return `${base}${path}`;
+  };
+
+  const getFileName = (url) => {
+    return url.split('/').pop().substring(14); // Remove unique prefix timestamp
+  };
+
+  const getFileIcon = (url) => {
+    const ext = url.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+      return <Image className="w-4 h-4 text-pink-400 shrink-0" />;
+    }
+    if (ext === 'pdf') {
+      return <File className="w-4 h-4 text-red-400 shrink-0" />;
+    }
+    if (['doc', 'docx'].includes(ext)) {
+      return <FileText className="w-4 h-4 text-blue-400 shrink-0" />;
+    }
+    if (['xls', 'xlsx'].includes(ext)) {
+      return <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />;
+    }
+    return <File className="w-4 h-4 text-dark-300 shrink-0" />;
+  };
+
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await api.post('/reports/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        setAttachments(prev => [...prev, { url: res.data.url, name: res.data.name }]);
+        addNotification('success', `"${file.name}" muvaffaqiyatli yuklandi`);
+      } catch (error) {
+        addNotification('error', `"${file.name}" yuklashda xatolik: ` + (error.response?.data?.error || error.message));
+      }
+    }
+    setUploading(false);
+    e.target.value = ''; // clear input
+  };
+
+  const handleRemoveAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     fetchTasksAndOperators();
@@ -84,7 +143,8 @@ export default function Tasks() {
         title: formData.title,
         description: formData.description,
         dueDate: formData.dueDate || null,
-        operatorIds: formData.sendToAll ? 'all' : formData.selectedOperatorIds
+        operatorIds: formData.sendToAll ? 'all' : formData.selectedOperatorIds,
+        attachmentUrls: attachments.map(a => a.url)
       });
 
       addNotification('success', "Yozma vazifa muvaffaqiyatli yuborildi");
@@ -96,6 +156,7 @@ export default function Tasks() {
         sendToAll: true,
         selectedOperatorIds: []
       });
+      setAttachments([]);
       fetchTasksAndOperators();
     } catch (error) {
       addNotification('error', error.response?.data?.error || "Xatolik yuz berdi");
@@ -198,7 +259,36 @@ export default function Tasks() {
 
                 {/* Expanded operators detail list */}
                 {isExpanded && (
-                  <div className="border-t border-dark-800 bg-dark-900/30 p-5 space-y-3">
+                  <div className="border-t border-dark-800 bg-dark-900/30 p-5 space-y-4">
+                    {/* Render attachments for this task */}
+                    {task.attachmentUrls && task.attachmentUrls.length > 0 && (
+                      <div className="space-y-1.5 shrink-0 border-b border-dark-800 pb-3">
+                        <p className="text-[10px] text-dark-400 uppercase font-bold tracking-wider mb-1">Biriktirilgan topshiriq fayllari:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {task.attachmentUrls.map((url, uidx) => {
+                            const fileName = getFileName(url);
+                            return (
+                              <div key={uidx} className="flex items-center justify-between gap-3 p-1.5 bg-dark-900/35 rounded-xl border border-dark-800 text-[11px] min-w-[150px] max-w-[240px]">
+                                <span className="text-dark-200 truncate flex items-center gap-1.5" title={fileName}>
+                                  {getFileIcon(url)}
+                                  {fileName || `Fayl_${uidx + 1}`}
+                                </span>
+                                <a 
+                                  href={getAttachmentUrl(url)} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-primary-400 hover:text-white p-1 shrink-0"
+                                  title="Ko'rish"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     <h5 className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">Xodimlar qamrovi va hisobotlari</h5>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {task.operators.map((op, opIdx) => (
@@ -377,6 +467,58 @@ export default function Tasks() {
                   </div>
                 </div>
               )}
+
+              {/* File upload area */}
+              <div className="space-y-3">
+                <label className="label mb-0">Fayl biriktirish (Rasm, PDF, Word, Excel)</label>
+                <div className="flex items-center gap-3">
+                  <label 
+                    htmlFor="task-files-upload"
+                    className="flex items-center gap-2 cursor-pointer bg-dark-850 border border-dark-800 hover:border-dark-700 hover:bg-dark-800 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-all select-none"
+                  >
+                    <Paperclip className="w-4 h-4 text-primary-400" />
+                    Hujjat yuklash
+                  </label>
+                  <input 
+                    type="file" 
+                    id="task-files-upload" 
+                    multiple 
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.doc,.docx,.xls,.xlsx" 
+                    className="hidden" 
+                    onChange={handleFileChange}
+                    disabled={uploading}
+                  />
+                  {uploading && (
+                    <span className="text-xs text-dark-400 flex items-center gap-1.5">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary-500" />
+                      Fayl yuklanmoqda...
+                    </span>
+                  )}
+                </div>
+
+                {/* Uploaded files preview list */}
+                {attachments.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    {attachments.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-3 p-2 bg-dark-850 border border-dark-800 rounded-lg text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getFileIcon(file.url)}
+                          <span className="text-white truncate" title={file.name}>
+                            {file.name}
+                          </span>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => handleRemoveAttachment(idx)}
+                          className="text-dark-400 hover:text-red-400 p-1 rounded transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Action buttons */}
               <div className="pt-4 flex gap-3">

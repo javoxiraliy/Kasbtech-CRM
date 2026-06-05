@@ -31,6 +31,7 @@ router.get('/admin', authenticate, requireAdmin, async (req, res) => {
           description: t.description,
           createdAt: t.createdAt,
           dueDate: t.dueDate,
+          attachmentUrls: t.attachmentUrls || [],
           total: 0,
           completed: 0,
           read: 0,
@@ -59,10 +60,10 @@ router.get('/admin', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// POST /api/tasks/admin - Send task to all or specific users (operators and teachers)
+// POST /api/tasks/admin - Send task to all or specific users (operators, teachers, SMM)
 router.post('/admin', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { title, description, operatorIds, dueDate } = req.body;
+    const { title, description, operatorIds, dueDate, attachmentUrls } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ error: 'Sarlavha va batafsil ma\'lumot kiritilishi shart' });
@@ -72,7 +73,7 @@ router.post('/admin', authenticate, requireAdmin, async (req, res) => {
     if (operatorIds === 'all' || !operatorIds || (Array.isArray(operatorIds) && operatorIds.length === 0)) {
       const users = await prisma.user.findMany({
         where: { 
-          role: { in: ['OPERATOR', 'TEACHER'] }, 
+          role: { in: ['OPERATOR', 'TEACHER', 'SMM'] }, 
           isActive: true 
         },
         select: { id: true }
@@ -93,7 +94,8 @@ router.post('/admin', authenticate, requireAdmin, async (req, res) => {
             title,
             description,
             assignedToId: opId,
-            dueDate: dueDate ? new Date(dueDate) : null
+            dueDate: dueDate ? new Date(dueDate) : null,
+            attachmentUrls: attachmentUrls || []
           }
         });
       })

@@ -122,13 +122,14 @@ model Setting {
 }
 
 model Task {
-  id           String    @id @default(cuid())
-  title        String
-  description  String
-  isCompleted  Boolean   @default(false)
-  isRead       Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  dueDate      DateTime?
+  id             String    @id @default(cuid())
+  title          String
+  description    String
+  isCompleted    Boolean   @default(false)
+  isRead         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  dueDate        DateTime?
+  attachmentUrls String[]  @default([])
   
   assignedToId String
   assignedTo   User      @relation("OperatorTasks", fields: [assignedToId], references: [id], onDelete: Cascade)
@@ -141,10 +142,11 @@ model Task {
 }
 
 model Report {
-  id        String   @id @default(cuid())
-  type      String   // "DAILY" or "WEEKLY"
-  content   String
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  type           String   // "DAILY" or "WEEKLY"
+  content        String
+  createdAt      DateTime @default(now())
+  attachmentUrls String[] @default([])
   
   authorId  String
   author    User     @relation("UserReports", fields: [authorId], references: [id], onDelete: Cascade)
