@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, CheckCircle, XCircle, Users, Clock, Send, Eye, BookOpen, AlertCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Users, Clock, Send, Eye, BookOpen, AlertCircle, X, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -34,8 +34,8 @@ export default function Tasks() {
         api.get('/admin/users')
       ]);
       setTasks(tasksRes.data.tasks);
-      // Filter out admins, we only want operators and teachers
-      const ops = usersRes.data.users.filter(u => ['OPERATOR', 'TEACHER'].includes(u.role) && u.isActive);
+      // Filter out admins, we only want operators, teachers and SMM
+      const ops = usersRes.data.users.filter(u => ['OPERATOR', 'TEACHER', 'SMM'].includes(u.role) && u.isActive);
       setOperators(ops);
     } catch (error) {
       addNotification('error', "Ma'lumotlarni yuklashda xatolik yuz berdi");
@@ -208,9 +208,11 @@ export default function Tasks() {
                               <p className="text-white text-sm font-medium truncate">{op.name}</p>
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className={`text-[9px] font-bold px-1 rounded border ${
-                                  op.role === 'TEACHER' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                                  op.role === 'TEACHER' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 
+                                  op.role === 'SMM' ? 'bg-pink-500/10 border-pink-500/20 text-pink-400' :
+                                  'bg-blue-500/10 border-blue-500/20 text-blue-400'
                                 }`}>
-                                  {op.role === 'TEACHER' ? "O'qituvchi" : 'Operator'}
+                                  {op.role === 'TEACHER' ? "O'qituvchi" : op.role === 'SMM' ? 'SMM' : 'Operator'}
                                 </span>
                                 <p className="text-dark-500 text-[10px] truncate">{op.email}</p>
                               </div>
@@ -367,7 +369,7 @@ export default function Tasks() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold truncate leading-tight">{op.name}</p>
-                            <span className="text-[9px] text-dark-500 block uppercase tracking-wider">{op.role === 'TEACHER' ? "O'qituvchi" : 'Operator'}</span>
+                            <span className="text-[9px] text-dark-500 block uppercase tracking-wider">{op.role === 'TEACHER' ? "O'qituvchi" : op.role === 'SMM' ? 'SMM' : 'Operator'}</span>
                           </div>
                         </div>
                       );

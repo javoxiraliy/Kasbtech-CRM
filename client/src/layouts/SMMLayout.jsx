@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, LogOut, CalendarDays, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle, FileText } from 'lucide-react';
+import { ClipboardList, LogOut, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle, Smartphone, FileText } from 'lucide-react';
 import api from '../lib/api';
 
-export default function OperatorLayout() {
+export default function SMMLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -35,7 +35,6 @@ export default function OperatorLayout() {
     // Background polling every 10 seconds for real-time notifications
     const pollInterval = setInterval(fetchUnreadTasks, 10000);
 
-    // Event listener for manual updates from the Calendar page
     const handleTasksUpdate = () => {
       fetchUnreadTasks();
     };
@@ -62,11 +61,11 @@ export default function OperatorLayout() {
       fetchUnreadTasks();
       setIsBellOpen(false);
       
-      // Dispatch event to refresh calendar tasks list immediately if the page is open
+      // Dispatch event to refresh tasks list immediately if the page is open
       window.dispatchEvent(new Event('tasks_updated'));
       
-      // Redirect to Calendar page
-      navigate('/operator/calendar');
+      // Redirect to tasks page
+      navigate('/smm');
     } catch (error) {
       console.error('Read task layout error:', error);
     }
@@ -79,8 +78,6 @@ export default function OperatorLayout() {
         unreadTasks.map(t => api.patch(`/tasks/operator/${t.id}/read`))
       );
       fetchUnreadTasks();
-      
-      // Dispatch event to refresh calendar tasks list immediately
       window.dispatchEvent(new Event('tasks_updated'));
     } catch (error) {
       console.error('Mark all read error:', error);
@@ -88,9 +85,8 @@ export default function OperatorLayout() {
   };
 
   const navItems = [
-    { to: '/operator', icon: LayoutDashboard, label: 'Ish stoli', end: true },
-    { to: '/operator/calendar', icon: CalendarDays, label: 'Taqvim' },
-    { to: '/operator/reports', icon: FileText, label: 'Hisobotlar' },
+    { to: '/smm', icon: ClipboardList, label: 'Topshiriqlar Markazi', end: true },
+    { to: '/smm/reports', icon: FileText, label: 'Hisobotlar', end: false },
   ];
 
   return (
@@ -109,7 +105,7 @@ export default function OperatorLayout() {
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="h-16 flex items-center px-6 border-b border-dark-800 justify-between">
-          <span className="font-bold text-white">CRM Operator</span>
+          <span className="font-bold text-white">CRM SMM</span>
           <button onClick={() => setIsMobileMenuOpen(false)}>
             <X className="w-6 h-6 text-dark-400" />
           </button>
@@ -146,10 +142,10 @@ export default function OperatorLayout() {
             <button className="md:hidden p-2 text-dark-400 mr-1" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu className="w-6 h-6" />
             </button>
-            <div className="w-8 h-8 rounded-lg bg-primary-600/20 text-primary-500 flex items-center justify-center font-bold">
-              C
+            <div className="w-8 h-8 rounded-lg bg-pink-600/20 text-pink-500 flex items-center justify-center font-bold">
+              K
             </div>
-            <span className="font-bold text-white hidden sm:block">CRM Operator</span>
+            <span className="font-bold text-white hidden sm:block">Kasbtech CRM</span>
           </div>
 
           <nav className="flex-1 px-8 hidden md:flex items-center gap-1">
@@ -218,7 +214,7 @@ export default function OperatorLayout() {
                           className="p-3 hover:bg-dark-850 cursor-pointer transition-colors block text-left group"
                         >
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-primary-400 group-hover:text-primary-300 truncate max-w-[170px]">
+                            <span className="text-xs font-semibold text-pink-400 group-hover:text-pink-300 truncate max-w-[170px]">
                               {task.title}
                             </span>
                             <span className="text-[9px] text-dark-500 shrink-0">
@@ -241,10 +237,10 @@ export default function OperatorLayout() {
             <div className="flex items-center gap-3">
               <div className="hidden lg:block text-right">
                 <p className="text-sm font-medium text-white">{user?.name}</p>
-                <p className="text-xs text-dark-400">Operator</p>
+                <p className="text-xs text-pink-400">SMM / Media</p>
               </div>
               <div className="w-9 h-9 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300">
-                <UserIcon className="w-5 h-5" />
+                <Smartphone className="w-5 h-5 text-pink-400" />
               </div>
               <button
                 onClick={handleLogout}

@@ -6,6 +6,10 @@ import Login from './pages/Login';
 import OperatorLayout from './layouts/OperatorLayout';
 import AdminLayout from './layouts/AdminLayout';
 import TeacherLayout from './layouts/TeacherLayout';
+import SMMLayout from './layouts/SMMLayout';
+
+import Reports from './pages/shared/Reports';
+import AdminReports from './pages/admin/AllReports';
 
 import OperatorKanban from './pages/operator/Kanban';
 import OperatorCalendar from './pages/operator/Calendar';
@@ -53,6 +57,10 @@ function RoleBasedRedirect() {
   if (user.role === 'TEACHER') {
     return <Navigate to="/teacher" replace />;
   }
+  
+  if (user.role === 'SMM') {
+    return <Navigate to="/smm" replace />;
+  }
 
   return <Navigate to="/operator" replace />;
 }
@@ -74,6 +82,7 @@ function App() {
             }>
               <Route index element={<OperatorKanban />} />
               <Route path="calendar" element={<OperatorCalendar />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
 
             <Route path="/teacher" element={
@@ -82,6 +91,16 @@ function App() {
               </ProtectedRoute>
             }>
               <Route index element={<TeacherTasks />} />
+              <Route path="reports" element={<Reports />} />
+            </Route>
+            
+            <Route path="/smm" element={
+              <ProtectedRoute allowedRoles={['SMM']}>
+                <SMMLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<TeacherTasks />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
 
             <Route path="/admin" element={
@@ -95,6 +114,8 @@ function App() {
               <Route path="settings" element={<AdminSettings />} />
               <Route path="kpi" element={<AdminKPI />} />
               <Route path="tasks" element={<AdminTasks />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="all-reports" element={<AdminReports />} />
             </Route>
 
           </Routes>

@@ -27,6 +27,8 @@ export default function Login() {
         navigate('/admin');
       } else if (user.role === 'TEACHER') {
         navigate('/teacher');
+      } else if (user.role === 'SMM') {
+        navigate('/smm');
       } else {
         navigate('/operator');
       }

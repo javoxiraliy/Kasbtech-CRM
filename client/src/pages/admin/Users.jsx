@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Shield, User, CheckCircle, XCircle, BookOpen } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, User, CheckCircle, XCircle, BookOpen, Smartphone } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -174,6 +174,8 @@ export default function Users() {
                           <Shield className="w-5 h-5 text-purple-400" />
                         ) : u.role === 'TEACHER' ? (
                           <BookOpen className="w-5 h-5 text-emerald-400" />
+                        ) : u.role === 'SMM' ? (
+                          <Smartphone className="w-5 h-5 text-pink-400" />
                         ) : (
                           <User className="w-5 h-5 text-blue-400" />
                         )}
@@ -188,9 +190,10 @@ export default function Users() {
                     <span className={`badge ${
                       u.role === 'ADMIN' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 
                       u.role === 'TEACHER' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                      u.role === 'SMM' ? 'bg-pink-500/20 text-pink-400 border-pink-500/30' :
                       'bg-blue-500/20 text-blue-400 border-blue-500/30'
                     }`}>
-                      {u.role === 'ADMIN' ? 'Admin' : u.role === 'TEACHER' ? "O'qituvchi" : 'Operator'}
+                      {u.role === 'ADMIN' ? 'Admin' : u.role === 'TEACHER' ? "O'qituvchi" : u.role === 'SMM' ? 'SMM / Media' : 'Operator'}
                     </span>
                   </td>
                   <td className="p-4 text-dark-300">
@@ -301,6 +304,7 @@ export default function Users() {
                   >
                     <option value="OPERATOR">Operator</option>
                     <option value="TEACHER">O'qituvchi</option>
+                    <option value="SMM">SMM / Mobilograf</option>
                     <option value="ADMIN">Admin</option>
                   </select>
                 </div>
