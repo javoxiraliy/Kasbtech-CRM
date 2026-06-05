@@ -16,11 +16,12 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, Phone, User, Calendar, MessageSquare, Search, Download, Loader2 } from 'lucide-react';
+import { Clock, Phone, User, Calendar, MessageSquare, Search, Download, Loader2, Plus, X } from 'lucide-react';
 import { formatDistanceToNow, isPast } from 'date-fns';
 import { uz } from 'date-fns/locale';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import LeadModal from '../../components/LeadModal';
 
 const COURSE_LABELS = {
@@ -165,12 +166,43 @@ function SortableLeadCard({ lead, onClick }) {
 }
 
 export default function Kanban() {
+  const { user } = useAuth();
   const [leads, setLeads] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [selectedLeadId, setSelectedLeadId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [exporting, setExporting] = useState(false);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newLead, setNewLead] = useState({
+    name: '', phone: '', phone2: '',
+    courseInterest: 'KOMPYUTER_SAVODXONLIGI', employmentStatus: 'Ishsiz',
+    status: 'NEW', isGrantEligible: false, source: 'Operator (Manual)'
+  });
+
   const { addNotification } = useNotification();
+
+  const handleCreateLead = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      const leadData = { ...newLead, assignedToId: user.id };
+      await api.post('/leads', leadData);
+      addNotification('success', "Lid muvaffaqiyatli qo'shildi");
+      setIsAddModalOpen(false);
+      setNewLead({
+        name: '', phone: '', phone2: '',
+        courseInterest: 'KOMPYUTER_SAVODXONLIGI', employmentStatus: 'Ishsiz',
+        status: 'NEW', isGrantEligible: false, source: 'Operator (Manual)'
+      });
+      fetchLeads();
+    } catch (error) {
+      addNotification('error', error.response?.data?.error || "Xatolik yuz berdi");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -291,6 +323,13 @@ export default function Kanban() {
             />
           </form>
           <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="btn-primary h-10 px-4 text-sm font-semibold justify-center shadow-lg shadow-primary-500/10 border-none shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Yangi lid
+          </button>
+          <button 
             onClick={handleExport}
             disabled={exporting}
             className="btn-primary h-10 px-4 text-sm font-semibold justify-center bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 shrink-0 shadow-lg shadow-green-500/10 border-none"
@@ -353,6 +392,105 @@ export default function Kanban() {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Add Lead Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop animate-fade-in">
+          <div className="card glass w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center mb-6 border-b border-dark-800 pb-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Plus className="w-5 h-5 text-primary-400" />
+                Yangi Lid Qo'shish
+              </h2>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-dark-400 hover:text-white transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateLead} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="label">Ism</label>
+                  <input
+                    type="text" required className="input bg-dark-800"
+                    value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})}
+                    placeholder="Masalan: Sardor"
+                  />
+                </div>
+                <div>
+                  <label className="label">Telefon</label>
+                  <input
+                    type="text" required className="input bg-dark-800"
+                    value={newLead.phone} onChange={e => setNewLead({...newLead, phone: e.target.value})}
+                    placeholder="+998901234567"
+                  />
+                </div>
+                <div>
+                  <label className="label">Qo'shimcha telefon</label>
+                  <input
+                    type="text" className="input bg-dark-800"
+                    value={newLead.phone2} onChange={e => setNewLead({...newLead, phone2: e.target.value})}
+                    placeholder="Ixtiyoriy"
+                  />
+                </div>
+                <div>
+                  <label className="label">Kurs</label>
+                  <select
+                    className="input bg-dark-800" value={newLead.courseInterest}
+                    onChange={e => setNewLead({...newLead, courseInterest: e.target.value})}
+                  >
+                    {Object.entries(COURSE_LABELS).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Bandlik</label>
+                  <select
+                    className="input bg-dark-800" value={newLead.employmentStatus}
+                    onChange={e => setNewLead({...newLead, employmentStatus: e.target.value})}
+                  >
+                    <option value="Ishsiz">Ishsiz</option>
+                    <option value="Talaba">Talaba</option>
+                    <option value="Maktab o'quvchisi">Maktab o'quvchisi</option>
+                    <option value="Rasmiy band">Rasmiy band</option>
+                    <option value="Uy bekasi">Uy bekasi</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Holat</label>
+                  <select
+                    className="input bg-dark-800" value={newLead.status}
+                    onChange={e => setNewLead({...newLead, status: e.target.value})}
+                  >
+                    <option value="NEW">Yangi</option>
+                    <option value="IN_PROGRESS">Jarayonda</option>
+                    <option value="SUCCESS">Muvaffaqiyatli</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 pt-8 md:col-span-2">
+                  <input
+                    type="checkbox" id="grant-eligible-op"
+                    className="w-5 h-5 rounded border-dark-700 bg-dark-800 text-primary-500"
+                    checked={newLead.isGrantEligible}
+                    onChange={e => setNewLead({...newLead, isGrantEligible: e.target.checked})}
+                  />
+                  <label htmlFor="grant-eligible-op" className="text-sm font-medium text-dark-200 cursor-pointer">
+                    Ushbu mijoz ta'lim granti uchun da'vogar
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-6 flex gap-3 border-t border-dark-800">
+                <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn-secondary flex-1 py-3">Bekor qilish</button>
+                <button type="submit" disabled={creating} className="btn-primary flex-1 py-3 shadow-[0_0_20px_-5px_rgba(59,130,246,0.4)]">
+                  {creating ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Lidni Saqlash"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {selectedLeadId && (
         <LeadModal 
