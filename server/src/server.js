@@ -27,6 +27,7 @@ const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
 const taskRoutes = require('./routes/tasks');
 const reportsRoutes = require('./routes/reports');
+const webhookRoutes = require('./routes/webhooks');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadRoutes);
@@ -35,6 +36,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 
 // Health check
