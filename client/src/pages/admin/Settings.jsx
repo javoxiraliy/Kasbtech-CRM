@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Clock, ShieldCheck, Loader2 } from 'lucide-react';
+import { Save, Clock, ShieldCheck, Loader2, Facebook } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -27,6 +27,24 @@ export default function Settings() {
       setLoading(false);
     }
   };
+
+  const handleFacebookConnect = async () => {
+    try {
+      const res = await api.get('/facebook/auth');
+      const width = 600;
+      const height = 700;
+      const left = window.innerWidth / 2 - width / 2;
+      const top = window.innerHeight / 2 - height / 2;
+      window.open(
+        res.data.url, 
+        'FacebookAuth', 
+        `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${width}, height=${height}, top=${top}, left=${left}`
+      );
+    } catch (error) {
+      addNotification('error', "Facebook tizimiga ulanib bo'lmadi");
+    }
+  };
+
 
   const handleSave = async (key) => {
     setSaving(key);
@@ -137,6 +155,35 @@ export default function Settings() {
                     Saqlash
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Facebook Integration */}
+        <div className="card glass relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+            <Facebook className="w-32 h-32 text-blue-500" />
+          </div>
+          
+          <div className="relative z-10 flex flex-col sm:flex-row gap-6">
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center gap-2 text-blue-400 mb-2">
+                <Facebook className="w-5 h-5" />
+                <h3 className="text-lg font-semibold text-white">Facebook Integratsiyasi (Lead Ads)</h3>
+              </div>
+              <p className="text-sm text-dark-400">
+                Ushbu bo'lim orqali Facebook reklamalaridan tushadigan lidlarni avtomatik tarzda CRM tizimiga ulashingiz mumkin. Tugmani bosing va 100k.uz kabi Facebook orqali ruxsatlarni tasdiqlang.
+              </p>
+              
+              <div className="pt-2">
+                <button 
+                  onClick={handleFacebookConnect}
+                  className="btn-primary bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                >
+                  <Facebook className="w-4 h-4 mr-2" />
+                  Facebookga bog'lash
+                </button>
               </div>
             </div>
           </div>

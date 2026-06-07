@@ -28,6 +28,7 @@ const settingsRoutes = require('./routes/settings');
 const taskRoutes = require('./routes/tasks');
 const reportsRoutes = require('./routes/reports');
 const webhookRoutes = require('./routes/webhooks');
+const facebookRoutes = require('./routes/facebook');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadRoutes);
@@ -37,6 +38,8 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/facebook', facebookRoutes);
+
 
 
 // Health check
