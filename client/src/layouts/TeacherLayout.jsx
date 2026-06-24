@@ -94,7 +94,7 @@ export default function TeacherLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-dark-950">
+    <div className="min-h-screen flex bg-dark-950">
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -103,27 +103,35 @@ export default function TeacherLayout() {
         />
       )}
 
-      {/* Mobile Sidebar */}
+      {/* Sidebar (Desktop & Mobile) */}
       <aside className={`
-        fixed top-0 left-0 z-50 h-screen w-64 border-r border-dark-800 bg-dark-900 glass flex flex-col transition-transform duration-300 md:hidden
+        fixed md:sticky top-0 left-0 z-50 h-screen w-64 border-r border-dark-800 bg-dark-900 glass flex flex-col transition-transform duration-300 md:translate-x-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="h-16 flex items-center px-6 border-b border-dark-800 justify-between">
-          <span className="font-bold text-white">CRM O'qituvchi</span>
-          <button onClick={() => setIsMobileMenuOpen(false)}>
-            <X className="w-6 h-6 text-dark-400" />
+          <div className="flex items-center gap-2.5 text-emerald-400">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-500 flex items-center justify-center font-bold">
+              K
+            </div>
+            <span className="font-bold text-white tracking-tight">CRM O'qituvchi</span>
+          </div>
+          <button className="md:hidden p-2 text-dark-400" onClick={() => setIsMobileMenuOpen(false)}>
+            <X className="w-6 h-6" />
           </button>
         </div>
-        <div className="flex-1 p-4 space-y-2">
-          {navItems.map(item => (
+
+        <div className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1">
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive ? 'bg-primary-600/10 text-primary-400' : 'text-dark-400 hover:text-white hover:bg-dark-800/50'
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-primary-600/10 text-primary-400 font-medium' 
+                    : 'text-dark-400 hover:text-white hover:bg-dark-800/50'
                 }`
               }
             >
@@ -132,43 +140,39 @@ export default function TeacherLayout() {
             </NavLink>
           ))}
         </div>
+
         <div className="p-4 border-t border-dark-800">
-           <button onClick={handleLogout} className="w-full flex items-center gap-2 text-red-400 p-2">
-             <LogOut className="w-5 h-5" /> Chiqish
-           </button>
+          <div className="flex items-center gap-3 mb-4 px-2">
+            <div className="w-10 h-10 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold">
+              {user?.name?.charAt(0) || 'O\''}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-dark-400 truncate">{user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Tizimdan chiqish</span>
+          </button>
         </div>
       </aside>
 
-      {/* Header */}
-      <header className="h-16 border-b border-dark-800 bg-dark-900/50 glass sticky top-0 z-40">
-        <div className="h-full px-4 flex items-center justify-between">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Header containing Notification Bell */}
+        <header className="h-16 border-b border-dark-800 bg-dark-900/50 glass flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <button className="md:hidden p-2 text-dark-400 mr-1" onClick={() => setIsMobileMenuOpen(true)}>
+            <button className="md:hidden p-2 text-dark-400 -ml-2" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu className="w-6 h-6" />
             </button>
-            <div className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-500 flex items-center justify-center font-bold">
-              K
-            </div>
-            <span className="font-bold text-white hidden sm:block">Kasbtech CRM</span>
+            <h2 className="text-sm font-semibold text-white tracking-wider uppercase hidden md:block">
+              O'qituvchi Kabineti
+            </h2>
           </div>
-
-          <nav className="flex-1 px-8 hidden md:flex items-center gap-1">
-            {navItems.map(item => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                    isActive ? 'bg-dark-800 text-white' : 'text-dark-400 hover:text-white hover:bg-dark-800/50'
-                  }`
-                }
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
 
           <div className="flex items-center gap-4">
             {/* Dynamic Notification Bell Container */}
@@ -237,7 +241,7 @@ export default function TeacherLayout() {
             </div>
             
             <div className="h-8 w-px bg-dark-800 mx-2 hidden sm:block" />
-            
+
             <div className="flex items-center gap-3">
               <div className="hidden lg:block text-right">
                 <p className="text-sm font-medium text-white">{user?.name}</p>
@@ -246,23 +250,16 @@ export default function TeacherLayout() {
               <div className="w-9 h-9 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300">
                 <UserIcon className="w-5 h-5 text-emerald-400" />
               </div>
-              <button
-                onClick={handleLogout}
-                className="hidden sm:flex p-2 text-dark-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10 ml-2"
-                title="Tizimdan chiqish"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto bg-dark-950 p-4">
-        <ReportWarningBanner />
-        <Outlet />
-      </main>
+        {/* Main Content */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-dark-950 p-4 md:p-6 lg:p-8">
+          <ReportWarningBanner />
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
