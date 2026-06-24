@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Shield, User, CheckCircle, XCircle, BookOpen, Smartphone } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -7,6 +8,15 @@ import ConfirmModal from '../../components/ConfirmModal';
 export default function Users() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.openAdd) {
+      openAddModal();
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
   
   // Confirm Modal state
   const [confirmModal, setConfirmModal] = useState({
@@ -136,15 +146,21 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-dark-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Xodimlar Boshqaruvi</h1>
           <p className="text-dark-400 text-sm">Tizim foydalanuvchilari va operatorlarni boshqarish</p>
         </div>
-        <button className="btn-primary" onClick={openAddModal}>
-          <Plus className="w-5 h-5" />
-          Yangi Xodim
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button className="btn-primary" onClick={openAddModal}>
+            <Plus className="w-5 h-5" />
+            Yangi Xodim qo'shish
+          </button>
+          <button className="btn-secondary border-dark-700 text-dark-300 hover:text-white" onClick={() => navigate('/admin/students', { state: { openRegister: true } })}>
+            <Plus className="w-5 h-5 text-emerald-400" />
+            Yangi Talaba qo'shish
+          </button>
+        </div>
       </div>
 
       <div className="card glass p-0 overflow-hidden">

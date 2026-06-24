@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, User, CheckCircle, XCircle, BookOpen, Key, Mail, Lock, Unlock } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -8,6 +9,15 @@ export default function StudentManager() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.openRegister) {
+      setIsRegModalOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
   
   // Register Modal state
   const [isRegModalOpen, setIsRegModalOpen] = useState(false);
@@ -106,15 +116,21 @@ export default function StudentManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-dark-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Talabalar Boshqaruvi</h1>
           <p className="text-dark-400 text-sm">O'quvchilarga ruxsat berish, profil va login parollarini sozlash</p>
         </div>
-        <button className="btn-primary" onClick={() => setIsRegModalOpen(true)}>
-          <Plus className="w-5 h-5" />
-          Yangi Talaba (Login-Parol)
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button className="btn-primary" onClick={() => setIsRegModalOpen(true)}>
+            <Plus className="w-5 h-5" />
+            Yangi Talaba qo'shish
+          </button>
+          <button className="btn-secondary border-dark-700 text-dark-300 hover:text-white" onClick={() => navigate('/admin/users', { state: { openAdd: true } })}>
+            <Plus className="w-5 h-5 text-blue-400" />
+            Yangi Xodim qo'shish
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
