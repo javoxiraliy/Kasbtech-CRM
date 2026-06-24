@@ -15,6 +15,8 @@ enum Role {
   OPERATOR
   TEACHER
   SMM
+  STUDENT
+  MENTOR
 }
 
 enum LeadStatus {
@@ -69,6 +71,13 @@ model User {
   comments Comment[]
   tasks    Task[]    @relation("OperatorTasks")
   reports  Report[]  @relation("UserReports")
+
+  // LMS new relations
+  enrollments       Enrollment[]
+  homeworks         Homework[]        @relation("StudentHomeworks")
+  reviewedHomeworks Homework[]        @relation("MentorReviews")
+  sessions          DeviceSession[]
+  coins             CoinTransaction[]
 
   @@map("users")
 }
@@ -153,4 +162,159 @@ model Report {
 
   @@map("reports")
 }
+
+// ==========================================
+// KASBTECH AKADEMIYASI LMS MODELLARI
+// ==========================================
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum HomeworkStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  thumbnail   String?
+  price       Decimal  @db.Decimal(10, 2)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     Module[]
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  title     String
+  order     Int      // Modul tartib raqami
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  videoUrl    String     // Bunny.net Stream Video ID
+  duration    Int        // Sekundlarda
+  order       Int        // Dars tartib raqami
+  dripDays    Int        @default(0) // Ro'yxatdan o'tgandan keyin necha kundan so'ng dars ochilishi
+  moduleId    String
+  module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  homeworks   Homework[]
+  quizzes     Quiz[]
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  Int      @default(0) // O'zlashtirish foizi (0-100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, courseId])
+  @@map("enrollments")
+}
+
+model Homework {
+  id             String         @id @default(cuid())
+  lessonId       String
+  lesson         Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        User           @relation("StudentHomeworks", fields: [studentId], references: [id], onDelete: Cascade)
+  fileUrl        String?        // Yuklangan fayl linki (ZIP yoki PDF)
+  textResponse   String?        // Talabaning matnli javobi
+  status         HomeworkStatus @default(PENDING)
+  grade          Int?           // Baholash balli (0-100)
+  feedback       String?        // Mentor fikr-mulohazasi
+  reviewerId     String?        // Tekshirgan mentor
+  reviewer       User?          @relation("MentorReviews", fields: [reviewerId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("homeworks")
+}
+
+model Quiz {
+  id        String   @id @default(cuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions Json     // Savollar ro'yxati (JSON formatida)
+  passScore Int      @default(70) // O'tish foizi
+
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId String
+  score     Int      // To'plangan foiz
+  passed    Boolean
+  createdAt DateTime @default(now())
+
+  @@map("quiz_attempts")
+}
+
+model DeviceSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  deviceInfo   String?  // Brauzer va operatsion tizim ma'lumotlari
+  ipAddress    String?
+  lastActiveAt DateTime @default(now())
+
+  @@map("device_sessions")
+}
+
+model Transaction {
+  id            String        @id @default(cuid())
+  userId        String
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentSystem String        // "PAYME", "CLICK", "UZUM"
+  status        PaymentStatus @default(PENDING)
+  systemTxId    String?       @unique // To'lov tizimidan kelgan tranzaksiya ID
+  createdAt     DateTime      @default(now())
+
+  @@map("transactions")
+}
+
+model CoinTransaction {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount      Int      // Musbat (koin qo'shilishi) yoki manfiy (koin sarflanishi)
+  type        String   // "HW_SUBMISSION", "QUIZ_PASS", "STORE_PURCHASE"
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@map("coin_transactions")
+}
+
 

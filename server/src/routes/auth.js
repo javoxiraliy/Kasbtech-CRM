@@ -33,6 +33,33 @@ router.post('/login', async (req, res) => {
       { expiresIn: '8h' }
     );
 
+    // Qurilmalar sonini cheklash (maksimum 2 ta faol sessiya)
+    const activeSessions = await prisma.deviceSession.findMany({
+      where: { userId: user.id },
+      orderBy: { lastActiveAt: 'asc' }
+    });
+
+    if (activeSessions.length >= 2) {
+      // Eng eski sessiyani o'chirish
+      const oldestSession = activeSessions[0];
+      await prisma.deviceSession.delete({
+        where: { id: oldestSession.id }
+      });
+    }
+
+    // Yangi sessiyani ro'yxatga olish
+    const deviceInfo = req.headers['user-agent'] || 'Nomaʼlum qurilma';
+    const ipAddress = req.ip || req.connection?.remoteAddress || '0.0.0.0';
+
+    await prisma.deviceSession.create({
+      data: {
+        userId: user.id,
+        token: token,
+        deviceInfo: deviceInfo,
+        ipAddress: ipAddress,
+      }
+    });
+
     res.json({
       token,
       user: {

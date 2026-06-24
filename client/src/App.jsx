@@ -7,9 +7,13 @@ import OperatorLayout from './layouts/OperatorLayout';
 import AdminLayout from './layouts/AdminLayout';
 import TeacherLayout from './layouts/TeacherLayout';
 import SMMLayout from './layouts/SMMLayout';
+import StudentLayout from './layouts/StudentLayout';
 
 import Reports from './pages/shared/Reports';
 import AdminReports from './pages/admin/AllReports';
+
+import StudentDashboard from './pages/student/Dashboard';
+import StudentStudy from './pages/student/Study';
 
 import OperatorKanban from './pages/operator/Kanban';
 import OperatorCalendar from './pages/operator/Calendar';
@@ -20,8 +24,10 @@ import AdminDatabase from './pages/admin/Database';
 import AdminSettings from './pages/admin/Settings';
 import AdminKPI from './pages/admin/KPI';
 import AdminTasks from './pages/admin/Tasks';
+import AdminCourses from './pages/admin/Courses';
 
 import TeacherTasks from './pages/teacher/Tasks';
+import TeacherHomeworkReview from './pages/teacher/HomeworkReview';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -52,6 +58,10 @@ function RoleBasedRedirect() {
 
   if (user.role === 'ADMIN') {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (user.role === 'STUDENT') {
+    return <Navigate to="/student" replace />;
   }
   
   if (user.role === 'TEACHER') {
@@ -91,6 +101,7 @@ function App() {
               </ProtectedRoute>
             }>
               <Route index element={<TeacherTasks />} />
+              <Route path="homeworks" element={<TeacherHomeworkReview />} />
               <Route path="reports" element={<Reports />} />
             </Route>
             
@@ -114,8 +125,18 @@ function App() {
               <Route path="settings" element={<AdminSettings />} />
               <Route path="kpi" element={<AdminKPI />} />
               <Route path="tasks" element={<AdminTasks />} />
+              <Route path="courses" element={<AdminCourses />} />
               <Route path="reports" element={<Reports />} />
               <Route path="all-reports" element={<AdminReports />} />
+            </Route>
+
+            <Route path="/student" element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <StudentLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<StudentDashboard />} />
+              <Route path="courses/:courseId" element={<StudentStudy />} />
             </Route>
 
           </Routes>

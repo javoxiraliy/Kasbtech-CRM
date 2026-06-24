@@ -87,6 +87,7 @@ export default function TeacherLayout() {
 
   const navItems = [
     { to: '/teacher', icon: ClipboardList, label: 'Topshiriqlar Markazi', end: true },
+    { to: '/teacher/homeworks', icon: CheckCheck, label: 'Vazifalarni Tekshirish', end: false },
     { to: '/teacher/reports', icon: FileText, label: 'Hisobotlar', end: false },
   ];
 
