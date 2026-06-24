@@ -22,6 +22,14 @@ export default function HomeworkReview() {
   const [reviewForm, setReviewForm] = useState({ status: 'APPROVED', grade: '', feedback: '' });
   const [submitting, setSubmitting] = useState(false);
 
+  const getFileUrl = (path) => {
+    if (!path) return '';
+    const base = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api', '') 
+      : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin);
+    return `${base}${path}`;
+  };
+
   useEffect(() => {
     fetchPendingHomeworks();
   }, []);
@@ -173,7 +181,7 @@ export default function HomeworkReview() {
                   {selectedHw.fileUrl && (
                     <div className="pt-2">
                       <a 
-                        href={`${import.meta.env.VITE_API_URL || ''}${selectedHw.fileUrl}`} 
+                        href={getFileUrl(selectedHw.fileUrl)} 
                         target="_blank" 
                         rel="noreferrer"
                         className="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5 bg-dark-800 hover:bg-dark-700 text-white"

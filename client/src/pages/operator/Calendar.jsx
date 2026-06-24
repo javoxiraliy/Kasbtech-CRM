@@ -17,7 +17,9 @@ export default function Calendar() {
 
   const getAttachmentUrl = (path) => {
     if (!path) return '';
-    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+    const base = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api', '') 
+      : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin);
     return `${base}${path}`;
   };
 
