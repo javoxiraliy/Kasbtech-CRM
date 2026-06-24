@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, CheckCircle, XCircle, Users, Clock, Send, Eye, BookOpen, AlertCircle, X, ChevronDown, ChevronUp, Smartphone, Paperclip, Image, File, ExternalLink, Loader2, FileText, FileSpreadsheet } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Users, Clock, Send, Eye, BookOpen, AlertCircle, X, ChevronDown, ChevronUp, Smartphone, Paperclip, Image, File, ExternalLink, Loader2, FileText, FileSpreadsheet, Search } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -10,6 +10,29 @@ export default function Tasks() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedTask, setExpandedTask] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const handleSelectAll = (role = 'ALL') => {
+    setFormData(prev => {
+      const filteredOps = operators.filter(op => {
+        if (role === 'ALL') return true;
+        return op.role === role;
+      });
+      const filteredIds = filteredOps.map(op => op.id);
+      return {
+        ...prev,
+        selectedOperatorIds: [...new Set([...prev.selectedOperatorIds, ...filteredIds])],
+        sendToAll: false
+      };
+    });
+  };
+
+  const handleClearSelection = () => {
+    setFormData(prev => ({
+      ...prev,
+      selectedOperatorIds: []
+    }));
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -169,19 +192,74 @@ export default function Tasks() {
     setExpandedTask(expandedTask === taskIndex ? null : taskIndex);
   };
 
+  const totalTasks = tasks.length;
+  const totalCompleted = tasks.filter(t => t.completed === t.total && t.total > 0).length;
+  const totalPending = totalTasks - totalCompleted;
+  const averageCompletionRate = totalTasks > 0 
+    ? Math.round((tasks.reduce((acc, t) => acc + (t.total > 0 ? (t.completed / t.total) : 0), 0) / totalTasks) * 100)
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* Title block */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Vazifalar Boshqaruvi</h1>
-          <p className="text-dark-400 text-sm">Operatorlarga yozma topshiriqlar yuborish va ularning bajarilishini kuzatish</p>
+          <p className="text-dark-400 text-sm">Xodimlar va mentorlarga yozma topshiriqlar yuborish va ularning bajarilishini kuzatish</p>
         </div>
-        <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+        <button className="btn-primary" onClick={() => {
+          setSearchTerm('');
+          setIsModalOpen(true);
+        }}>
           <Plus className="w-5 h-5" />
           Yangi vazifa
         </button>
       </div>
+
+      {/* Stats row */}
+      {!loading && tasks.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="card glass p-4 flex items-center gap-3">
+            <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
+              <Send className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-dark-400 text-xs font-medium uppercase tracking-wider">Jami Topshiriqlar</p>
+              <h4 className="text-xl font-bold text-white">{totalTasks} ta</h4>
+            </div>
+          </div>
+
+          <div className="card glass p-4 flex items-center gap-3">
+            <div className="p-3 bg-green-500/10 text-green-400 rounded-xl">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-dark-400 text-xs font-medium uppercase tracking-wider">To'liq bajarilgan</p>
+              <h4 className="text-xl font-bold text-white">{totalCompleted} ta</h4>
+            </div>
+          </div>
+
+          <div className="card glass p-4 flex items-center gap-3">
+            <div className="p-3 bg-yellow-500/10 text-yellow-400 rounded-xl">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-dark-400 text-xs font-medium uppercase tracking-wider">Jarayondagilar</p>
+              <h4 className="text-xl font-bold text-white">{totalPending} ta</h4>
+            </div>
+          </div>
+
+          <div className="card glass p-4 flex items-center gap-3">
+            <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-dark-400 text-xs font-medium uppercase tracking-wider">O'rtacha bajarilish</p>
+              <h4 className="text-xl font-bold text-white">{averageCompletionRate}%</h4>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main List */}
       <div className="space-y-4">
@@ -437,33 +515,80 @@ export default function Tasks() {
 
               {/* Operator select grid */}
               {!formData.sendToAll && (
-                <div className="space-y-2 animate-fade-in">
-                  <label className="label text-xs">Operatorlarni tanlang:</label>
+                <div className="space-y-3 animate-fade-in border-t border-dark-800/80 pt-3">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <label className="label text-xs">Xodimlarni tanlang:</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button 
+                        type="button" 
+                        onClick={() => handleSelectAll('ALL')}
+                        className="px-2.5 py-1 bg-dark-800 hover:bg-dark-750 text-white rounded-lg text-[10px] font-medium border border-dark-700"
+                      >
+                        Barchasini tanlash
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => handleSelectAll('OPERATOR')}
+                        className="px-2.5 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-[10px] font-medium border border-blue-500/20"
+                      >
+                        Operatorlar
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => handleSelectAll('TEACHER')}
+                        className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-medium border border-emerald-500/20"
+                      >
+                        Mentorlar
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={handleClearSelection}
+                        className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-[10px] font-medium border border-red-500/20"
+                      >
+                        Tozalash
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search box */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-dark-400 absolute left-3 top-2.5" />
+                    <input 
+                      type="text"
+                      placeholder="Ism bo'yicha qidirish..."
+                      className="input pl-9 py-2 text-xs bg-dark-850"
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto p-1 bg-dark-900/40 border border-dark-800/85 rounded-xl">
-                    {operators.map(op => {
-                      const isSelected = formData.selectedOperatorIds.includes(op.id);
-                      return (
-                        <div
-                          key={op.id}
-                          onClick={() => handleToggleOperator(op.id)}
-                          className={`cursor-pointer px-3 py-2.5 rounded-lg border flex items-center gap-2.5 transition-all select-none ${
-                            isSelected 
-                              ? 'bg-primary-500/10 border-primary-500 text-primary-400 shadow-[0_0_10px_-2px_rgba(59,130,246,0.2)]'
-                              : 'bg-dark-850 border-dark-800 text-dark-300 hover:bg-dark-800 hover:border-dark-700'
-                          }`}
-                        >
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                            isSelected ? 'bg-primary-600/20 text-primary-400' : 'bg-dark-700 text-dark-400'
-                          }`}>
-                            {op.name.charAt(0).toUpperCase()}
+                    {operators
+                      .filter(op => op.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                      .map(op => {
+                        const isSelected = formData.selectedOperatorIds.includes(op.id);
+                        return (
+                          <div
+                            key={op.id}
+                            onClick={() => handleToggleOperator(op.id)}
+                            className={`cursor-pointer px-3 py-2.5 rounded-lg border flex items-center gap-2.5 transition-all select-none ${
+                              isSelected 
+                                ? 'bg-primary-500/10 border-primary-500 text-primary-400 shadow-[0_0_10px_-2px_rgba(59,130,246,0.2)]'
+                                : 'bg-dark-850 border-dark-800 text-dark-300 hover:bg-dark-800 hover:border-dark-700'
+                            }`}
+                          >
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                              isSelected ? 'bg-primary-600/20 text-primary-400' : 'bg-dark-700 text-dark-400'
+                            }`}>
+                              {op.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold truncate leading-tight">{op.name}</p>
+                              <span className="text-[9px] text-dark-500 block uppercase tracking-wider">{op.role === 'TEACHER' ? "O'qituvchi" : op.role === 'SMM' ? 'SMM' : 'Operator'}</span>
+                            </div>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold truncate leading-tight">{op.name}</p>
-                            <span className="text-[9px] text-dark-500 block uppercase tracking-wider">{op.role === 'TEACHER' ? "O'qituvchi" : op.role === 'SMM' ? 'SMM' : 'Operator'}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </div>
               )}
