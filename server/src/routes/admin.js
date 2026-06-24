@@ -30,6 +30,11 @@ router.get('/dashboard', async (req, res) => {
       leadsByStatus,
       leadsByCourse,
       operatorStats,
+      totalStudents,
+      totalCourses,
+      totalTeachers,
+      totalEnrollments,
+      coursesWithEnrollments,
     ] = await Promise.all([
       prisma.lead.count(),
       prisma.lead.count({ where: { createdAt: { gte: todayStart } } }),
@@ -53,6 +58,19 @@ router.get('/dashboard', async (req, res) => {
           },
         },
       }),
+      prisma.user.count({ where: { role: 'STUDENT' } }),
+      prisma.course.count(),
+      prisma.user.count({ where: { OR: [{ role: 'TEACHER' }, { role: 'MENTOR' }] } }),
+      prisma.enrollment.count(),
+      prisma.course.findMany({
+        select: {
+          id: true,
+          title: true,
+          _count: {
+            select: { enrollments: true }
+          }
+        }
+      })
     ]);
 
     const conversionRate = totalLeads > 0
@@ -79,6 +97,10 @@ router.get('/dashboard', async (req, res) => {
         successLeads: successLeads || 0,
         slaBreachedLeads: slaBreachedLeads || 0,
         conversionRate,
+        totalStudents: totalStudents || 0,
+        totalCourses: totalCourses || 0,
+        totalTeachers: totalTeachers || 0,
+        totalEnrollments: totalEnrollments || 0
       },
       leadsByStatus: (leadsByStatus || []).map(s => ({
         status: s.status,
@@ -89,14 +111,25 @@ router.get('/dashboard', async (req, res) => {
         count: c._count._all,
       })),
       operators,
+      lmsStats: {
+        coursesEnrollments: (coursesWithEnrollments || []).map(c => ({
+          courseId: c.id,
+          title: c.title,
+          enrollmentsCount: c._count.enrollments
+        }))
+      }
     });
   } catch (error) {
     console.error('Dashboard error:', error);
     res.json({
-      metrics: { totalLeads: 0, todayLeads: 0, weekLeads: 0, monthLeads: 0, successLeads: 0, slaBreachedLeads: 0, conversionRate: 0 },
+      metrics: { 
+        totalLeads: 0, todayLeads: 0, weekLeads: 0, monthLeads: 0, successLeads: 0, slaBreachedLeads: 0, conversionRate: 0,
+        totalStudents: 0, totalCourses: 0, totalTeachers: 0, totalEnrollments: 0
+      },
       leadsByStatus: [],
       leadsByCourse: [],
       operators: [],
+      lmsStats: { coursesEnrollments: [] },
       error: error.message
     });
   }

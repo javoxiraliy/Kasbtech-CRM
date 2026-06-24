@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { Users, Target, Clock, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Users, Target, Clock, TrendingUp, AlertTriangle, GraduationCap, BookOpen, Award } from 'lucide-react';
 import api from '../../lib/api';
 import OperatorActivityModal from '../../components/OperatorActivityModal';
 
@@ -95,6 +95,39 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* LMS Academic Stats */}
+      <div className="pt-2">
+        <h2 className="text-xl font-bold text-white mb-1">Akademik Tahlil (LMS)</h2>
+        <p className="text-dark-400 text-sm">O'quv jarayoni va platforma faoliyati ko'rsatkichlari</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard 
+          title="Jami Talabalar" 
+          value={data.metrics.totalStudents} 
+          icon={GraduationCap} 
+          colorClass="text-emerald-500" 
+        />
+        <StatCard 
+          title="Faol Kurslar" 
+          value={data.metrics.totalCourses} 
+          icon={BookOpen} 
+          colorClass="text-indigo-500" 
+        />
+        <StatCard 
+          title="O'qituvchilar / Mentorlar" 
+          value={data.metrics.totalTeachers} 
+          icon={Users} 
+          colorClass="text-sky-500" 
+        />
+        <StatCard 
+          title="A'zoliklar (Enrollments)" 
+          value={data.metrics.totalEnrollments} 
+          icon={Award} 
+          colorClass="text-amber-500" 
+        />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Course Chart */}
         <div className="card glass">
@@ -163,6 +196,76 @@ export default function Dashboard() {
                 />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Course Enrollments Breakdown */}
+        <div className="card glass lg:col-span-2">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-emerald-400" />
+            Kurslar bo'yicha talabalar a'zoligi
+          </h3>
+          <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2">
+            {(data.lmsStats?.coursesEnrollments || []).map((c) => {
+              const maxEnrollments = Math.max(...(data.lmsStats?.coursesEnrollments || []).map(x => x.enrollmentsCount), 1);
+              const percentage = (c.enrollmentsCount / maxEnrollments) * 100;
+              
+              return (
+                <div key={c.courseId} className="space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white font-medium">{c.title}</span>
+                    <span className="text-dark-300 font-bold">{c.enrollmentsCount} talaba</span>
+                  </div>
+                  <div className="w-full bg-dark-800 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            {(!data.lmsStats?.coursesEnrollments || data.lmsStats.coursesEnrollments.length === 0) && (
+              <div className="py-8 text-center text-dark-500">Faol a'zoliklar mavjud emas</div>
+            )}
+          </div>
+        </div>
+
+        {/* LMS Quick Stats / Highlights */}
+        <div className="card glass">
+          <h3 className="text-lg font-semibold text-white mb-4">Platforma Qisqacha hisoboti</h3>
+          <div className="space-y-4">
+            <div className="p-3 bg-dark-800/40 border border-dark-700/50 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span className="text-sm text-dark-300">Har bir kursga o'rtacha</span>
+              </div>
+              <span className="text-sm font-bold text-white">
+                {data.metrics.totalCourses > 0 ? (data.metrics.totalEnrollments / data.metrics.totalCourses).toFixed(1) : 0} talaba
+              </span>
+            </div>
+
+            <div className="p-3 bg-dark-800/40 border border-dark-700/50 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                <span className="text-sm text-dark-300">Bir o'qituvchiga o'rtacha</span>
+              </div>
+              <span className="text-sm font-bold text-white">
+                {data.metrics.totalTeachers > 0 ? (data.metrics.totalStudents / data.metrics.totalTeachers).toFixed(1) : 0} talaba
+              </span>
+            </div>
+            
+            <div className="p-3 bg-dark-800/40 border border-dark-700/50 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                <span className="text-sm text-dark-300">Sotuv konversiyasi</span>
+              </div>
+              <span className="text-sm font-bold text-white">
+                {data.metrics.conversionRate}%
+              </span>
+            </div>
           </div>
         </div>
       </div>
