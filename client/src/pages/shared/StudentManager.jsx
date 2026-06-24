@@ -3,8 +3,12 @@ import { Plus, Search, User, CheckCircle, XCircle, BookOpen, Key, Mail, Lock, Un
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function StudentManager() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,10 +129,6 @@ export default function StudentManager() {
           <button className="btn-primary" onClick={() => setIsRegModalOpen(true)}>
             <Plus className="w-5 h-5" />
             Yangi Talaba qo'shish
-          </button>
-          <button className="btn-secondary border-dark-700 text-dark-300 hover:text-white" onClick={() => navigate('/admin/users', { state: { openAdd: true } })}>
-            <Plus className="w-5 h-5 text-blue-400" />
-            Yangi Xodim qo'shish
           </button>
         </div>
       </div>

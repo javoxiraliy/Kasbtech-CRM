@@ -319,16 +319,35 @@ export default function StudentStudy() {
                 </div>
               )}
 
-              {/* Streaming Video Container (Bunny.net Stream Embed Mockup using iframe or custom HTML5 fallback) */}
+              {/* Streaming Video Container */}
               <div className="w-full h-full relative">
-                {/* Real Bunny.net Stream Embed Iframe */}
-                <iframe 
-                  src={`https://iframe.mediadelivery.net/embed/123456/${lessonDetail?.videoUrl}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`}
-                  loading="lazy"
-                  className="w-full h-full border-0 absolute top-0 left-0"
-                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                  allowFullScreen={true}
-                />
+                {(() => {
+                  const url = lessonDetail?.videoUrl || '';
+                  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                  const match = url.match(regExp);
+                  const youtubeId = (match && match[2].length === 11) ? match[2] : null;
+
+                  if (youtubeId) {
+                    return (
+                      <iframe 
+                        src={`https://www.youtube.com/embed/${youtubeId}`}
+                        className="w-full h-full border-0 absolute top-0 left-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen={true}
+                      />
+                    );
+                  } else {
+                    return (
+                      <iframe 
+                        src={`https://iframe.mediadelivery.net/embed/123456/${lessonDetail?.videoUrl}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`}
+                        loading="lazy"
+                        className="w-full h-full border-0 absolute top-0 left-0"
+                        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                        allowFullScreen={true}
+                      />
+                    );
+                  }
+                })()}
               </div>
 
             </div>

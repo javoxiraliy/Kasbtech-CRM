@@ -70,8 +70,14 @@ router.get('/courses', authenticate, async (req, res) => {
         enrolledAt: e.createdAt
       }));
     } else {
-      // Admins/Operators/Teachers see all courses
+      // Admins/Operators see all courses, Teachers/Mentors see only their assigned courses
+      const whereClause = {};
+      if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
+        whereClause.teacherId = req.user.id;
+      }
+      
       courses = await prisma.course.findMany({
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         include: {
           _count: { select: { modules: true } },
@@ -88,7 +94,7 @@ router.get('/courses', authenticate, async (req, res) => {
 });
 
 // POST /api/lms/courses - Create course
-router.post('/courses', authenticate, requireMentorOrAdmin, upload.single('thumbnail'), async (req, res) => {
+router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), async (req, res) => {
   try {
     const { title, description, price, isPublished, teacherId } = req.body;
     if (!title || !description || !price) {
@@ -116,7 +122,7 @@ router.post('/courses', authenticate, requireMentorOrAdmin, upload.single('thumb
 });
 
 // PUT /api/lms/courses/:id - Update course
-router.put('/courses/:id', authenticate, requireMentorOrAdmin, upload.single('thumbnail'), async (req, res) => {
+router.put('/courses/:id', authenticate, requireAdmin, upload.single('thumbnail'), async (req, res) => {
   try {
     const { title, description, price, isPublished, teacherId } = req.body;
     const updateData = {};
@@ -143,7 +149,7 @@ router.put('/courses/:id', authenticate, requireMentorOrAdmin, upload.single('th
 });
 
 // DELETE /api/lms/courses/:id - Delete course
-router.delete('/courses/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
+router.delete('/courses/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     await prisma.course.delete({
       where: { id: req.params.id }
@@ -169,6 +175,12 @@ router.post('/courses/:courseId/modules', authenticate, requireMentorOrAdmin, as
       return res.status(400).json({ error: 'Sarlavha va tartib raqami kiritilishi shart' });
     }
 
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) return res.status(404).json({ error: 'Kurs topilmadi' });
+    if (req.user.role !== 'ADMIN' && course.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Sizda ushbu kursga modul qo\'shish huquqi yo\'q' });
+    }
+
     const module = await prisma.module.create({
       data: {
         title,
@@ -192,12 +204,21 @@ router.put('/modules/:id', authenticate, requireMentorOrAdmin, async (req, res) 
     if (title !== undefined) updateData.title = title;
     if (order !== undefined) updateData.order = parseInt(order);
 
-    const module = await prisma.module.update({
+    const module = await prisma.module.findUnique({
+      where: { id: req.params.id },
+      include: { course: true }
+    });
+    if (!module) return res.status(404).json({ error: 'Modul topilmadi' });
+    if (req.user.role !== 'ADMIN' && module.course.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Sizda ushbu modulni o\'zgartirish huquqi yo\'q' });
+    }
+
+    const updatedModule = await prisma.module.update({
       where: { id: req.params.id },
       data: updateData
     });
 
-    res.json({ module });
+    res.json({ module: updatedModule });
   } catch (error) {
     console.error('Update module error:', error);
     res.status(500).json({ error: 'Modulni yangilashda xatolik yuz berdi' });
@@ -207,6 +228,15 @@ router.put('/modules/:id', authenticate, requireMentorOrAdmin, async (req, res) 
 // DELETE /api/lms/modules/:id - Delete module
 router.delete('/modules/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
+    const module = await prisma.module.findUnique({
+      where: { id: req.params.id },
+      include: { course: true }
+    });
+    if (!module) return res.status(404).json({ error: 'Modul topilmadi' });
+    if (req.user.role !== 'ADMIN' && module.course.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Sizda ushbu modulni o\'chirish huquqi yo\'q' });
+    }
+
     await prisma.module.delete({
       where: { id: req.params.id }
     });
@@ -229,6 +259,15 @@ router.post('/modules/:moduleId/lessons', authenticate, requireMentorOrAdmin, as
 
     if (!title || !videoUrl || duration === undefined || order === undefined) {
       return res.status(400).json({ error: 'Sarlavha, video ID, davomiylik va tartib raqami kiritilishi shart' });
+    }
+
+    const module = await prisma.module.findUnique({
+      where: { id: moduleId },
+      include: { course: true }
+    });
+    if (!module) return res.status(404).json({ error: 'Modul topilmadi' });
+    if (req.user.role !== 'ADMIN' && module.course.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Sizda ushbu modulga dars qo\'shish huquqi yo\'q' });
     }
 
     const lesson = await prisma.lesson.create({
@@ -263,12 +302,21 @@ router.put('/lessons/:id', authenticate, requireMentorOrAdmin, async (req, res) 
     if (order !== undefined) updateData.order = parseInt(order);
     if (dripDays !== undefined) updateData.dripDays = parseInt(dripDays);
 
-    const lesson = await prisma.lesson.update({
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: req.params.id },
+      include: { module: { include: { course: true } } }
+    });
+    if (!lesson) return res.status(404).json({ error: 'Dars topilmadi' });
+    if (req.user.role !== 'ADMIN' && lesson.module.course.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Sizda ushbu darsni o\'zgartirish huquqi yo\'q' });
+    }
+
+    const updatedLesson = await prisma.lesson.update({
       where: { id: req.params.id },
       data: updateData
     });
 
-    res.json({ lesson });
+    res.json({ lesson: updatedLesson });
   } catch (error) {
     console.error('Update lesson error:', error);
     res.status(500).json({ error: 'Darsni yangilashda xatolik yuz berdi' });
@@ -278,6 +326,15 @@ router.put('/lessons/:id', authenticate, requireMentorOrAdmin, async (req, res) 
 // DELETE /api/lms/lessons/:id - Delete lesson
 router.delete('/lessons/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: req.params.id },
+      include: { module: { include: { course: true } } }
+    });
+    if (!lesson) return res.status(404).json({ error: 'Dars topilmadi' });
+    if (req.user.role !== 'ADMIN' && lesson.module.course.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Sizda ushbu darsni o\'chirish huquqi yo\'q' });
+    }
+
     await prisma.lesson.delete({
       where: { id: req.params.id }
     });

@@ -15,10 +15,17 @@ import {
   AlertCircle
 } from 'lucide-react';
 import api from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Courses() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const isTeacher = user?.role === 'TEACHER';
+
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [activeTab, setActiveTab] = useState('courses'); // 'courses', 'teachers', 'students'
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,10 +46,22 @@ export default function Courses() {
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [quizPassScore, setQuizPassScore] = useState(70);
 
+  const fetchStudents = async () => {
+    try {
+      const res = await api.get('/lms/students');
+      setStudents(res.data.students || []);
+    } catch (err) {
+      console.error('Error fetching students', err);
+    }
+  };
+
   useEffect(() => {
     fetchCourses();
     fetchTeachers();
-  }, []);
+    if (isAdmin) {
+      fetchStudents();
+    }
+  }, [user]);
 
   const fetchTeachers = async () => {
     try {
@@ -284,7 +303,7 @@ export default function Courses() {
           </h1>
           <p className="text-sm text-dark-400">Onlayn darslarni boshqarish va ta'lim jarayonini sozlash</p>
         </div>
-        {!selectedCourse && (
+        {!selectedCourse && isAdmin && (
           <button 
             onClick={() => {
               setCourseForm({ id: null, title: '', description: '', price: '', isPublished: false, thumbnail: null, teacherId: '' });
@@ -305,88 +324,215 @@ export default function Courses() {
         </div>
       )}
 
+      {/* Admin tabs */}
+      {isAdmin && !selectedCourse && (
+        <div className="flex gap-2 border-b border-dark-800 pb-3">
+          <button 
+            onClick={() => setActiveTab('courses')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'courses' ? 'bg-primary-600 text-white' : 'text-dark-300 hover:text-white bg-dark-900/50 border border-dark-850'}`}
+          >
+            Kurslar Nazorati
+          </button>
+          <button 
+            onClick={() => setActiveTab('teachers')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'teachers' ? 'bg-primary-600 text-white' : 'text-dark-300 hover:text-white bg-dark-900/50 border border-dark-850'}`}
+          >
+            O'qituvchilar Nazorati
+          </button>
+          <button 
+            onClick={() => setActiveTab('students')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'students' ? 'bg-primary-600 text-white' : 'text-dark-300 hover:text-white bg-dark-900/50 border border-dark-850'}`}
+          >
+            Talabalar Nazorati
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12 text-dark-400">Yuklanmoqda...</div>
       ) : !selectedCourse ? (
-        // ==========================================
-        // COURSES LIST VIEW
-        // ==========================================
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map(course => (
-            <div key={course.id} className="card-hover flex flex-col justify-between">
-              <div>
-                <div className="aspect-video bg-dark-800 rounded-lg overflow-hidden relative mb-4 border border-dark-700">
-                  {course.thumbnail ? (
-                    <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-dark-500 bg-dark-900/50">
-                      <BookOpen className="w-12 h-12" />
-                    </div>
-                  )}
-                  <span className={`absolute top-2 right-2 badge ${course.isPublished ? 'badge-success' : 'badge-progress'}`}>
-                    {course.isPublished ? 'Nashr etilgan' : 'Qoralama'}
+        activeTab === 'courses' ? (
+          // ==========================================
+          // COURSES LIST VIEW
+          // ==========================================
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {courses.map(course => (
+              <div key={course.id} className="card-hover flex flex-col justify-between">
+                <div>
+                  <div className="aspect-video bg-dark-800 rounded-lg overflow-hidden relative mb-4 border border-dark-700">
+                    {course.thumbnail ? (
+                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-dark-500 bg-dark-900/50">
+                        <BookOpen className="w-12 h-12" />
+                      </div>
+                    )}
+                    <span className={`absolute top-2 right-2 badge ${course.isPublished ? 'badge-success' : 'badge-progress'}`}>
+                      {course.isPublished ? 'Nashr etilgan' : 'Qoralama'}
+                    </span>
+                  </div>
+                  
+                  <h3 className="font-bold text-white text-lg mb-2">{course.title}</h3>
+                  <p className="text-sm text-dark-400 line-clamp-3 mb-2">{course.description}</p>
+                  <div className="text-xs mb-4">
+                    {course.teacher ? (
+                      <span className="text-emerald-400 font-medium">O'qituvchi: {course.teacher.name}</span>
+                    ) : (
+                      <span className="text-dark-500 italic">O'qituvchi biriktirilmagan</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-dark-800 pt-4 flex justify-between items-center mt-4">
+                  <span className="text-primary-400 font-bold text-lg">
+                    {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(course.price)}
                   </span>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleCourseClick(course)} 
+                      className="btn-secondary py-1.5 px-3 text-xs"
+                    >
+                      {isTeacher ? "Darslarni boshqarish" : "Darslarni ko'rish"} ({course._count?.modules || 0} modul)
+                    </button>
+                    
+                    {isAdmin && (
+                      <>
+                        <button 
+                          onClick={() => {
+                            setCourseForm({ 
+                              id: course.id, 
+                              title: course.title, 
+                              description: course.description, 
+                              price: course.price, 
+                              isPublished: course.isPublished, 
+                              thumbnail: course.thumbnail,
+                              teacherId: course.teacherId || ''
+                            });
+                            setIsCourseModalOpen(true);
+                          }}
+                          className="p-2 text-dark-400 hover:text-white rounded-lg hover:bg-dark-800 transition-colors"
+                          title="Tahrirlash"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        
+                        <button 
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="p-2 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
+                          title="O'chirish"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                
-                <h3 className="font-bold text-white text-lg mb-2">{course.title}</h3>
-                <p className="text-sm text-dark-400 line-clamp-3 mb-2">{course.description}</p>
-                <div className="text-xs mb-4">
-                  {course.teacher ? (
-                    <span className="text-emerald-400 font-medium">O'qituvchi: {course.teacher.name}</span>
-                  ) : (
-                    <span className="text-dark-500 italic">O'qituvchi biriktirilmagan</span>
+              </div>
+            ))}
+
+            {courses.length === 0 && (
+              <div className="col-span-full text-center py-12 text-dark-400 border border-dashed border-dark-700 rounded-xl">
+                Hozircha kurslar mavjud emas. Yangi kurs yaratish uchun yuqoridagi tugmani bosing.
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'teachers' ? (
+          // ==========================================
+          // TEACHERS MONITORING VIEW
+          // ==========================================
+          <div className="card glass p-0 overflow-hidden border border-dark-800">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-dark-900/50 border-b border-dark-800 text-dark-300 text-sm">
+                    <th className="p-4 font-medium">O'qituvchi / Kurator</th>
+                    <th className="p-4 font-medium">Email</th>
+                    <th className="p-4 font-medium">Roli</th>
+                    <th className="p-4 font-medium">Biriktirilgan Kurslar</th>
+                    <th className="p-4 font-medium text-right">Kurslar soni</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  {teachers.map(t => {
+                    const assigned = courses.filter(c => c.teacherId === t.id);
+                    return (
+                      <tr key={t.id} className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors">
+                        <td className="p-4 font-medium text-white">{t.name}</td>
+                        <td className="p-4 text-dark-300">{t.email}</td>
+                        <td className="p-4">
+                          <span className={`badge ${t.role === 'TEACHER' ? 'badge-success' : 'badge-progress'}`}>
+                            {t.role === 'TEACHER' ? "O'qituvchi" : "Mentor"}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-wrap gap-1.5">
+                            {assigned.length === 0 ? (
+                              <span className="text-dark-500 text-xs italic">Kurs biriktirilmagan</span>
+                            ) : assigned.map(c => (
+                              <span key={c.id} className="badge bg-primary-500/10 text-primary-400 border border-primary-500/20 text-xs">
+                                {c.title}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-4 text-right text-white font-semibold">{assigned.length} ta</td>
+                      </tr>
+                    );
+                  })}
+                  {teachers.length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="p-8 text-center text-dark-400">O'qituvchilar topilmadi</td>
+                    </tr>
                   )}
-                </div>
-              </div>
-
-              <div className="border-t border-dark-800 pt-4 flex justify-between items-center mt-4">
-                <span className="text-primary-400 font-bold text-lg">
-                  {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(course.price)}
-                </span>
-                
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleCourseClick(course)} 
-                    className="btn-secondary py-1.5 px-3 text-xs"
-                  >
-                    Darslar ({course._count?.modules || 0} modul)
-                  </button>
-                  
-                  <button 
-                    onClick={() => {
-                      setCourseForm({ 
-                        id: course.id, 
-                        title: course.title, 
-                        description: course.description, 
-                        price: course.price, 
-                        isPublished: course.isPublished, 
-                        thumbnail: course.thumbnail,
-                        teacherId: course.teacherId || ''
-                      });
-                      setIsCourseModalOpen(true);
-                    }}
-                    className="p-2 text-dark-400 hover:text-white rounded-lg hover:bg-dark-800 transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  
-                  <button 
-                    onClick={() => handleDeleteCourse(course.id)}
-                    className="p-2 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+                </tbody>
+              </table>
             </div>
-          ))}
-
-          {courses.length === 0 && (
-            <div className="col-span-full text-center py-12 text-dark-400 border border-dashed border-dark-700 rounded-xl">
-              Hozircha kurslar mavjud emas. Yangi kurs yaratish uchun yuqoridagi tugmani bosing.
+          </div>
+        ) : (
+          // ==========================================
+          // STUDENTS MONITORING VIEW
+          // ==========================================
+          <div className="card glass p-0 overflow-hidden border border-dark-800">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-dark-900/50 border-b border-dark-800 text-dark-300 text-sm">
+                    <th className="p-4 font-medium">Talaba</th>
+                    <th className="p-4 font-medium">Email</th>
+                    <th className="p-4 font-medium">Ruxsat Berilgan Kurslari</th>
+                    <th className="p-4 font-medium text-right">Kurslar soni</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  {students.map(s => (
+                    <tr key={s.id} className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors">
+                      <td className="p-4 font-medium text-white">{s.name}</td>
+                      <td className="p-4 text-dark-300">{s.email}</td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {s.enrollments?.length === 0 ? (
+                            <span className="text-dark-500 text-xs italic">Ruxsat berilmagan</span>
+                          ) : s.enrollments?.map(e => (
+                            <span key={e.id} className="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs">
+                              {e.course?.title}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-4 text-right text-white font-semibold">{s.enrollments?.length || 0} ta</td>
+                    </tr>
+                  ))}
+                  {students.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-dark-400">Talabalar topilmadi</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+          </div>
+        )
       ) : (
         // ==========================================
         // SINGLE COURSE MANAGEMENT VIEW
@@ -407,26 +553,20 @@ export default function Courses() {
               </div>
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto">
-              <button 
-                onClick={() => {
-                  setModuleForm({ id: null, title: '', order: selectedCourse.modules.length + 1 });
-                  setIsModuleModalOpen(true);
-                }} 
-                className="btn-secondary py-2 px-3 text-xs w-full sm:w-auto"
-              >
-                <FolderPlus className="w-4 h-4" />
-                Yangi Modul Qo'shish
-              </button>
-              
-              <button 
-                onClick={() => handleDeleteCourse(selectedCourse.id)}
-                className="btn-danger py-2 px-3 text-xs w-full sm:w-auto bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20"
-              >
-                <Trash2 className="w-4 h-4" />
-                Kursni O'chirish
-              </button>
-            </div>
+            {isTeacher && (
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button 
+                  onClick={() => {
+                    setModuleForm({ id: null, title: '', order: selectedCourse.modules.length + 1 });
+                    setIsModuleModalOpen(true);
+                  }} 
+                  className="btn-secondary py-2 px-3 text-xs w-full sm:w-auto"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  Yangi Modul Qo'shish
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Module & Lessons List */}
@@ -443,35 +583,37 @@ export default function Courses() {
                     <h3 className="font-bold text-white text-md">{mod.title}</h3>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => {
-                        setLessonForm({ id: null, moduleId: mod.id, title: '', description: '', videoUrl: '', duration: '', order: mod.lessons.length + 1, dripDays: '' });
-                        setIsLessonModalOpen(true);
-                      }}
-                      className="btn-primary py-1 px-2.5 text-xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Dars Qo'shish
-                    </button>
-                    
-                    <button 
-                      onClick={() => {
-                        setModuleForm({ id: mod.id, title: mod.title, order: mod.order });
-                        setIsModuleModalOpen(true);
-                      }}
-                      className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    
-                    <button 
-                      onClick={() => handleDeleteModule(mod.id)}
-                      className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {isTeacher && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          setLessonForm({ id: null, moduleId: mod.id, title: '', description: '', videoUrl: '', duration: '', order: mod.lessons.length + 1, dripDays: '' });
+                          setIsLessonModalOpen(true);
+                        }}
+                        className="btn-primary py-1 px-2.5 text-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Dars Qo'shish
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          setModuleForm({ id: mod.id, title: mod.title, order: mod.order });
+                          setIsModuleModalOpen(true);
+                        }}
+                        className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      
+                      <button 
+                        onClick={() => handleDeleteModule(mod.id)}
+                        className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Lessons inside Module */}
@@ -502,32 +644,34 @@ export default function Courses() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2 self-end sm:self-center">
-                        <button 
-                          onClick={() => openQuizModal(lesson)}
-                          className="btn-secondary py-1 px-2.5 text-xs text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10"
-                        >
-                          <FileQuestion className="w-3.5 h-3.5" />
-                          {lesson.quizPassed !== undefined ? 'Test Sozlash' : 'Test Sozlash'}
-                        </button>
+                      {isTeacher && (
+                        <div className="flex gap-2 self-end sm:self-center">
+                          <button 
+                            onClick={() => openQuizModal(lesson)}
+                            className="btn-secondary py-1.5 px-2.5 text-xs text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10"
+                          >
+                            <FileQuestion className="w-3.5 h-3.5" />
+                            {lesson.quizPassed !== undefined ? 'Test Sozlash' : 'Test Sozlash'}
+                          </button>
 
-                        <button 
-                          onClick={() => {
-                            setLessonForm({ id: lesson.id, moduleId: mod.id, title: lesson.title, description: lesson.description || '', videoUrl: lesson.videoUrl, duration: lesson.duration, order: lesson.order, dripDays: lesson.dripDays });
-                            setIsLessonModalOpen(true);
-                          }}
-                          className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors border border-dark-700"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        
-                        <button 
-                          onClick={() => handleDeleteLesson(lesson.id)}
-                          className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors border border-dark-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                          <button 
+                            onClick={() => {
+                              setLessonForm({ id: lesson.id, moduleId: mod.id, title: lesson.title, description: lesson.description || '', videoUrl: lesson.videoUrl, duration: lesson.duration, order: lesson.order, dripDays: lesson.dripDays });
+                              setIsLessonModalOpen(true);
+                            }}
+                            className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors border border-dark-700"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleDeleteLesson(lesson.id)}
+                            className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors border border-dark-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
 
@@ -705,20 +849,21 @@ export default function Courses() {
               </div>
 
               <div>
-                <label className="label">Dars Ta'rifi (Uy vazifasi shartlari)</label>
+                <label className="label">Dars ta'rifi, savol-javoblar va uyga vazifa (kunlik topshiriq) shartlari</label>
                 <textarea 
-                  className="input min-h-[60px]" 
+                  className="input min-h-[100px]" 
+                  placeholder="Dars ta'rifi, o'tilgan materiallar bo'yicha savol-javoblar hamda o'quvchi bajarishi kerak bo'lgan kunlik uyga vazifa topshiriqlarini batafsil kiriting..."
                   value={lessonForm.description} 
                   onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })} 
                 />
               </div>
 
               <div>
-                <label className="label">Bunny.net Stream Video ID</label>
+                <label className="label">Video darslik havolasi (YouTube havola yoki video ID)</label>
                 <input 
                   type="text" 
                   className="input" 
-                  placeholder="masalan, play_ab12cd34..."
+                  placeholder="Masalan: https://www.youtube.com/watch?v=... yoki video_id"
                   value={lessonForm.videoUrl} 
                   onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })} 
                   required 
