@@ -35,6 +35,9 @@ router.get('/dashboard', async (req, res) => {
       totalTeachers,
       totalEnrollments,
       coursesWithEnrollments,
+      pendingHomeworks,
+      transactions,
+      teachersStats,
     ] = await Promise.all([
       prisma.lead.count(),
       prisma.lead.count({ where: { createdAt: { gte: todayStart } } }),
@@ -70,12 +73,23 @@ router.get('/dashboard', async (req, res) => {
             select: { enrollments: true }
           }
         }
+      }),
+      prisma.homework.count({ where: { status: 'PENDING' } }),
+      prisma.transaction.findMany({ where: { status: 'SUCCESS' } }),
+      prisma.user.findMany({
+        where: { OR: [{ role: 'TEACHER' }, { role: 'MENTOR' }], isActive: true },
+        include: {
+          teacherCourses: { select: { id: true } },
+          reviewedHomeworks: { select: { id: true, grade: true } }
+        }
       })
     ]);
 
     const conversionRate = totalLeads > 0
       ? ((successLeads / totalLeads) * 100).toFixed(1)
       : 0;
+
+    const totalRevenue = transactions.reduce((acc, t) => acc + Number(t.amount), 0);
 
     const operators = operatorStats.map(op => ({
       id: op.id,
@@ -87,6 +101,20 @@ router.get('/dashboard', async (req, res) => {
       archivedLeads: op.leads.filter(l => l.status === 'ARCHIVED').length,
       slaBreached: op.leads.filter(l => l.slaBreached).length,
     }));
+
+    const teachers = teachersStats.map(t => {
+      const totalGrades = t.reviewedHomeworks.reduce((acc, h) => acc + (h.grade || 0), 0);
+      const avgGrade = t.reviewedHomeworks.length > 0 ? (totalGrades / t.reviewedHomeworks.length).toFixed(1) : '0';
+      return {
+        id: t.id,
+        name: t.name,
+        email: t.email,
+        role: t.role,
+        coursesCount: t.teacherCourses.length,
+        reviewedCount: t.reviewedHomeworks.length,
+        avgGrade
+      };
+    });
 
     res.json({
       metrics: {
@@ -100,7 +128,9 @@ router.get('/dashboard', async (req, res) => {
         totalStudents: totalStudents || 0,
         totalCourses: totalCourses || 0,
         totalTeachers: totalTeachers || 0,
-        totalEnrollments: totalEnrollments || 0
+        totalEnrollments: totalEnrollments || 0,
+        pendingHomeworks: pendingHomeworks || 0,
+        totalRevenue: totalRevenue || 0
       },
       leadsByStatus: (leadsByStatus || []).map(s => ({
         status: s.status,
@@ -111,6 +141,7 @@ router.get('/dashboard', async (req, res) => {
         count: c._count._all,
       })),
       operators,
+      teachers,
       lmsStats: {
         coursesEnrollments: (coursesWithEnrollments || []).map(c => ({
           courseId: c.id,
@@ -124,11 +155,12 @@ router.get('/dashboard', async (req, res) => {
     res.json({
       metrics: { 
         totalLeads: 0, todayLeads: 0, weekLeads: 0, monthLeads: 0, successLeads: 0, slaBreachedLeads: 0, conversionRate: 0,
-        totalStudents: 0, totalCourses: 0, totalTeachers: 0, totalEnrollments: 0
+        totalStudents: 0, totalCourses: 0, totalTeachers: 0, totalEnrollments: 0, pendingHomeworks: 0, totalRevenue: 0
       },
       leadsByStatus: [],
       leadsByCourse: [],
       operators: [],
+      teachers: [],
       lmsStats: { coursesEnrollments: [] },
       error: error.message
     });

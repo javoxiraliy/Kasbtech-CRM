@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedOperatorId, setSelectedOperatorId] = useState(null);
+  const [activeTab, setActiveTab] = useState('operators');
 
   useEffect(() => {
     fetchDashboardData();
@@ -62,12 +63,20 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white mb-1">Asosiy Ko'rsatkichlar</h1>
-        <p className="text-dark-400 text-sm">Tizimning umumiy holati va tahlili</p>
+      <div className="flex justify-between items-center border-b border-dark-800 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-1">Kasbtech CRM & LMS Ekotizimi</h1>
+          <p className="text-dark-400 text-sm">Sotuvlar, onlayn ta'lim, o'quvchilar progressi va moliyaviy natijalarning yagona boshqaruv markazi</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <StatCard 
+          title="Umumiy Daromad" 
+          value={new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(data.metrics.totalRevenue || 0)} 
+          icon={TrendingUp} 
+          colorClass="text-amber-500" 
+        />
         <StatCard 
           title="Jami Lidlar" 
           value={data.metrics.totalLeads} 
@@ -75,33 +84,11 @@ export default function Dashboard() {
           colorClass="text-blue-500" 
         />
         <StatCard 
-          title="Muvaffaqiyatli" 
-          value={data.metrics.successLeads} 
+          title="Sotuv Konversiyasi" 
+          value={`${data.metrics.conversionRate}%`} 
           icon={Target} 
-          trend={`${data.metrics.conversionRate}% Konversiya`}
           colorClass="text-green-500" 
         />
-        <StatCard 
-          title="Bugun tushgan" 
-          value={data.metrics.todayLeads} 
-          icon={TrendingUp} 
-          colorClass="text-purple-500" 
-        />
-        <StatCard 
-          title="SLA Buzilgan" 
-          value={data.metrics.slaBreachedLeads} 
-          icon={AlertTriangle} 
-          colorClass="text-red-500" 
-        />
-      </div>
-
-      {/* LMS Academic Stats */}
-      <div className="pt-2">
-        <h2 className="text-xl font-bold text-white mb-1">Akademik Tahlil (LMS)</h2>
-        <p className="text-dark-400 text-sm">O'quv jarayoni va platforma faoliyati ko'rsatkichlari</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title="Jami Talabalar" 
           value={data.metrics.totalStudents} 
@@ -109,22 +96,16 @@ export default function Dashboard() {
           colorClass="text-emerald-500" 
         />
         <StatCard 
-          title="Faol Kurslar" 
-          value={data.metrics.totalCourses} 
-          icon={BookOpen} 
+          title="Kurs A'zoliklari" 
+          value={data.metrics.totalEnrollments} 
+          icon={Award} 
           colorClass="text-indigo-500" 
         />
         <StatCard 
-          title="O'qituvchilar / Mentorlar" 
-          value={data.metrics.totalTeachers} 
-          icon={Users} 
-          colorClass="text-sky-500" 
-        />
-        <StatCard 
-          title="A'zoliklar (Enrollments)" 
-          value={data.metrics.totalEnrollments} 
-          icon={Award} 
-          colorClass="text-amber-500" 
+          title="Kutilayotgan Uy Vazifalari" 
+          value={data.metrics.pendingHomeworks} 
+          icon={Clock} 
+          colorClass="text-orange-500" 
         />
       </div>
 
@@ -270,64 +251,136 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Operator KPIs */}
+      {/* Staff KPI Section */}
       <div className="card glass">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-primary-400" />
-          Operatorlar samaradorligi
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-dark-800 text-dark-400 text-sm">
-                <th className="pb-3 font-medium">Operator</th>
-                <th className="pb-3 font-medium text-center">Jami</th>
-                <th className="pb-3 font-medium text-center text-yellow-400">Jarayonda</th>
-                <th className="pb-3 font-medium text-center text-green-400">Muvaffaqiyatli</th>
-                <th className="pb-3 font-medium text-center text-red-400">Rad etilgan</th>
-                <th className="pb-3 font-medium text-center">SLA Buzilgan</th>
-                <th className="pb-3 font-medium text-right">Samaradorlik</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {[...data.operators].sort((a, b) => {
-                const aConv = a.totalLeads > 0 ? (a.successLeads / a.totalLeads) : 0;
-                const bConv = b.totalLeads > 0 ? (b.successLeads / b.totalLeads) : 0;
-                return bConv - aConv;
-              }).map((op) => {
-                const convRate = op.totalLeads > 0 ? (op.successLeads / op.totalLeads * 100) : 0;
-                let ratingColor = 'text-red-400';
-                if (convRate > 20) ratingColor = 'text-green-400';
-                else if (convRate > 10) ratingColor = 'text-yellow-400';
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-dark-800 pb-4 mb-4 gap-4">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary-400" />
+            Ekotizim Xodimlari Ish Faoliyati
+          </h3>
+          <div className="flex bg-dark-900 p-1 rounded-lg border border-dark-800">
+            <button
+              onClick={() => setActiveTab('operators')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'operators' 
+                  ? 'bg-primary-600 text-white shadow' 
+                  : 'text-dark-400 hover:text-white'
+              }`}
+            >
+              Sotuv (Operatorlar)
+            </button>
+            <button
+              onClick={() => setActiveTab('teachers')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'teachers' 
+                  ? 'bg-primary-600 text-white shadow' 
+                  : 'text-dark-400 hover:text-white'
+              }`}
+            >
+              Akademik (Mentorlar)
+            </button>
+          </div>
+        </div>
 
-                return (
-                  <tr 
-                    key={op.id} 
-                    onClick={() => setSelectedOperatorId(op.id)}
-                    className="border-b border-dark-800/50 hover:bg-dark-800/80 transition-colors cursor-pointer"
-                  >
-                    <td className="py-3 text-white font-medium pl-2">{op.name}</td>
-                    <td className="py-3 text-center text-dark-300">{op.totalLeads}</td>
-                    <td className="py-3 text-center text-yellow-500/80">{op.activeLeads || 0}</td>
-                    <td className="py-3 text-center text-green-400">{op.successLeads}</td>
-                    <td className="py-3 text-center text-red-400/70">{op.archivedLeads || 0}</td>
-                    <td className={`py-3 text-center ${op.slaBreached > 0 ? 'text-red-500 font-bold' : 'text-dark-500'}`}>{op.slaBreached}</td>
-                    <td className={`py-3 text-right font-bold pr-2 ${ratingColor}`}>
-                      {convRate.toFixed(1)}%
+        {activeTab === 'operators' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-dark-800 text-dark-400 text-sm">
+                  <th className="pb-3 font-medium">Operator</th>
+                  <th className="pb-3 font-medium text-center">Jami</th>
+                  <th className="pb-3 font-medium text-center text-yellow-400">Jarayonda</th>
+                  <th className="pb-3 font-medium text-center text-green-400">Muvaffaqiyatli</th>
+                  <th className="pb-3 font-medium text-center text-red-400">Rad etilgan</th>
+                  <th className="pb-3 font-medium text-center">SLA Buzilgan</th>
+                  <th className="pb-3 font-medium text-right">Samaradorlik</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {[...data.operators].sort((a, b) => {
+                  const aConv = a.totalLeads > 0 ? (a.successLeads / a.totalLeads) : 0;
+                  const bConv = b.totalLeads > 0 ? (b.successLeads / b.totalLeads) : 0;
+                  return bConv - aConv;
+                }).map((op) => {
+                  const convRate = op.totalLeads > 0 ? (op.successLeads / op.totalLeads * 100) : 0;
+                  let ratingColor = 'text-red-400';
+                  if (convRate > 20) ratingColor = 'text-green-400';
+                  else if (convRate > 10) ratingColor = 'text-yellow-400';
+
+                  return (
+                    <tr 
+                      key={op.id} 
+                      onClick={() => setSelectedOperatorId(op.id)}
+                      className="border-b border-dark-800/50 hover:bg-dark-800/80 transition-colors cursor-pointer"
+                    >
+                      <td className="py-3 text-white font-medium pl-2">{op.name}</td>
+                      <td className="py-3 text-center text-dark-300">{op.totalLeads}</td>
+                      <td className="py-3 text-center text-yellow-500/80">{op.activeLeads || 0}</td>
+                      <td className="py-3 text-center text-green-400">{op.successLeads}</td>
+                      <td className="py-3 text-center text-red-400/70">{op.archivedLeads || 0}</td>
+                      <td className={`py-3 text-center ${op.slaBreached > 0 ? 'text-red-500 font-bold' : 'text-dark-500'}`}>{op.slaBreached}</td>
+                      <td className={`py-3 text-right font-bold pr-2 ${ratingColor}`}>
+                        {convRate.toFixed(1)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+                {data.operators.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="py-8 text-center text-dark-500">
+                      Ma'lumot topilmadi
                     </td>
                   </tr>
-                );
-              })}
-              {data.operators.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="py-8 text-center text-dark-500">
-                    Ma'lumot topilmadi
-                  </td>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-dark-800 text-dark-400 text-sm">
+                  <th className="pb-3 font-medium">Mentor / O'qituvchi</th>
+                  <th className="pb-3 font-medium">Email</th>
+                  <th className="pb-3 font-medium text-center">Roli</th>
+                  <th className="pb-3 font-medium text-center">Biriktirilgan Kurslar</th>
+                  <th className="pb-3 font-medium text-center">Tekshirilgan Vazifalar</th>
+                  <th className="pb-3 font-medium text-right">O'rtacha Baho</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="text-sm">
+                {[...data.teachers].sort((a, b) => b.reviewedCount - a.reviewedCount).map((teacher) => {
+                  return (
+                    <tr 
+                      key={teacher.id} 
+                      className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors"
+                    >
+                      <td className="py-3 text-white font-medium pl-2">{teacher.name}</td>
+                      <td className="py-3 text-dark-300">{teacher.email}</td>
+                      <td className="py-3 text-center">
+                        <span className={`badge ${teacher.role === 'TEACHER' ? 'badge-success' : 'badge-progress'}`}>
+                          {teacher.role === 'TEACHER' ? "O'qituvchi" : 'Mentor'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-center text-dark-300 font-semibold">{teacher.coursesCount} ta</td>
+                      <td className="py-3 text-center text-emerald-400 font-bold">{teacher.reviewedCount} ta</td>
+                      <td className="py-3 text-right font-bold pr-2 text-indigo-400">
+                        {teacher.avgGrade} / 100
+                      </td>
+                    </tr>
+                  );
+                })}
+                {(!data.teachers || data.teachers.length === 0) && (
+                  <tr>
+                    <td colSpan="6" className="py-8 text-center text-dark-500">
+                      O'qituvchilar ma'lumoti topilmadi
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {selectedOperatorId && (
