@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ClipboardList, LogOut, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle, FileText } from 'lucide-react';
+import { ClipboardList, LogOut, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle, FileText, BookOpen, Users } from 'lucide-react';
 import api from '../lib/api';
 import ReportWarningBanner from '../components/ReportWarningBanner';
 
@@ -88,6 +88,8 @@ export default function TeacherLayout() {
   const navItems = [
     { to: '/teacher', icon: ClipboardList, label: 'Topshiriqlar Markazi', end: true },
     { to: '/teacher/homeworks', icon: CheckCheck, label: 'Vazifalarni Tekshirish', end: false },
+    { to: '/teacher/courses', icon: BookOpen, label: 'Kurslarni Boshqarish', end: false },
+    { to: '/teacher/students', icon: Users, label: 'Talabalar Nazorati', end: false },
     { to: '/teacher/reports', icon: FileText, label: 'Hisobotlar', end: false },
   ];
 

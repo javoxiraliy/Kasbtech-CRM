@@ -74,7 +74,8 @@ router.get('/courses', authenticate, async (req, res) => {
       courses = await prisma.course.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
-          _count: { select: { modules: true } }
+          _count: { select: { modules: true } },
+          teacher: { select: { id: true, name: true, email: true } }
         }
       });
     }
@@ -86,10 +87,10 @@ router.get('/courses', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/lms/courses - Create course (Admin only)
-router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), async (req, res) => {
+// POST /api/lms/courses - Create course
+router.post('/courses', authenticate, requireMentorOrAdmin, upload.single('thumbnail'), async (req, res) => {
   try {
-    const { title, description, price, isPublished } = req.body;
+    const { title, description, price, isPublished, teacherId } = req.body;
     if (!title || !description || !price) {
       return res.status(400).json({ error: 'Sarlavha, ta\'rif va narx kiritilishi shart' });
     }
@@ -102,7 +103,8 @@ router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), 
         description,
         price: parseFloat(price),
         thumbnail: thumbnailPath,
-        isPublished: isPublished === 'true' || isPublished === true
+        isPublished: isPublished === 'true' || isPublished === true,
+        teacherId: teacherId || null
       }
     });
 
@@ -113,16 +115,17 @@ router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), 
   }
 });
 
-// PUT /api/lms/courses/:id - Update course (Admin only)
-router.put('/courses/:id', authenticate, requireAdmin, upload.single('thumbnail'), async (req, res) => {
+// PUT /api/lms/courses/:id - Update course
+router.put('/courses/:id', authenticate, requireMentorOrAdmin, upload.single('thumbnail'), async (req, res) => {
   try {
-    const { title, description, price, isPublished } = req.body;
+    const { title, description, price, isPublished, teacherId } = req.body;
     const updateData = {};
 
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (price !== undefined) updateData.price = parseFloat(price);
     if (isPublished !== undefined) updateData.isPublished = isPublished === 'true' || isPublished === true;
+    if (teacherId !== undefined) updateData.teacherId = teacherId || null;
     if (req.file) {
       updateData.thumbnail = `/uploads/${req.file.filename}`;
     }
@@ -139,8 +142,8 @@ router.put('/courses/:id', authenticate, requireAdmin, upload.single('thumbnail'
   }
 });
 
-// DELETE /api/lms/courses/:id - Delete course (Admin only)
-router.delete('/courses/:id', authenticate, requireAdmin, async (req, res) => {
+// DELETE /api/lms/courses/:id - Delete course
+router.delete('/courses/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     await prisma.course.delete({
       where: { id: req.params.id }
@@ -157,7 +160,7 @@ router.delete('/courses/:id', authenticate, requireAdmin, async (req, res) => {
 // ==========================================
 
 // POST /api/lms/courses/:courseId/modules - Create module
-router.post('/courses/:courseId/modules', authenticate, requireAdmin, async (req, res) => {
+router.post('/courses/:courseId/modules', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     const { title, order } = req.body;
     const { courseId } = req.params;
@@ -182,7 +185,7 @@ router.post('/courses/:courseId/modules', authenticate, requireAdmin, async (req
 });
 
 // PUT /api/lms/modules/:id - Update module
-router.put('/modules/:id', authenticate, requireAdmin, async (req, res) => {
+router.put('/modules/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     const { title, order } = req.body;
     const updateData = {};
@@ -202,7 +205,7 @@ router.put('/modules/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/lms/modules/:id - Delete module
-router.delete('/modules/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/modules/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     await prisma.module.delete({
       where: { id: req.params.id }
@@ -219,7 +222,7 @@ router.delete('/modules/:id', authenticate, requireAdmin, async (req, res) => {
 // ==========================================
 
 // POST /api/lms/modules/:moduleId/lessons - Create lesson
-router.post('/modules/:moduleId/lessons', authenticate, requireAdmin, async (req, res) => {
+router.post('/modules/:moduleId/lessons', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     const { title, description, videoUrl, duration, order, dripDays } = req.body;
     const { moduleId } = req.params;
@@ -248,7 +251,7 @@ router.post('/modules/:moduleId/lessons', authenticate, requireAdmin, async (req
 });
 
 // PUT /api/lms/lessons/:id - Update lesson
-router.put('/lessons/:id', authenticate, requireAdmin, async (req, res) => {
+router.put('/lessons/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     const { title, description, videoUrl, duration, order, dripDays } = req.body;
     const updateData = {};
@@ -273,7 +276,7 @@ router.put('/lessons/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/lms/lessons/:id - Delete lesson
-router.delete('/lessons/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/lessons/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     await prisma.lesson.delete({
       where: { id: req.params.id }
@@ -697,8 +700,8 @@ router.get('/lessons/:lessonId/quiz', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/lms/lessons/:lessonId/quiz - Create/update quiz (Admin only)
-router.post('/lessons/:lessonId/quiz', authenticate, requireAdmin, async (req, res) => {
+// POST /api/lms/lessons/:lessonId/quiz - Create/update quiz
+router.post('/lessons/:lessonId/quiz', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     const { lessonId } = req.params;
     const { questions, passScore } = req.body; // questions should be JSON array
@@ -835,6 +838,174 @@ router.get('/coins/balance', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Fetch coin balance error:', error);
     res.status(500).json({ error: 'Koinlar balansini yuklashda xatolik' });
+  }
+});
+
+// ==========================================
+// 8. TEACHER ASSIGNMENT & STUDENT PROFILES
+// ==========================================
+
+// GET /api/lms/teachers - List all teachers/mentors
+router.get('/teachers', authenticate, async (req, res) => {
+  try {
+    const teachers = await prisma.user.findMany({
+      where: {
+        role: { in: ['TEACHER', 'MENTOR'] }
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json({ teachers });
+  } catch (error) {
+    console.error('Fetch teachers error:', error);
+    res.status(500).json({ error: 'O\'qituvchilarni yuklashda xatolik yuz berdi' });
+  }
+});
+
+// POST /api/lms/courses/:courseId/assign-teacher - Assign teacher to course (Admin only)
+router.post('/courses/:courseId/assign-teacher', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { teacherId } = req.body;
+
+    const course = await prisma.course.update({
+      where: { id: courseId },
+      data: {
+        teacherId: teacherId || null
+      }
+    });
+
+    res.json({ message: 'O\'qituvchi kursga muvaffaqiyatli biriktirildi', course });
+  } catch (error) {
+    console.error('Assign teacher error:', error);
+    res.status(500).json({ error: 'O\'qituvchini biriktirishda xatolik yuz berdi' });
+  }
+});
+
+// POST /api/lms/students/register - Register a student and enroll in courses (Teacher/Admin)
+router.post('/students/register', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const { name, email, password, courseIds } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'F.I.SH., email va parol kiritilishi shart' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    
+    // Check if email already exists
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(400).json({ error: 'Ushbu email bilan ro\'yxatdan o\'tgan foydalanuvchi mavjud' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Create student user
+    const student = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: 'STUDENT'
+      }
+    });
+
+    // Enroll in selected courses
+    if (courseIds && Array.isArray(courseIds)) {
+      for (const courseId of courseIds) {
+        await prisma.enrollment.upsert({
+          where: { studentId_courseId: { studentId: student.id, courseId } },
+          update: {},
+          create: {
+            studentId: student.id,
+            courseId
+          }
+        });
+      }
+    }
+
+    res.status(201).json({ message: 'Talaba profili muvaffaqiyatli yaratildi', student });
+  } catch (error) {
+    console.error('Register student error:', error);
+    res.status(500).json({ error: 'Talabani ro\'yxatdan o\'tkazishda xatolik yuz berdi' });
+  }
+});
+
+// POST /api/lms/students/:studentId/enroll - Grant course access / enroll student (Teacher/Admin)
+router.post('/students/:studentId/enroll', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { courseId } = req.body;
+
+    if (!courseId) {
+      return res.status(400).json({ error: 'Kurs ID kiritilishi shart' });
+    }
+
+    const enrollment = await prisma.enrollment.upsert({
+      where: { studentId_courseId: { studentId, courseId } },
+      update: {},
+      create: {
+        studentId,
+        courseId
+      }
+    });
+
+    res.json({ message: 'Talabaga darsga ruxsat berildi', enrollment });
+  } catch (error) {
+    console.error('Enroll student error:', error);
+    res.status(500).json({ error: 'Darsga ruxsat berishda xatolik yuz berdi' });
+  }
+});
+
+// POST /api/lms/students/:studentId/unenroll - Revoke course access / unenroll student (Teacher/Admin)
+router.post('/students/:studentId/unenroll', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { courseId } = req.body;
+
+    if (!courseId) {
+      return res.status(400).json({ error: 'Kurs ID kiritilishi shart' });
+    }
+
+    await prisma.enrollment.delete({
+      where: { studentId_courseId: { studentId, courseId } }
+    });
+
+    res.json({ message: 'Kursdan ruxsat bekor qilindi' });
+  } catch (error) {
+    console.error('Unenroll student error:', error);
+    res.status(500).json({ error: 'Kurs ruxsatini bekor qilishda xatolik yuz berdi' });
+  }
+});
+
+// GET /api/lms/students - List all students with their enrollments (Teacher/Admin)
+router.get('/students', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const students = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isActive: true,
+        createdAt: true,
+        enrollments: {
+          include: {
+            course: { select: { id: true, title: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ students });
+  } catch (error) {
+    console.error('List students error:', error);
+    res.status(500).json({ error: 'Talabalar ro\'yxatini yuklashda xatolik yuz berdi' });
   }
 });
 

@@ -18,6 +18,7 @@ import api from '../../lib/api';
 
 export default function Courses() {
   const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +30,7 @@ export default function Courses() {
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
 
   // Form states
-  const [courseForm, setCourseForm] = useState({ id: null, title: '', description: '', price: '', isPublished: false, thumbnail: null });
+  const [courseForm, setCourseForm] = useState({ id: null, title: '', description: '', price: '', isPublished: false, thumbnail: null, teacherId: '' });
   const [moduleForm, setModuleForm] = useState({ id: null, title: '', order: '' });
   const [lessonForm, setLessonForm] = useState({ id: null, moduleId: null, title: '', description: '', videoUrl: '', duration: '', order: '', dripDays: '' });
   
@@ -40,7 +41,17 @@ export default function Courses() {
 
   useEffect(() => {
     fetchCourses();
+    fetchTeachers();
   }, []);
+
+  const fetchTeachers = async () => {
+    try {
+      const res = await api.get('/lms/teachers');
+      setTeachers(res.data.teachers || []);
+    } catch (err) {
+      console.error('Error fetching teachers', err);
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -83,6 +94,7 @@ export default function Courses() {
       formData.append('description', courseForm.description);
       formData.append('price', courseForm.price);
       formData.append('isPublished', courseForm.isPublished);
+      formData.append('teacherId', courseForm.teacherId || '');
       if (courseForm.thumbnail instanceof File) {
         formData.append('thumbnail', courseForm.thumbnail);
       }
@@ -275,7 +287,7 @@ export default function Courses() {
         {!selectedCourse && (
           <button 
             onClick={() => {
-              setCourseForm({ id: null, title: '', description: '', price: '', isPublished: false, thumbnail: null });
+              setCourseForm({ id: null, title: '', description: '', price: '', isPublished: false, thumbnail: null, teacherId: '' });
               setIsCourseModalOpen(true);
             }} 
             className="btn-primary"
@@ -317,7 +329,14 @@ export default function Courses() {
                 </div>
                 
                 <h3 className="font-bold text-white text-lg mb-2">{course.title}</h3>
-                <p className="text-sm text-dark-400 line-clamp-3 mb-4">{course.description}</p>
+                <p className="text-sm text-dark-400 line-clamp-3 mb-2">{course.description}</p>
+                <div className="text-xs mb-4">
+                  {course.teacher ? (
+                    <span className="text-emerald-400 font-medium">O'qituvchi: {course.teacher.name}</span>
+                  ) : (
+                    <span className="text-dark-500 italic">O'qituvchi biriktirilmagan</span>
+                  )}
+                </div>
               </div>
 
               <div className="border-t border-dark-800 pt-4 flex justify-between items-center mt-4">
@@ -335,7 +354,15 @@ export default function Courses() {
                   
                   <button 
                     onClick={() => {
-                      setCourseForm({ id: course.id, title: course.title, description: course.description, price: course.price, isPublished: course.isPublished, thumbnail: course.thumbnail });
+                      setCourseForm({ 
+                        id: course.id, 
+                        title: course.title, 
+                        description: course.description, 
+                        price: course.price, 
+                        isPublished: course.isPublished, 
+                        thumbnail: course.thumbnail,
+                        teacherId: course.teacherId || ''
+                      });
                       setIsCourseModalOpen(true);
                     }}
                     className="p-2 text-dark-400 hover:text-white rounded-lg hover:bg-dark-800 transition-colors"
@@ -588,6 +615,20 @@ export default function Courses() {
                   onChange={(e) => setCourseForm({ ...courseForm, thumbnail: e.target.files[0] })}
                   className="block w-full text-xs text-dark-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dark-800 file:text-dark-100 hover:file:bg-dark-700 cursor-pointer"
                 />
+              </div>
+
+              <div>
+                <label className="label">O'qituvchi / Kurator biriktirish</label>
+                <select 
+                  className="input bg-dark-800" 
+                  value={courseForm.teacherId} 
+                  onChange={(e) => setCourseForm({ ...courseForm, teacherId: e.target.value })}
+                >
+                  <option value="">Biriktirilmagan</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.role === 'TEACHER' ? "O'qituvchi" : 'Mentor'})</option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex justify-end gap-2 border-t border-dark-800 pt-3">

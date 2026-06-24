@@ -28,6 +28,7 @@ import AdminCourses from './pages/admin/Courses';
 
 import TeacherTasks from './pages/teacher/Tasks';
 import TeacherHomeworkReview from './pages/teacher/HomeworkReview';
+import StudentManager from './pages/shared/StudentManager';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -102,6 +103,8 @@ function App() {
             }>
               <Route index element={<TeacherTasks />} />
               <Route path="homeworks" element={<TeacherHomeworkReview />} />
+              <Route path="students" element={<StudentManager />} />
+              <Route path="courses" element={<AdminCourses />} />
               <Route path="reports" element={<Reports />} />
             </Route>
             
@@ -126,6 +129,7 @@ function App() {
               <Route path="kpi" element={<AdminKPI />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="courses" element={<AdminCourses />} />
+              <Route path="students" element={<StudentManager />} />
               <Route path="reports" element={<Reports />} />
               <Route path="all-reports" element={<AdminReports />} />
             </Route>

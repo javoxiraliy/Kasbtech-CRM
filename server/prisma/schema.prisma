@@ -78,6 +78,7 @@ model User {
   reviewedHomeworks Homework[]        @relation("MentorReviews")
   sessions          DeviceSession[]
   coins             CoinTransaction[]
+  teacherCourses    Course[]          @relation("CourseTeacher")
 
   @@map("users")
 }
@@ -192,6 +193,8 @@ model Course {
 
   modules     Module[]
   enrollments Enrollment[]
+  teacherId   String?
+  teacher     User?    @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
 
   @@map("courses")
 }
