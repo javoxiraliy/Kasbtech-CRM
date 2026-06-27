@@ -75,6 +75,62 @@ export default function StudentStudy() {
     };
   }, [lessonDetail]);
 
+  // Anti-copy, anti-devtools, anti-print and screen capture deterrents
+  useEffect(() => {
+    const preventActions = (e) => {
+      if (e.type === 'contextmenu') {
+        e.preventDefault();
+      }
+      if (e.type === 'copy' || e.type === 'cut' || e.type === 'paste') {
+        e.preventDefault();
+        alert('Ruxsatsiz nusxa olish va matn joylashtirish taqiqlangan!');
+      }
+      if (e.type === 'dragstart') {
+        e.preventDefault();
+      }
+    };
+
+    const preventKeys = (e) => {
+      // Block F12, Ctrl+Shift+I/C/J, Ctrl+U, Ctrl+S, Ctrl+P
+      if (
+        e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 67 || e.keyCode === 74)) || 
+        (e.ctrlKey && e.keyCode === 85) || 
+        (e.ctrlKey && e.keyCode === 83) || 
+        (e.ctrlKey && e.keyCode === 80)
+      ) {
+        e.preventDefault();
+        alert('Xavfsizlik choralari sababli ushbu amal taqiqlangan!');
+        return false;
+      }
+    };
+
+    // Console clearing and debugger loop to deter devtools inspecting
+    const devtoolsTimer = setInterval(() => {
+      const start = new Date();
+      debugger; 
+      const end = new Date();
+      if (end - start > 100) {
+        console.clear();
+      }
+    }, 1000);
+
+    document.addEventListener('contextmenu', preventActions);
+    document.addEventListener('copy', preventActions);
+    document.addEventListener('cut', preventActions);
+    document.addEventListener('dragstart', preventActions);
+    document.addEventListener('keydown', preventKeys);
+
+    return () => {
+      document.removeEventListener('contextmenu', preventActions);
+      document.removeEventListener('copy', preventActions);
+      document.removeEventListener('cut', preventActions);
+      document.removeEventListener('dragstart', preventActions);
+      document.removeEventListener('keydown', preventKeys);
+      clearInterval(devtoolsTimer);
+    };
+  }, []);
+
   const fetchCourseDetails = async () => {
     try {
       setLoading(true);
@@ -217,7 +273,7 @@ export default function StudentStudy() {
   };
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 min-h-[calc(100vh-8rem)]">
+    <div className="flex flex-col xl:flex-row gap-6 min-h-[calc(100vh-8rem)] select-none">
       
       {/* Sidebar: Course Modules & Lessons */}
       <div className="w-full xl:w-80 bg-dark-900 border border-dark-800 rounded-xl overflow-hidden flex flex-col flex-shrink-0">

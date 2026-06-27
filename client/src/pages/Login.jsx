@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Key, Mail, Loader2 } from 'lucide-react';
+import { Shield, Key, Mail, Loader2, X } from 'lucide-react';
+import api from '../lib/api';
+
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -8,12 +10,15 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [deviceLimitError, setDeviceLimitError] = useState(false);
+  const [activeSessions, setActiveSessions] = useState([]);
+  const [terminatingSessionId, setTerminatingSessionId] = useState(null);
   const { login } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!email || !password) {
       addNotification('warning', "Barcha maydonlarni to'ldiring");
       return;
@@ -33,9 +38,46 @@ export default function Login() {
         navigate('/operator');
       }
     } catch (error) {
-      addNotification('error', error.response?.data?.error || "Login yoki parol noto'g'ri");
+      if (error.response?.data?.error === 'DEVICE_LIMIT_EXCEEDED') {
+        setDeviceLimitError(true);
+        setActiveSessions(error.response.data.sessions || []);
+        addNotification('warning', "Maksimal qurilmalar soniga yetdingiz");
+      } else {
+        addNotification('error', error.response?.data?.message || error.response?.data?.error || "Login yoki parol noto'g'ri");
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTerminateSession = async (sessionId) => {
+    setTerminatingSessionId(sessionId);
+    try {
+      await api.post('/auth/terminate-session', {
+        email,
+        password,
+        sessionId
+      });
+      addNotification('success', "Qurilma o'chirildi. Tizimga qayta kirilmoqda...");
+      setDeviceLimitError(false);
+      setActiveSessions([]);
+      
+      // Attempt login again automatically
+      const user = await login(email, password);
+      addNotification('success', 'Tizimga muvaffaqiyatli kirdingiz');
+      if (user.role === 'ADMIN') {
+        navigate('/admin');
+      } else if (user.role === 'TEACHER') {
+        navigate('/teacher');
+      } else if (user.role === 'SMM') {
+        navigate('/smm');
+      } else {
+        navigate('/operator');
+      }
+    } catch (err) {
+      addNotification('error', err.response?.data?.error || "Qurilmani o'chirishda xatolik yuz berdi");
+    } finally {
+      setTerminatingSessionId(null);
     }
   };
 
@@ -117,6 +159,64 @@ export default function Login() {
           <p>Adminstrator bilan bog'laning</p>
         </div>
       </div>
+
+      {/* Device Limit Exceeded Modal */}
+      {deviceLimitError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop animate-fade-in">
+          <div className="card glass w-full max-w-md overflow-hidden shadow-2xl relative">
+            <div className="p-4 border-b border-dark-800 flex justify-between items-center bg-dark-900/50">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                Faol Qurilmalar (Max 3 ta)
+              </h3>
+              <button 
+                onClick={() => {
+                  setDeviceLimitError(false);
+                  setActiveSessions([]);
+                }} 
+                className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-850 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-dark-300">
+                Siz ruxsat etilgan maksimal qurilmalar soniga (3 ta) yetdingiz. Tizimga kirish uchun quyidagi faol qurilmalardan birini o'chirishingiz lozim:
+              </p>
+              
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {activeSessions.map((session) => (
+                  <div key={session.id} className="p-3 rounded-xl bg-dark-800/80 border border-dark-700/60 flex items-center justify-between gap-3 text-left">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-white truncate" title={session.deviceInfo}>
+                        {session.deviceInfo}
+                      </p>
+                      <p className="text-[10px] text-dark-400 mt-1">
+                        IP: <span className="text-primary-400 font-mono">{session.ipAddress}</span>
+                      </p>
+                      <p className="text-[9px] text-dark-500 mt-0.5">
+                        Oxirgi faollik: {new Date(session.lastActiveAt).toLocaleString('uz-UZ')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleTerminateSession(session.id)}
+                      disabled={terminatingSessionId !== null}
+                      className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/20 hover:border-transparent transition-all shrink-0 active:scale-95 flex items-center gap-1"
+                    >
+                      {terminatingSessionId === session.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : 'Chiqish'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
