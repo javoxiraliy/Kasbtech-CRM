@@ -110,8 +110,12 @@ export default function StudentLayout() {
             className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-dark-800/30 hover:bg-dark-800/80 border border-transparent hover:border-dark-700/60 cursor-pointer transition-all duration-200"
             title="Profil sozlamalari"
           >
-            <div className="w-10 h-10 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400 font-bold shrink-0">
-              {user?.name?.charAt(0) || 'S'}
+            <div className="w-10 h-10 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400 font-bold shrink-0 overflow-hidden">
+              {user?.avatar ? (
+                <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+              ) : (
+                user?.name?.charAt(0) || 'S'
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user?.name}</p>

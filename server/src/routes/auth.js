@@ -2,6 +2,35 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../prismaClient');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|webp|gif/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    if (ext) return cb(null, true);
+    cb(new Error('Faqat rasmlar ruxsat etiladi! (jpeg, jpg, png, webp, gif)'));
+  }
+});
 
 const router = express.Router();
 
@@ -146,9 +175,9 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 // PUT /api/auth/profile - Update user profile
-router.put('/profile', authenticate, async (req, res) => {
+router.put('/profile', authenticate, upload.single('avatar'), async (req, res) => {
   try {
-    const { name, bio, phone, nickname, password } = req.body;
+    const { name, bio, phone, nickname, password, currentPassword } = req.body;
     const userId = req.user.id;
 
     const data = {};
@@ -157,8 +186,25 @@ router.put('/profile', authenticate, async (req, res) => {
     if (phone !== undefined) data.phone = phone;
     if (nickname !== undefined) data.nickname = nickname;
 
+    if (req.file) {
+      data.avatar = `/uploads/${req.file.filename}`;
+    }
+
     if (password) {
-      const bcrypt = require('bcryptjs');
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Yangi parolni o\'rnatish uchun joriy parolingizni kiritishingiz shart!' });
+      }
+
+      // Foydalanuvchining joriy parolini tekshirish
+      const userDb = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      const isValidPassword = await bcrypt.compare(currentPassword, userDb.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ error: 'Joriy parolingiz noto\'g\'ri kiritildi!' });
+      }
+
       data.password = await bcrypt.hash(password, 10);
     }
 
@@ -173,14 +219,15 @@ router.put('/profile', authenticate, async (req, res) => {
         isActive: true,
         bio: true,
         phone: true,
-        nickname: true
+        nickname: true,
+        avatar: true
       }
     });
 
     res.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Profil ma\'lumotlarini yangilashda xatolik yuz berdi' });
+    res.status(500).json({ error: error.message || 'Profil ma\'lumotlarini yangilashda xatolik yuz berdi' });
   }
 });
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, User, Phone, FileText, Key, Loader2, Mail, Shield } from 'lucide-react';
+import { X, User, Phone, FileText, Key, Loader2, Shield, Camera } from 'lucide-react';
 import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -13,7 +13,18 @@ export default function ProfileModal({ onClose }) {
   const [phone, setPhone] = useState(user?.phone || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [password, setPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || '');
   const [submitting, setSubmitting] = useState(false);
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,23 +33,37 @@ export default function ProfileModal({ onClose }) {
       return;
     }
 
+    if (password && !currentPassword) {
+      addNotification('warning', "Parolni o'zgartirish uchun joriy parolingizni kiritishingiz shart!");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const payload = {
-        name,
-        nickname,
-        phone,
-        bio
-      };
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('nickname', nickname);
+      formData.append('phone', phone);
+      formData.append('bio', bio);
+      
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
       if (password) {
-        payload.password = password;
+        formData.append('password', password);
+        formData.append('currentPassword', currentPassword);
       }
 
-      const res = await api.put('/auth/profile', payload);
+      const res = await api.put('/auth/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
       if (res.data.success) {
         updateProfile(res.data.user);
         addNotification('success', "Profil ma'lumotlari muvaffaqiyatli yangilandi");
         setPassword('');
+        setCurrentPassword('');
+        setAvatarFile(null);
         onClose();
       }
     } catch (error) {
@@ -93,10 +118,35 @@ export default function ProfileModal({ onClose }) {
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           
-          {/* Avatar and Role */}
+          {/* Avatar Upload and Role */}
           <div className="flex items-center gap-4 p-3 bg-dark-800/40 border border-dark-700/40 rounded-2xl">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold border-2 border-dark-600 shadow-md">
-              {name.charAt(0).toUpperCase()}
+            <div className="relative group/avatar cursor-pointer">
+              <input
+                type="file"
+                id="avatar-input"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+              <label htmlFor="avatar-input" className="cursor-pointer block relative">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold border-2 border-dark-600 shadow-md overflow-hidden relative">
+                  {avatarPreview ? (
+                    <img 
+                      src={avatarPreview} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    name.charAt(0).toUpperCase()
+                  )}
+                  
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
+                    <Camera className="w-4 h-4 text-white" />
+                    <span className="text-[8px] text-white font-bold uppercase mt-0.5">Yuklash</span>
+                  </div>
+                </div>
+              </label>
             </div>
             <div>
               <h4 className="text-base font-bold text-white leading-tight">{name}</h4>
@@ -118,7 +168,7 @@ export default function ProfileModal({ onClose }) {
                 type="text"
                 required
                 className="input h-10 text-xs"
-                placeholder="Malika Yusupova"
+                placeholder="Sherzod Asadov"
                 value={name}
                 onChange={e => setName(e.target.value)}
               />
@@ -132,7 +182,7 @@ export default function ProfileModal({ onClose }) {
               <input
                 type="text"
                 className="input h-10 text-xs"
-                placeholder="malika_y"
+                placeholder="sherzod_a"
                 value={nickname}
                 onChange={e => setNickname(e.target.value)}
               />
@@ -165,6 +215,23 @@ export default function ProfileModal({ onClose }) {
                 onChange={e => setPassword(e.target.value)}
               />
             </div>
+
+            {/* Eski parolni tasdiqlash */}
+            {password && (
+              <div className="space-y-1 sm:col-span-2 animate-fade-in">
+                <label className="text-xs font-semibold text-red-400 flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5" /> Amaldagi (eski) parolingizni tasdiqlang *
+                </label>
+                <input
+                  type="password"
+                  required
+                  className="input h-10 text-xs border-red-500/30 focus:border-red-500 bg-red-500/5"
+                  placeholder="Yangi parolni saqlash uchun joriy parolingizni kiriting..."
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                />
+              </div>
+            )}
 
           </div>
 

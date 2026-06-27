@@ -250,8 +250,12 @@ export default function SMMLayout() {
                 <p className="text-sm font-medium text-white">{user?.name}</p>
                 <p className="text-xs text-pink-400">SMM / Media</p>
               </div>
-              <div className="w-9 h-9 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300">
-                <Smartphone className="w-5 h-5 text-pink-400" />
+              <div className="w-9 h-9 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300 overflow-hidden">
+                {user?.avatar ? (
+                  <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <Smartphone className="w-5 h-5 text-pink-400" />
+                )}
               </div>
             </div>
             <button

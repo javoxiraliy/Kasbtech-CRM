@@ -67,6 +67,7 @@ model User {
   bio          String?
   phone        String?
   nickname     String?
+  avatar       String?
   createdAt    DateTime @default(now())
   updatedAt DateTime @updatedAt
 

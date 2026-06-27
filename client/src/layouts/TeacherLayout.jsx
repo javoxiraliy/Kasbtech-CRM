@@ -257,8 +257,12 @@ export default function TeacherLayout() {
                 <p className="text-sm font-medium text-white">{user?.name}</p>
                 <p className="text-xs text-emerald-400">O'qituvchi</p>
               </div>
-              <div className="w-9 h-9 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300">
-                <UserIcon className="w-5 h-5 text-emerald-400" />
+              <div className="w-9 h-9 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300 overflow-hidden">
+                {user?.avatar ? (
+                  <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <UserIcon className="w-5 h-5 text-emerald-400" />
+                )}
               </div>
             </div>
           </div>
