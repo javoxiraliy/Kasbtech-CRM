@@ -34,6 +34,21 @@ function StatCard({ title, value, icon: Icon, trend, colorClass }) {
   );
 }
 
+const COURSE_LABELS = {
+  COMPUTER_LITERACY: 'Kompyuter Savodxonligi',
+  GRAPHIC_DESIGN: 'Grafik Dizayn',
+  SMM: 'SMM',
+  TARGET_PRO: 'Target Pro',
+  VIDEOGRAPHY: 'Videomontaj "videografiya"',
+  WEB_DEVELOPMENT: 'Web Dasturlash',
+  PYTHON: 'Python Dasturlash',
+  AUTOCAD: 'AutoCAD',
+  THREE_D_MAX: '3D MAX',
+  OTHER: 'Boshqa',
+  VIDEO_EDITING: 'Video montaj',
+  COMPUTER_GRAPHICS: 'Kompyuter grafikasi'
+};
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -123,7 +138,7 @@ export default function Dashboard() {
                   fontSize={10} 
                   tickLine={false} 
                   axisLine={false}
-                  tickFormatter={(val) => val.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  tickFormatter={(val) => COURSE_LABELS[val] || val}
                   angle={-15}
                   textAnchor="end"
                   interval={0}
@@ -133,7 +148,7 @@ export default function Dashboard() {
                   contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px' }}
                   itemStyle={{ color: '#e2e8f0' }}
                   formatter={(value, name, props) => [value, 'Lidlar']}
-                  labelFormatter={(label) => label.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  labelFormatter={(label) => COURSE_LABELS[label] || label}
                 />
                 <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
