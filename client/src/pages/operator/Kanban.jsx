@@ -80,7 +80,16 @@ function SortableLeadCard({ lead, onClick }) {
 
   // Determine SLA color
   let slaClass = '';
-  if (lead.status === 'NEW' && lead.slaDeadline) {
+  const hasDelayWarning = lead.status !== 'SUCCESS' && lead.status !== 'ARCHIVED' && lead.comments && lead.comments.length > 0 && (() => {
+    const lastCommentDate = new Date(lead.comments[0].createdAt);
+    const now = new Date();
+    const diffDays = (now - lastCommentDate) / (1000 * 60 * 60 * 24);
+    return diffDays >= 3;
+  })();
+
+  if (hasDelayWarning) {
+    slaClass = 'sla-red';
+  } else if (lead.status === 'NEW' && lead.slaDeadline) {
     const deadline = new Date(lead.slaDeadline);
     const now = new Date();
     const diffMins = (deadline - now) / 1000 / 60;
@@ -100,7 +109,15 @@ function SortableLeadCard({ lead, onClick }) {
       className={`bg-dark-800 p-3 rounded-lg border border-dark-700 cursor-grab active:cursor-grabbing hover:border-dark-500 transition-colors ${slaClass}`}
     >
       <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium text-white text-sm">{lead.name}</h4>
+        <h4 className="font-medium text-white text-sm flex items-center gap-2">
+          {lead.name}
+          {hasDelayWarning && (
+            <span className="relative flex h-2 w-2 shrink-0 animate-pulse" title="Kechikish: 3 kundan beri aloqaga chiqilmagan!">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            </span>
+          )}
+        </h4>
         <div className="flex flex-col gap-1 items-end">
           <span className="text-[10px] text-primary-400 bg-primary-500/10 px-1.5 py-0.5 rounded leading-none">
             {COURSE_LABELS[lead.courseInterest] || lead.courseInterest}

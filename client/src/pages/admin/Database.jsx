@@ -111,6 +111,18 @@ export default function Database() {
     }
   };
 
+  const getDelayWarning = (lead) => {
+    if (lead.status === 'SUCCESS' || lead.status === 'ARCHIVED') return false;
+    if (lead.comments && lead.comments.length > 0) {
+      const lastCommentDate = new Date(lead.comments[0].createdAt);
+      const now = new Date();
+      const diffTime = Math.abs(now - lastCommentDate);
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      return diffDays >= 3;
+    }
+    return false;
+  };
+
   const handleSearch = (e) => {
     if (e) e.preventDefault();
     fetchLeads(searchTerm, startDate, endDate);
@@ -470,7 +482,7 @@ export default function Database() {
               ) : leads.map((l) => (
                 <tr 
                   key={l.id} 
-                  className={`border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors ${selectedIds.includes(l.id) ? 'bg-primary-500/5' : ''}`}
+                  className={`border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors ${selectedIds.includes(l.id) ? 'bg-primary-500/5' : ''} ${getDelayWarning(l) ? 'border-l-4 border-l-red-500 bg-red-500/5' : ''}`}
                 >
                   <td className="px-4 py-3">
                     <input 
@@ -482,7 +494,15 @@ export default function Database() {
                   </td>
                   <td className="px-4 py-3 text-dark-500 text-xs font-mono">{l.id.slice(-6)}</td>
                   <td className="px-4 py-3">
-                    <p className="text-white font-medium">{l.name}</p>
+                    <p className="text-white font-medium flex items-center gap-2">
+                      {l.name}
+                      {getDelayWarning(l) && (
+                        <span className="relative flex h-2 w-2" title="Kechikish: 3 kundan beri aloqaga chiqilmagan!">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-dark-400">{l.phone}</p>
                     {l.phone2 && <p className="text-xs text-dark-400">{l.phone2}</p>}
                   </td>
