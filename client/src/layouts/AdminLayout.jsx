@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import ReportWarningBanner from '../components/ReportWarningBanner';
+import MotivationalBanner from '../components/MotivationalBanner';
+
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -121,6 +123,7 @@ export default function AdminLayout() {
         </header>
 
         <div className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+          <MotivationalBanner />
           <ReportWarningBanner />
           <Outlet />
         </div>

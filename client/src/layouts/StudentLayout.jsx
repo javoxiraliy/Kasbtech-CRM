@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
+import MotivationalBanner from '../components/MotivationalBanner';
+
 
 export default function StudentLayout() {
   const { user, logout } = useAuth();
@@ -140,6 +142,7 @@ export default function StudentLayout() {
         </header>
 
         <div className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+          <MotivationalBanner />
           <Outlet context={{ fetchCoinBalance }} />
         </div>
       </main>

@@ -216,7 +216,7 @@ export default function Database() {
       setIsAddModalOpen(false);
       setNewLead({
         name: '', phone: '', phone2: '',
-        courseInterest: 'KOMPYUTER_SAVODXONLIGI', employmentStatus: 'Ishsiz',
+        courseInterest: 'COMPUTER_LITERACY', employmentStatus: 'Ishsiz',
         status: 'NEW', assignedToId: '', isGrantEligible: false,
         source: 'Admin (Manual)'
       });
@@ -229,7 +229,7 @@ export default function Database() {
   };
 
   const COURSE_OPTIONS = [
-    { value: 'KOMPYUTER_SAVODXONLIGI', label: 'Kompyuter Savodxonligi' },
+    { value: 'COMPUTER_LITERACY', label: 'Kompyuter Savodxonligi' },
     { value: 'GRAPHIC_DESIGN', label: 'Grafik Dizayn' },
     { value: 'SMM', label: 'SMM' },
     { value: 'TARGET_PRO', label: 'Target Pro' },

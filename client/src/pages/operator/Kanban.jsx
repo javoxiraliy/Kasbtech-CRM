@@ -177,7 +177,7 @@ export default function Kanban() {
   const [creating, setCreating] = useState(false);
   const [newLead, setNewLead] = useState({
     name: '', phone: '', phone2: '',
-    courseInterest: 'KOMPYUTER_SAVODXONLIGI', employmentStatus: 'Ishsiz',
+    courseInterest: 'COMPUTER_LITERACY', employmentStatus: 'Ishsiz',
     status: 'NEW', isGrantEligible: false, source: 'Operator (Manual)'
   });
 
@@ -193,7 +193,7 @@ export default function Kanban() {
       setIsAddModalOpen(false);
       setNewLead({
         name: '', phone: '', phone2: '',
-        courseInterest: 'KOMPYUTER_SAVODXONLIGI', employmentStatus: 'Ishsiz',
+        courseInterest: 'COMPUTER_LITERACY', employmentStatus: 'Ishsiz',
         status: 'NEW', isGrantEligible: false, source: 'Operator (Manual)'
       });
       fetchLeads();

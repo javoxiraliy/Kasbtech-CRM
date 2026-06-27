@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { LayoutDashboard, LogOut, CalendarDays, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle, FileText } from 'lucide-react';
 import api from '../lib/api';
 import ReportWarningBanner from '../components/ReportWarningBanner';
+import MotivationalBanner from '../components/MotivationalBanner';
+
 
 export default function OperatorLayout() {
   const { user, logout } = useAuth();
@@ -261,6 +263,7 @@ export default function OperatorLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-x-hidden overflow-y-auto bg-dark-950 p-4">
+        <MotivationalBanner />
         <ReportWarningBanner />
         <Outlet />
       </main>

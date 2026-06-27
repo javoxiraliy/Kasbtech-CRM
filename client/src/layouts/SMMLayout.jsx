@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { ClipboardList, LogOut, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle, Smartphone, FileText } from 'lucide-react';
 import api from '../lib/api';
 import ReportWarningBanner from '../components/ReportWarningBanner';
+import MotivationalBanner from '../components/MotivationalBanner';
+
 
 export default function SMMLayout() {
   const { user, logout } = useAuth();
@@ -257,6 +259,7 @@ export default function SMMLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-x-hidden overflow-y-auto bg-dark-950 p-4">
+        <MotivationalBanner />
         <ReportWarningBanner />
         <Outlet />
       </main>

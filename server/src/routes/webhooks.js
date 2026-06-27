@@ -41,9 +41,12 @@ router.post('/meta', async (req, res) => {
 
             console.log(`[Webhook] New LeadGen ID received: ${leadgen_id}`);
 
-            const PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
+            const tokenSetting = await prisma.setting.findUnique({
+              where: { key: 'FB_PAGE_ACCESS_TOKEN' }
+            });
+            const PAGE_ACCESS_TOKEN = tokenSetting?.value || process.env.FB_PAGE_ACCESS_TOKEN;
             if (!PAGE_ACCESS_TOKEN) {
-              console.error('Missing FB_PAGE_ACCESS_TOKEN in env variables');
+              console.error('Missing FB_PAGE_ACCESS_TOKEN in database or env variables');
               continue;
             }
 
@@ -235,7 +238,9 @@ router.post('/payme', async (req, res) => {
   try {
     // Authenticate Payme merchant request (Basic Auth)
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    const PAYME_KEY = process.env.PAYME_MERCHANT_KEY || 'KASBTECH_PAYME_SECRET_123';
+    const expectedAuth = `Basic ${Buffer.from('Paycom:' + PAYME_KEY).toString('base64')}`;
+    if (!authHeader || authHeader !== expectedAuth) {
       return res.status(200).json({ error: { code: -32504, message: 'Not authorized' }, id });
     }
 
@@ -357,7 +362,7 @@ router.post('/payme', async (req, res) => {
       // In production, we'd save courseId in transactions, but in schema we don't have courseId field in transaction.
       // Let's assign student to the course that matches transaction amount, or the first published course.
       const courses = await prisma.course.findMany({ where: { isPublished: true } });
-      const course = courses.find(c => Math.abs(parseFloat(c.price) - tx.amount) < 1000) || courses[0];
+      const course = courses.find(c => Math.abs(Number(c.price) - Number(tx.amount)) < 1000) || courses[0];
 
       if (!course) {
         return res.status(200).json({ error: { code: -31050, message: { uz: 'Kurs aniqlanmadi', ru: 'Курс не определен' } }, id });
@@ -450,6 +455,20 @@ router.post('/click', async (req, res) => {
   } = req.body;
 
   try {
+    // Validate Click signature
+    const crypto = require('crypto');
+    const CLICK_SECRET = process.env.CLICK_SECRET_KEY || 'KASBTECH_CLICK_SECRET_123';
+    let signatureString = '';
+    if (parseInt(action) === 0) {
+      signatureString = `${click_trans_id}${service_id}${CLICK_SECRET}${merchant_trans_id}${amount}${action}${error}${sign_time}`;
+    } else if (parseInt(action) === 1) {
+      signatureString = `${click_trans_id}${service_id}${CLICK_SECRET}${merchant_trans_id}${click_trans_id}${amount}${action}${error}${sign_time}`;
+    }
+    const mySign = crypto.createHash('md5').update(signatureString).digest('hex');
+    if (mySign !== sign_string) {
+      return res.json({ error: '-1', error_note: 'Signature mismatch' });
+    }
+
     if (parseInt(error) < 0) {
       return res.json({ error: '-9', error_note: 'Transaction error' });
     }
@@ -505,6 +524,13 @@ router.post('/uzum', async (req, res) => {
   const { transactionId, status, amount, metadata } = req.body; // metadata: { courseId, phone, name }
 
   try {
+    // Authenticate Uzum webhook
+    const UZUM_KEY = process.env.UZUM_SECRET_KEY || 'KASBTECH_UZUM_SECRET_123';
+    const authHeader = req.headers['x-api-key'] || req.headers['authorization'];
+    if (authHeader !== UZUM_KEY && authHeader !== `Bearer ${UZUM_KEY}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     if (status === 'COMPLETED') {
       const { courseId, phone, name, email } = metadata || {};
       
