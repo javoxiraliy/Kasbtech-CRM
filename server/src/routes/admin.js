@@ -116,6 +116,41 @@ router.get('/dashboard', async (req, res) => {
       };
     });
 
+    // Calculate delayed leads (no comment for >= 3 days)
+    const allLeadsForStatus = await prisma.lead.findMany({
+      select: {
+        id: true,
+        status: true,
+        comments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { createdAt: true }
+        }
+      }
+    });
+
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+    const delayedLeadIds = new Set(
+      allLeadsForStatus
+        .filter(l => l.status !== 'SUCCESS' && l.status !== 'ARCHIVED' && l.comments && l.comments.length > 0 && new Date(l.comments[0].createdAt) <= threeDaysAgo)
+        .map(l => l.id)
+    );
+
+    const statusCounts = {};
+    allLeadsForStatus.forEach(l => {
+      const chartStatus = delayedLeadIds.has(l.id) ? 'DELAYED' : l.status;
+      statusCounts[chartStatus] = (statusCounts[chartStatus] || 0) + 1;
+    });
+
+    const leadsByStatusData = Object.entries(statusCounts)
+      .map(([status, count]) => ({
+        status,
+        count
+      }))
+      .filter(item => item.count > 0);
+
     res.json({
       metrics: {
         totalLeads: totalLeads || 0,
@@ -132,10 +167,7 @@ router.get('/dashboard', async (req, res) => {
         pendingHomeworks: pendingHomeworks || 0,
         totalRevenue: totalRevenue || 0
       },
-      leadsByStatus: (leadsByStatus || []).map(s => ({
-        status: s.status,
-        count: s._count._all,
-      })),
+      leadsByStatus: leadsByStatusData,
       leadsByCourse: (leadsByCourse || []).map(c => ({
         course: c.courseInterest,
         count: c._count._all,

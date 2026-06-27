@@ -144,23 +144,33 @@ export default function Dashboard() {
         {/* Status Chart */}
         <div className="card glass">
           <h3 className="text-lg font-semibold text-white mb-4">Lidlar holati</h3>
-          <div className="h-72 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-72 flex flex-col items-center justify-center">
+            <ResponsiveContainer width="100%" height="80%">
               <PieChart>
                 <Pie
                   data={data.leadsByStatus}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={100}
+                  outerRadius={90}
                   paddingAngle={5}
                   dataKey="count"
                   nameKey="status"
-                  label={({ status, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                 >
-                  {data.leadsByStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
+                  {data.leadsByStatus.map((entry, index) => {
+                    const statusColors = {
+                      NEW: '#3b82f6',          // Kok (Blue)
+                      IN_PROGRESS: '#ec4899',  // Pushti (Pink)
+                      VOUCHER_CHECK: '#eab308',// Sariq (Yellow)
+                      SUCCESS: '#10b981',      // Yashil (Green)
+                      ARCHIVED: '#8b5cf6',     // Binafsha (Purple)
+                      DELAYED: '#ef4444'       // Qizil (Red)
+                    };
+                    return (
+                      <Cell key={`cell-${index}`} fill={statusColors[entry.status] || '#64748b'} />
+                    );
+                  })}
                 </Pie>
                 <RechartsTooltip 
                   contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px' }}
@@ -170,13 +180,44 @@ export default function Dashboard() {
                       IN_PROGRESS: 'Jarayonda',
                       VOUCHER_CHECK: 'Vaucher tekshiruvi',
                       SUCCESS: 'Muvaffaqiyatli',
-                      ARCHIVED: 'Rad etilgan'
+                      ARCHIVED: 'Rad etilgan',
+                      DELAYED: 'Kechiktirilgan qo\'ng\'iroqlar'
                     };
                     return [value, statusLabels[name] || name];
                   }}
                 />
               </PieChart>
             </ResponsiveContainer>
+            
+            {/* Custom Status Legend */}
+            <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1.5 text-[11px] w-full px-4">
+              {Object.entries({
+                NEW: 'Yangi',
+                IN_PROGRESS: 'Jarayonda',
+                VOUCHER_CHECK: 'Vaucher tekshiruvi',
+                SUCCESS: 'Muvaffaqiyatli',
+                ARCHIVED: 'Rad etilgan',
+                DELAYED: 'Kechiktirilgan'
+              }).map(([key, label]) => {
+                const count = data.leadsByStatus.find(s => s.status === key)?.count || 0;
+                if (count === 0) return null;
+                const statusColors = {
+                  NEW: '#3b82f6',
+                  IN_PROGRESS: '#ec4899',
+                  VOUCHER_CHECK: '#eab308',
+                  SUCCESS: '#10b981',
+                  ARCHIVED: '#8b5cf6',
+                  DELAYED: '#ef4444'
+                };
+                return (
+                  <div key={key} className="flex items-center gap-1.5 px-2 py-0.5 bg-dark-800/40 rounded-lg border border-dark-700/50">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColors[key] }} />
+                    <span className="text-dark-300 font-medium">{label}:</span>
+                    <span className="text-white font-bold">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
