@@ -7,6 +7,8 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+let lastSlaUpdate = 0;
+
 // All lead routes require authentication
 router.use(authenticate);
 
@@ -15,17 +17,20 @@ router.get('/', async (req, res) => {
   try {
     const now = new Date();
     
-    // Automatically update SLA status for NEW leads whose deadline has passed
-    await prisma.lead.updateMany({
-      where: {
-        status: 'NEW',
-        slaDeadline: { lt: now },
-        slaBreached: false,
-      },
-      data: {
-        slaBreached: true,
-      },
-    });
+    // Automatically update SLA status for NEW leads whose deadline has passed (throttled to once every 30s)
+    if (Date.now() - lastSlaUpdate > 30000) {
+      lastSlaUpdate = Date.now();
+      await prisma.lead.updateMany({
+        where: {
+          status: 'NEW',
+          slaDeadline: { lt: now },
+          slaBreached: false,
+        },
+        data: {
+          slaBreached: true,
+        },
+      }).catch(err => console.error("SLA Auto-update failed:", err));
+    }
 
     const { status, search, startDate, endDate } = req.query;
 

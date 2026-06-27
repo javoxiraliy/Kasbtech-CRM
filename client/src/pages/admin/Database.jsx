@@ -44,6 +44,7 @@ const EMPLOYMENT_LABELS = {
 export default function Database() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Confirm Modal state
   const [confirmModal, setConfirmModal] = useState({
@@ -98,6 +99,7 @@ export default function Database() {
 
   const fetchLeads = async (search = '', start = '', end = '') => {
     setLoading(true);
+    setCurrentPage(1);
     try {
       let url = `/leads?search=${encodeURIComponent(search)}`;
       if (start) url += `&startDate=${start}`;
@@ -323,6 +325,11 @@ export default function Database() {
     });
   };
 
+  const itemsPerPage = 50;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedLeads = leads.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(leads.length / itemsPerPage);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -479,7 +486,7 @@ export default function Database() {
                     <p>Ma'lumot topilmadi</p>
                   </td>
                 </tr>
-              ) : leads.map((l) => (
+              ) : paginatedLeads.map((l) => (
                 <tr 
                   key={l.id} 
                   className={`border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors ${selectedIds.includes(l.id) ? 'bg-primary-500/5' : ''} ${getDelayWarning(l) ? 'border-l-4 border-l-red-500 bg-red-500/5' : ''}`}
@@ -553,6 +560,57 @@ export default function Database() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-dark-800 bg-dark-900/30">
+            <div className="text-xs text-dark-400">
+              Jami <span className="font-semibold text-white">{leads.length}</span> tadan 
+              <span className="font-semibold text-white"> {startIndex + 1}-{Math.min(startIndex + itemsPerPage, leads.length)}</span> ko'rsatilmoqda
+            </div>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg bg-dark-850 hover:bg-dark-800 border border-dark-750 text-xs font-semibold text-white disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95"
+              >
+                Oldingi
+              </button>
+              
+              {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
+                let pageNum = currentPage - 2 + idx;
+                if (pageNum < 1) pageNum = idx + 1;
+                if (pageNum > totalPages) return null;
+                
+                return (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all active:scale-95 ${
+                      currentPage === pageNum
+                        ? 'bg-primary-600 border-primary-500 text-white shadow-md shadow-primary-600/20'
+                        : 'bg-dark-850 border-dark-750 text-dark-300 hover:text-white hover:bg-dark-800'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg bg-dark-850 hover:bg-dark-800 border border-dark-750 text-xs font-semibold text-white disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95"
+              >
+                Keyingi
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Edit Modal */}

@@ -75,7 +75,12 @@ router.get('/dashboard', async (req, res) => {
         }
       }),
       prisma.homework.count({ where: { status: 'PENDING' } }),
-      prisma.transaction.findMany({ where: { status: 'SUCCESS' } }),
+      prisma.transaction.aggregate({
+        where: { status: 'SUCCESS' },
+        _sum: {
+          amount: true
+        }
+      }),
       prisma.user.findMany({
         where: { OR: [{ role: 'TEACHER' }, { role: 'MENTOR' }], isActive: true },
         include: {
@@ -89,7 +94,7 @@ router.get('/dashboard', async (req, res) => {
       ? ((successLeads / totalLeads) * 100).toFixed(1)
       : 0;
 
-    const totalRevenue = transactions.reduce((acc, t) => acc + Number(t.amount), 0);
+    const totalRevenue = Number(transactions._sum?.amount || 0);
 
     const operators = operatorStats.map(op => ({
       id: op.id,
