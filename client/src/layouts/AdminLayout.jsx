@@ -18,12 +18,16 @@ import {
 import { useState } from 'react';
 import ReportWarningBanner from '../components/ReportWarningBanner';
 import MotivationalBanner from '../components/MotivationalBanner';
+import ProfileModal from '../components/ProfileModal';
+
 
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
 
   const handleLogout = () => {
     logout();
@@ -90,8 +94,12 @@ export default function AdminLayout() {
         </div>
 
         <div className="p-4 border-t border-dark-800">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400">
+          <div 
+            onClick={() => setIsProfileOpen(true)}
+            className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-dark-800/30 hover:bg-dark-800/80 border border-transparent hover:border-dark-700/60 cursor-pointer transition-all duration-200"
+            title="Profil sozlamalari"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400 font-bold shrink-0">
               {user?.name?.charAt(0) || 'A'}
             </div>
             <div className="flex-1 min-w-0">
@@ -128,6 +136,7 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+      {isProfileOpen && <ProfileModal onClose={() => setIsProfileOpen(false)} />}
     </div>
   );
 }

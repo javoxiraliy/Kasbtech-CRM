@@ -31,8 +31,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateProfile = (updatedUser) => {
+    localStorage.setItem('crm_user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateProfile, loading }}>
       {children}
     </AuthContext.Provider>
   );

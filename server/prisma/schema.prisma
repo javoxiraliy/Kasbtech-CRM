@@ -64,6 +64,9 @@ model User {
   role         Role     @default(OPERATOR)
   isActive     Boolean  @default(true)
   workingHours String?  @default("09:00 - 18:00")
+  bio          String?
+  phone        String?
+  nickname     String?
   createdAt    DateTime @default(now())
   updatedAt DateTime @updatedAt
 

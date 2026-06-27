@@ -11,6 +11,8 @@ import {
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import MotivationalBanner from '../components/MotivationalBanner';
+import ProfileModal from '../components/ProfileModal';
+
 
 
 export default function StudentLayout() {
@@ -18,6 +20,8 @@ export default function StudentLayout() {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [coinBalance, setCoinBalance] = useState(0);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
 
   useEffect(() => {
     fetchCoinBalance();
@@ -101,8 +105,12 @@ export default function StudentLayout() {
         </div>
 
         <div className="p-4 border-t border-dark-800">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400 font-bold">
+          <div 
+            onClick={() => setIsProfileOpen(true)}
+            className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-dark-800/30 hover:bg-dark-800/80 border border-transparent hover:border-dark-700/60 cursor-pointer transition-all duration-200"
+            title="Profil sozlamalari"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400 font-bold shrink-0">
               {user?.name?.charAt(0) || 'S'}
             </div>
             <div className="flex-1 min-w-0">
@@ -146,6 +154,7 @@ export default function StudentLayout() {
           <Outlet context={{ fetchCoinBalance }} />
         </div>
       </main>
+      {isProfileOpen && <ProfileModal onClose={() => setIsProfileOpen(false)} />}
     </div>
   );
 }

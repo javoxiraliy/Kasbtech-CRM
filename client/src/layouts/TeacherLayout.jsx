@@ -5,12 +5,16 @@ import { ClipboardList, LogOut, Bell, User as UserIcon, Menu, X, CheckCheck, Ale
 import api from '../lib/api';
 import ReportWarningBanner from '../components/ReportWarningBanner';
 import MotivationalBanner from '../components/MotivationalBanner';
+import ProfileModal from '../components/ProfileModal';
+
 
 
 export default function TeacherLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   
   // Notification states
   const [unreadTasks, setUnreadTasks] = useState([]);
@@ -244,7 +248,11 @@ export default function TeacherLayout() {
             
             <div className="h-8 w-px bg-dark-800 mx-2 hidden sm:block" />
 
-            <div className="flex items-center gap-3">
+            <div 
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity"
+              title="Profil sozlamalari"
+            >
               <div className="hidden lg:block text-right">
                 <p className="text-sm font-medium text-white">{user?.name}</p>
                 <p className="text-xs text-emerald-400">O'qituvchi</p>
@@ -254,6 +262,7 @@ export default function TeacherLayout() {
               </div>
             </div>
           </div>
+
         </header>
 
         {/* Main Content */}
@@ -263,6 +272,7 @@ export default function TeacherLayout() {
           <Outlet />
         </main>
       </div>
+      {isProfileOpen && <ProfileModal onClose={() => setIsProfileOpen(false)} />}
     </div>
   );
 }

@@ -5,12 +5,16 @@ import { ClipboardList, LogOut, Bell, User as UserIcon, Menu, X, CheckCheck, Ale
 import api from '../lib/api';
 import ReportWarningBanner from '../components/ReportWarningBanner';
 import MotivationalBanner from '../components/MotivationalBanner';
+import ProfileModal from '../components/ProfileModal';
+
 
 
 export default function SMMLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   
   // Notification states
   const [unreadTasks, setUnreadTasks] = useState([]);
@@ -237,7 +241,11 @@ export default function SMMLayout() {
             
             <div className="h-8 w-px bg-dark-800 mx-2 hidden sm:block" />
             
-            <div className="flex items-center gap-3">
+            <div 
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity"
+              title="Profil sozlamalari"
+            >
               <div className="hidden lg:block text-right">
                 <p className="text-sm font-medium text-white">{user?.name}</p>
                 <p className="text-xs text-pink-400">SMM / Media</p>
@@ -245,14 +253,14 @@ export default function SMMLayout() {
               <div className="w-9 h-9 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center text-dark-300">
                 <Smartphone className="w-5 h-5 text-pink-400" />
               </div>
-              <button
-                onClick={handleLogout}
-                className="hidden sm:flex p-2 text-dark-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10 ml-2"
-                title="Tizimdan chiqish"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
             </div>
+            <button
+              onClick={handleLogout}
+              className="hidden sm:flex p-2 text-dark-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10 ml-2"
+              title="Tizimdan chiqish"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
@@ -263,6 +271,7 @@ export default function SMMLayout() {
         <ReportWarningBanner />
         <Outlet />
       </main>
+      {isProfileOpen && <ProfileModal onClose={() => setIsProfileOpen(false)} />}
     </div>
   );
 }

@@ -145,4 +145,43 @@ router.get('/me', authenticate, async (req, res) => {
   res.json({ user: req.user });
 });
 
+// PUT /api/auth/profile - Update user profile
+router.put('/profile', authenticate, async (req, res) => {
+  try {
+    const { name, bio, phone, nickname, password } = req.body;
+    const userId = req.user.id;
+
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (bio !== undefined) data.bio = bio;
+    if (phone !== undefined) data.phone = phone;
+    if (nickname !== undefined) data.nickname = nickname;
+
+    if (password) {
+      const bcrypt = require('bcryptjs');
+      data.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        bio: true,
+        phone: true,
+        nickname: true
+      }
+    });
+
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Profil ma\'lumotlarini yangilashda xatolik yuz berdi' });
+  }
+});
+
 module.exports = router;
