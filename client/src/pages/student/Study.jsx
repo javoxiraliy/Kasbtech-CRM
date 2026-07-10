@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import api from '../../lib/api';
+import SecureYoutubePlayer from '../../components/SecureYoutubePlayer';
 
 export default function StudentStudy() {
   const { courseId } = useParams();
@@ -272,6 +273,11 @@ export default function StudentStudy() {
     }
   };
 
+  const url = lessonDetail?.videoUrl || '';
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  const youtubeId = (match && match[2].length === 11) ? match[2] : null;
+
   return (
     <div className="flex flex-col xl:flex-row gap-6 min-h-[calc(100vh-8rem)] select-none">
       
@@ -362,8 +368,8 @@ export default function StudentStudy() {
             {/* Video Player Box with Floating Watermark */}
             <div className="bg-black border border-dark-800 rounded-2xl overflow-hidden aspect-video relative group shadow-2xl">
               
-              {/* Dynamic anti-piracy floating watermark */}
-              {lessonDetail && watermark?.text && (
+              {/* Dynamic anti-piracy floating watermark (rendered only for non-youtube stream, youtube handles its own for fullscreen support) */}
+              {lessonDetail && watermark?.text && !youtubeId && (
                 <div 
                   className="absolute pointer-events-none z-30 select-none text-[11px] sm:text-xs font-bold text-white/20 bg-black/10 px-2 py-1 rounded backdrop-blur-[1px] transition-all duration-1000 ease-in-out border border-white/5"
                   style={{ 
@@ -378,18 +384,13 @@ export default function StudentStudy() {
               {/* Streaming Video Container */}
               <div className="w-full h-full relative">
                 {(() => {
-                  const url = lessonDetail?.videoUrl || '';
-                  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-                  const match = url.match(regExp);
-                  const youtubeId = (match && match[2].length === 11) ? match[2] : null;
-
                   if (youtubeId) {
                     return (
-                      <iframe 
-                        src={`https://www.youtube.com/embed/${youtubeId}`}
-                        className="w-full h-full border-0 absolute top-0 left-0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen={true}
+                      <SecureYoutubePlayer
+                        youtubeId={youtubeId}
+                        watermarkText={watermark?.text}
+                        watermarkIp={watermark?.ip}
+                        watermarkPos={watermarkPos}
                       />
                     );
                   } else {
