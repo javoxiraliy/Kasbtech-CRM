@@ -78,7 +78,14 @@ router.post('/upload', authenticate, upload.single('file'), (req, res) => {
         if (!req.file) {
             return res.status(400).json({ error: 'Fayl yuklanmadi' });
         }
-        const fileUrl = `/uploads/${req.file.filename}`;
+        const fileBuffer = fs.readFileSync(req.file.path);
+        const base64 = fileBuffer.toString('base64');
+        const fileUrl = `data:${req.file.mimetype};base64,${base64}`;
+        try {
+            fs.unlinkSync(req.file.path);
+        } catch (err) {
+            console.error('Error deleting temp file:', err);
+        }
         res.json({ url: fileUrl, name: req.file.originalname });
     } catch (error) {
         console.error('File upload error:', error);

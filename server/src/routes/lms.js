@@ -101,7 +101,17 @@ router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), 
       return res.status(400).json({ error: 'Sarlavha, ta\'rif va narx kiritilishi shart' });
     }
 
-    const thumbnailPath = req.file ? `/uploads/${req.file.filename}` : null;
+    let thumbnailPath = null;
+    if (req.file) {
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const base64 = fileBuffer.toString('base64');
+      thumbnailPath = `data:${req.file.mimetype};base64,${base64}`;
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting temp file:', err);
+      }
+    }
 
     const course = await prisma.course.create({
       data: {
@@ -133,7 +143,14 @@ router.put('/courses/:id', authenticate, requireAdmin, upload.single('thumbnail'
     if (isPublished !== undefined) updateData.isPublished = isPublished === 'true' || isPublished === true;
     if (teacherId !== undefined) updateData.teacherId = teacherId || null;
     if (req.file) {
-      updateData.thumbnail = `/uploads/${req.file.filename}`;
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const base64 = fileBuffer.toString('base64');
+      updateData.thumbnail = `data:${req.file.mimetype};base64,${base64}`;
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting temp file:', err);
+      }
     }
 
     const course = await prisma.course.update({
@@ -618,7 +635,17 @@ router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), 
       return res.status(400).json({ error: 'Ushbu dars uchun uy vazifasi allaqachon topshirilgan yoki tasdiqlangan' });
     }
 
-    const fileUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    let fileUrl = null;
+    if (req.file) {
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const base64 = fileBuffer.toString('base64');
+      fileUrl = `data:${req.file.mimetype};base64,${base64}`;
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting temp file:', err);
+      }
+    }
 
     if (!fileUrl && !textResponse) {
       return res.status(400).json({ error: 'Fayl yuklang yoki javob matnini yozing' });

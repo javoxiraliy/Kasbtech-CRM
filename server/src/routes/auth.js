@@ -187,7 +187,14 @@ router.put('/profile', authenticate, upload.single('avatar'), async (req, res) =
     if (nickname !== undefined) data.nickname = nickname;
 
     if (req.file) {
-      data.avatar = `/uploads/${req.file.filename}`;
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const base64 = fileBuffer.toString('base64');
+      data.avatar = `data:${req.file.mimetype};base64,${base64}`;
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting temp file:', err);
+      }
     }
 
     if (password) {

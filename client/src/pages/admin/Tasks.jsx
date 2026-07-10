@@ -51,6 +51,7 @@ export default function Tasks() {
 
   const getAttachmentUrl = (path) => {
     if (!path) return '';
+    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
     const base = import.meta.env.VITE_API_URL 
       ? import.meta.env.VITE_API_URL.replace('/api', '') 
       : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin);
