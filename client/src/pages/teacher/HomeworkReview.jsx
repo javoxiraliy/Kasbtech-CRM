@@ -31,6 +31,76 @@ export default function HomeworkReview() {
     return `${base}${path}`;
   };
 
+  const getExtensionFromMime = (mimeType) => {
+    switch (mimeType) {
+      case 'image/jpeg':
+      case 'image/jpg':
+        return 'jpg';
+      case 'image/png':
+        return 'png';
+      case 'image/gif':
+        return 'gif';
+      case 'image/webp':
+        return 'webp';
+      case 'application/zip':
+      case 'application/x-zip-compressed':
+        return 'zip';
+      case 'application/x-rar-compressed':
+        return 'rar';
+      case 'application/pdf':
+        return 'pdf';
+      case 'application/msword':
+        return 'doc';
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return 'docx';
+      case 'text/plain':
+        return 'txt';
+      default:
+        const parts = mimeType.split('/');
+        return parts.length > 1 ? parts[1] : 'bin';
+    }
+  };
+
+  const handleDownloadFile = (hw) => {
+    const fileUrl = hw.fileUrl;
+    if (!fileUrl) return;
+
+    if (fileUrl.startsWith('data:')) {
+      const arr = fileUrl.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+      const ext = getExtensionFromMime(mime);
+      
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      const cleanName = `${hw.student.name}_${hw.lesson.title}`.replace(/[^a-zA-Z0-9_]/g, '_');
+      a.download = `${cleanName}.${ext}`;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } else {
+      // Standard URL fallback for old uploads
+      const a = document.createElement('a');
+      a.href = getFileUrl(fileUrl);
+      a.target = '_blank';
+      a.download = `vazifa_${hw.id}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   useEffect(() => {
     fetchPendingHomeworks();
   }, []);
@@ -180,16 +250,29 @@ export default function HomeworkReview() {
                   )}
 
                   {selectedHw.fileUrl && (
-                    <div className="pt-2">
-                      <a 
-                        href={getFileUrl(selectedHw.fileUrl)} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5 bg-dark-800 hover:bg-dark-700 text-white"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        Biriktirilgan faylni yuklab olish
-                      </a>
+                    <div className="pt-2 space-y-3">
+                      {/* Image Preview for screenshots/images */}
+                      {(selectedHw.fileUrl.startsWith('data:image/') || 
+                        /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedHw.fileUrl)) && (
+                        <div className="mt-2 max-w-lg border border-dark-800 rounded-lg overflow-hidden bg-dark-900">
+                          <img 
+                            src={selectedHw.fileUrl.startsWith('data:') ? selectedHw.fileUrl : getFileUrl(selectedHw.fileUrl)} 
+                            alt="Vazifa rasmi" 
+                            className="w-full h-auto max-h-[400px] object-contain" 
+                          />
+                        </div>
+                      )}
+                      
+                      <div>
+                        <button 
+                          type="button"
+                          onClick={() => handleDownloadFile(selectedHw)}
+                          className="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5 bg-dark-800 hover:bg-dark-700 text-white cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Biriktirilgan faylni yuklab olish
+                        </button>
+                      </div>
                     </div>
                   )}
 
