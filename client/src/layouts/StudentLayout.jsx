@@ -42,7 +42,8 @@ export default function StudentLayout() {
   };
 
   const navItems = [
-    { to: '/student', icon: BookOpen, label: 'Mening Kurslarim' }
+    { to: '/student', icon: BookOpen, label: 'Mening Kurslarim' },
+    { to: '/student/leaderboard', icon: Award, label: 'Reyting' }
   ];
 
   return (

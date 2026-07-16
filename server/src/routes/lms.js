@@ -1093,4 +1093,190 @@ router.get('/students', authenticate, requireMentorOrAdmin, async (req, res) => 
   }
 });
 
+// GET /api/lms/leaderboard - Get top students by performance and activity
+router.get('/leaderboard', authenticate, async (req, res) => {
+  try {
+    const { courseId } = req.query; // 'overall' or specific course UUID
+
+    let studentsData = [];
+
+    if (!courseId || courseId === 'overall') {
+      // 1. Overall Leaderboard
+      const students = await prisma.user.findMany({
+        where: { role: 'STUDENT', isActive: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatar: true,
+          enrollments: {
+            select: {
+              progress: true
+            }
+          },
+          homeworks: {
+            where: { status: 'APPROVED' },
+            select: {
+              grade: true
+            }
+          },
+          coins: {
+            select: {
+              amount: true
+            }
+          },
+          _count: {
+            select: {
+              homeworks: true // total submissions (active)
+            }
+          }
+        }
+      });
+
+      studentsData = students.map(student => {
+        const enrolls = student.enrollments || [];
+        const avgProgress = enrolls.length > 0 
+          ? Math.round(enrolls.reduce((acc, curr) => acc + curr.progress, 0) / enrolls.length)
+          : 0;
+
+        const approvedHws = student.homeworks || [];
+        const validGrades = approvedHws.filter(h => h.grade !== null);
+        const avgGrade = validGrades.length > 0
+          ? Math.round(validGrades.reduce((acc, curr) => acc + curr.grade, 0) / validGrades.length)
+          : 0;
+
+        const totalCoins = student.coins.reduce((acc, curr) => acc + curr.amount, 0);
+        const submissionsCount = student._count.homeworks;
+
+        return {
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          avatar: student.avatar,
+          progress: avgProgress,
+          avgGrade: avgGrade,
+          coins: totalCoins,
+          submissionsCount: submissionsCount
+        };
+      });
+    } else {
+      // 2. Specific Course Leaderboard
+      const enrollments = await prisma.enrollment.findMany({
+        where: { courseId },
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              coins: {
+                select: {
+                  amount: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const homeworks = await prisma.homework.findMany({
+        where: {
+          lesson: {
+            module: {
+              courseId
+            }
+          }
+        },
+        select: {
+          studentId: true,
+          grade: true,
+          status: true
+        }
+      });
+
+      // Group homeworks by studentId
+      const hwMap = {};
+      homeworks.forEach(hw => {
+        if (!hwMap[hw.studentId]) {
+          hwMap[hw.studentId] = {
+            totalSubmissions: 0,
+            approvedGrades: []
+          };
+        }
+        hwMap[hw.studentId].totalSubmissions++;
+        if (hw.status === 'APPROVED' && hw.grade !== null) {
+          hwMap[hw.studentId].approvedGrades.push(hw.grade);
+        }
+      });
+
+      studentsData = enrollments.map(enrollment => {
+        const student = enrollment.student;
+        if (!student) return null;
+
+        const hwData = hwMap[student.id] || { totalSubmissions: 0, approvedGrades: [] };
+        const avgGrade = hwData.approvedGrades.length > 0
+          ? Math.round(hwData.approvedGrades.reduce((acc, curr) => acc + curr, 0) / hwData.approvedGrades.length)
+          : 0;
+
+        const totalCoins = student.coins.reduce((acc, curr) => acc + curr.amount, 0);
+
+        return {
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          avatar: student.avatar,
+          progress: enrollment.progress,
+          avgGrade: avgGrade,
+          coins: totalCoins,
+          submissionsCount: hwData.totalSubmissions
+        };
+      }).filter(Boolean);
+    }
+
+    // Sort by progress/grade first
+    // For visual chart: sort descending, slice top 10, then reverse it (to show ascending left-to-right)
+    const byPerformance = [...studentsData]
+      .sort((a, b) => {
+        if (b.progress !== a.progress) {
+          return b.progress - a.progress;
+        }
+        return b.avgGrade - a.avgGrade;
+      })
+      .slice(0, 10)
+      .reverse();
+
+    // Sort by activity: coins / submissionsCount
+    const byActivity = [...studentsData]
+      .sort((a, b) => {
+        if (b.coins !== a.coins) {
+          return b.coins - a.coins;
+        }
+        return b.submissionsCount - a.submissionsCount;
+      })
+      .slice(0, 10)
+      .reverse();
+
+    // The full list sorted descending by progress for the leaderboard table
+    const tableLeaderboard = [...studentsData].sort((a, b) => {
+      if (b.progress !== a.progress) {
+        return b.progress - a.progress;
+      }
+      if (b.coins !== a.coins) {
+        return b.coins - a.coins;
+      }
+      return b.avgGrade - a.avgGrade;
+    });
+
+    res.json({
+      leaderboard: tableLeaderboard,
+      byPerformance,
+      byActivity
+    });
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({ error: 'Natijalarni hisoblashda xatolik yuz berdi' });
+  }
+});
+
 module.exports = router;

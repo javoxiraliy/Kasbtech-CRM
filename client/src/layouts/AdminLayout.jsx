@@ -13,7 +13,8 @@ import {
   CheckSquare,
   FileText,
   FileSearch,
-  BookOpen
+  BookOpen,
+  Award
 } from 'lucide-react';
 import { useState } from 'react';
 import ReportWarningBanner from '../components/ReportWarningBanner';
@@ -40,6 +41,7 @@ export default function AdminLayout() {
     { to: '/admin/tasks', icon: CheckSquare, label: 'Vazifalar' },
     { to: '/admin/courses', icon: BookOpen, label: 'Onlayn Kurslar' },
     { to: '/admin/students', icon: Users, label: 'Talabalar Nazorati' },
+    { to: '/admin/leaderboard', icon: Award, label: 'Reyting' },
     { to: '/admin/kpi', icon: TrendingUp, label: 'KPI & Hisobot' },
     { to: '/admin/all-reports', icon: FileSearch, label: 'Barcha Hisobotlar' },
     { to: '/admin/reports', icon: FileText, label: 'Mening Hisobotim' },

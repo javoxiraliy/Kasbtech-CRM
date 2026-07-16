@@ -29,6 +29,7 @@ import AdminCourses from './pages/admin/Courses';
 import TeacherTasks from './pages/teacher/Tasks';
 import TeacherHomeworkReview from './pages/teacher/HomeworkReview';
 import StudentManager from './pages/shared/StudentManager';
+import Leaderboard from './pages/shared/Leaderboard';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -105,6 +106,7 @@ function App() {
               <Route path="homeworks" element={<TeacherHomeworkReview />} />
               <Route path="students" element={<StudentManager />} />
               <Route path="courses" element={<AdminCourses />} />
+              <Route path="leaderboard" element={<Leaderboard />} />
               <Route path="reports" element={<Reports />} />
             </Route>
             
@@ -130,6 +132,7 @@ function App() {
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="courses" element={<AdminCourses />} />
               <Route path="students" element={<StudentManager />} />
+              <Route path="leaderboard" element={<Leaderboard />} />
               <Route path="reports" element={<Reports />} />
               <Route path="all-reports" element={<AdminReports />} />
             </Route>
@@ -141,6 +144,7 @@ function App() {
             }>
               <Route index element={<StudentDashboard />} />
               <Route path="courses/:courseId" element={<StudentStudy />} />
+              <Route path="leaderboard" element={<Leaderboard />} />
             </Route>
 
           </Routes>
