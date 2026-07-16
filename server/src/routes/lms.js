@@ -740,17 +740,59 @@ router.post('/homeworks/:homeworkId/review', authenticate, requireMentorOrAdmin,
       }
     });
 
-    // Gamification: Reward coins if approved based on the grade percentage
-    if (status === 'APPROVED') {
-      const rewardCoins = grade ? Math.round(grade) : 10;
+    // Gamification: Reward coins if approved based on the grade percentage (Max 10 coins, only if >= 60%)
+    if (status === 'APPROVED' && grade && grade >= 60) {
+      const rewardCoins = Math.round(grade / 10);
       await prisma.coinTransaction.create({
         data: {
           studentId: homework.studentId,
           amount: rewardCoins,
           type: 'HW_SUBMISSION',
-          description: `"${homework.lesson.title}" darsi uy vazifasi tasdiqlandi (Bahosi: ${rewardCoins}%)`
+          description: `"${homework.lesson.title}" darsi uy vazifasi tasdiqlandi (Bahosi: ${grade}%)`
         }
       });
+
+      // Bonus: Check if both homework and quiz are 100%
+      if (grade === 100) {
+        const lesson = await prisma.lesson.findUnique({
+          where: { id: homework.lessonId },
+          include: { quizzes: true }
+        });
+        
+        if (lesson && lesson.quizzes.length > 0) {
+          const quizId = lesson.quizzes[0].id;
+          const perfectQuiz = await prisma.quizAttempt.findFirst({
+            where: {
+              quizId,
+              studentId: homework.studentId,
+              score: 100,
+              passed: true
+            }
+          });
+
+          if (perfectQuiz) {
+            // Check if they already received the perfect bonus for this lesson
+            const bonusTx = await prisma.coinTransaction.findFirst({
+              where: {
+                studentId: homework.studentId,
+                type: 'PERFECT_LESSON_BONUS',
+                description: { contains: `"${homework.lesson.title}"` }
+              }
+            });
+
+            if (!bonusTx) {
+              await prisma.coinTransaction.create({
+                data: {
+                  studentId: homework.studentId,
+                  amount: 2,
+                  type: 'PERFECT_LESSON_BONUS',
+                  description: `"${homework.lesson.title}" darsidan to'liq 100% (vazifa va test) natija uchun bonus`
+                }
+              });
+            }
+          }
+        }
+      }
     }
 
     res.json({ message: `Vazifa muvaffaqiyatli ${status === 'APPROVED' ? 'tasdiqlandi' : 'rad etildi'}`, homework: updated });
@@ -865,15 +907,15 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
       }
     });
 
-    // Gamification: Reward coins if passed based on the quiz score percentage
-    if (passed) {
+    // Gamification: Reward coins if passed based on the quiz score percentage (Max 10 coins, only if >= 60%)
+    if (passed && scorePercent >= 60) {
       // Check if student has passed this quiz before (only reward once)
       const previousPass = await prisma.quizAttempt.findFirst({
         where: { quizId, studentId, passed: true, id: { not: attempt.id } }
       });
 
       if (!previousPass) {
-        const rewardCoins = scorePercent;
+        const rewardCoins = Math.round(scorePercent / 10);
         await prisma.coinTransaction.create({
           data: {
             studentId,
@@ -882,6 +924,40 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
             description: `"${quiz.lesson.title}" dars testidan o'tildi (Natija: ${scorePercent}%)`
           }
         });
+
+        // Bonus: Check if both quiz and homework are 100%
+        if (scorePercent === 100) {
+          const perfectHomework = await prisma.homework.findFirst({
+            where: {
+              lessonId: quiz.lessonId,
+              studentId,
+              status: 'APPROVED',
+              grade: 100
+            }
+          });
+
+          if (perfectHomework) {
+            // Check if they already received the perfect bonus for this lesson
+            const bonusTx = await prisma.coinTransaction.findFirst({
+              where: {
+                studentId,
+                type: 'PERFECT_LESSON_BONUS',
+                description: { contains: `"${quiz.lesson.title}"` }
+              }
+            });
+
+            if (!bonusTx) {
+              await prisma.coinTransaction.create({
+                data: {
+                  studentId,
+                  amount: 2,
+                  type: 'PERFECT_LESSON_BONUS',
+                  description: `"${quiz.lesson.title}" darsidan to'liq 100% (vazifa va test) natija uchun bonus`
+                }
+              });
+            }
+          }
+        }
       }
     }
 
