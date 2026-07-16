@@ -9,6 +9,8 @@ import {
   Check, 
   ArrowLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   HelpCircle,
   Clock,
   Video,
@@ -47,6 +49,7 @@ export default function StudentStudy() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState('description'); // description, homework, quiz
+  const [isDescExpanded, setIsDescExpanded] = useState(true);
 
   // Floating Watermark position state
   const [watermarkPos, setWatermarkPos] = useState({ top: 10, left: 10 });
@@ -167,6 +170,7 @@ export default function StudentStudy() {
       setQuizAnswers([]);
       setHomeworkFile(null);
       setHomeworkText('');
+      setIsDescExpanded(true);
 
       const res = await api.get(`/lms/lessons/${lessonId}`);
       setLessonDetail(res.data.lesson);
@@ -449,13 +453,30 @@ export default function StudentStudy() {
                 {/* TAB 1: DESCRIPTION */}
                 {tab === 'description' && (
                   <div className="space-y-4">
-                    <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                      <FileText className="w-4.5 h-4.5 text-primary-400" />
-                      Dars tavsifi va Uy vazifasi sharti
-                    </h3>
-                    <p className="text-sm text-dark-200 whitespace-pre-line leading-relaxed">
-                      {lessonDetail?.description || 'Ushbu dars uchun matnli tavsif kiritilmagan.'}
-                    </p>
+                    <div 
+                      onClick={() => setIsDescExpanded(!isDescExpanded)}
+                      className="flex items-center justify-between pb-3 border-b border-dark-800 cursor-pointer group select-none"
+                    >
+                      <h3 className="font-bold text-white text-sm flex items-center gap-2 group-hover:text-primary-400 transition-colors">
+                        <FileText className="w-4.5 h-4.5 text-primary-400" />
+                        Dars tavsifi va Uy vazifasi sharti
+                      </h3>
+                      <button className="text-dark-400 group-hover:text-white transition-colors">
+                        {isDescExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                    
+                    {isDescExpanded && (
+                      <div className="p-4 bg-dark-850/40 border border-dark-800 rounded-xl mt-2 transition-all duration-300">
+                        <p className="text-sm text-dark-200 whitespace-pre-line leading-relaxed">
+                          {lessonDetail?.description || 'Ushbu dars uchun matnli tavsif kiritilmagan.'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
