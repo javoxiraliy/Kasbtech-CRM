@@ -907,6 +907,9 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
       }
     });
 
+    let rewardCoins = 0;
+    let bonusCoins = 0;
+
     // Gamification: Reward coins if passed based on the quiz score percentage (Max 10 coins, only if >= 60%)
     if (passed && scorePercent >= 60) {
       // Check if student has passed this quiz before (only reward once)
@@ -915,7 +918,7 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
       });
 
       if (!previousPass) {
-        const rewardCoins = Math.round(scorePercent / 10);
+        rewardCoins = Math.round(scorePercent / 10);
         await prisma.coinTransaction.create({
           data: {
             studentId,
@@ -955,6 +958,7 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
                   description: `"${quiz.lesson.title}" darsidan to'liq 100% (vazifa va test) natija uchun bonus`
                 }
               });
+              bonusCoins = 2;
             }
           }
         }
@@ -966,7 +970,9 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
       score: scorePercent,
       correctAnswers: correctCount,
       totalQuestions: questionsList.length,
-      attempt
+      attempt,
+      rewardCoins,
+      bonusCoins
     });
 
   } catch (error) {

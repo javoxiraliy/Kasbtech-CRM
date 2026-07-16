@@ -169,11 +169,15 @@ export default function StudentDashboard() {
               <div className="bg-dark-850 p-3 rounded-lg border border-dark-700/50 space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-dark-300">Uy vazifasi uchun</span>
-                  <span className="font-semibold text-green-400">+10 koin</span>
+                  <span className="font-semibold text-green-400">Maks. +10 koin</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-dark-300">Testdan o'tish</span>
-                  <span className="font-semibold text-green-400">+20 koin</span>
+                  <span className="font-semibold text-green-400">Maks. +10 koin</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-dark-300">100% natija (Vazifa + Test)</span>
+                  <span className="font-semibold text-yellow-400">Bonus +2 koin</span>
                 </div>
               </div>
             </div>

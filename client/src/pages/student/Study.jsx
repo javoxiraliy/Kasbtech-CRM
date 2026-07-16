@@ -503,7 +503,12 @@ export default function StudentStudy() {
                     {homeworkDetails && (homeworkDetails.grade !== null || homeworkDetails.feedback) && (
                       <div className={`p-4 rounded-lg border ${homeworkStatus === 'APPROVED' ? 'bg-green-500/5 border-green-500/20 text-green-200' : 'bg-red-500/5 border-red-500/20 text-red-200'} text-xs space-y-2`}>
                         <p className="font-bold text-white">Mentor taqrizi:</p>
-                        {homeworkDetails.grade !== null && <p><strong>Bahosi:</strong> {homeworkDetails.grade} / 100</p>}
+                        {homeworkDetails.grade !== null && (
+                          <p>
+                            <strong>Bahosi:</strong> {homeworkDetails.grade} / 100
+                            {homeworkDetails.grade >= 60 && ` (🪙 +${Math.round(homeworkDetails.grade / 10)} koin qo'shildi)`}
+                          </p>
+                        )}
                         {homeworkDetails.feedback && <p><strong>Fikr-mulohaza:</strong> {homeworkDetails.feedback}</p>}
                       </div>
                     )}
@@ -618,11 +623,20 @@ export default function StudentStudy() {
                           <p className="text-xs text-dark-400 mt-1">
                             To'g'ri javoblar: {quizResult.correctAnswers} / {quizResult.totalQuestions} ({quizResult.score}%)
                           </p>
-                          {quizResult.passed && (
-                            <p className="text-xs text-yellow-400 font-extrabold mt-3 animate-pulse">
-                              🪙 Testdan muvaffaqiyatli o'tganingiz uchun +20 koin hisobingizga qo'shildi!
-                            </p>
-                          )}
+                           {quizResult.passed && (
+                             <p className="text-xs text-yellow-400 font-extrabold mt-3 animate-pulse">
+                               {quizResult.rewardCoins > 0 ? (
+                                 <>
+                                   🪙 Testdan muvaffaqiyatli o'tganingiz uchun +{quizResult.rewardCoins} koin hisobingizga qo'shildi!
+                                   {quizResult.bonusCoins > 0 && ` (va to'liq 100% natija uchun +${quizResult.bonusCoins} koin bonus!)`}
+                                 </>
+                               ) : (
+                                 <>
+                                   🎉 Testdan muvaffaqiyatli o'tdingiz! (Ushbu test uchun koinlar oldin berilgan)
+                                 </>
+                               )}
+                             </p>
+                           )}
                         </div>
 
                         {!quizResult.passed && (
