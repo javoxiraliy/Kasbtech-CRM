@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Key, Mail, Loader2, X } from 'lucide-react';
+import { Shield, Key, Mail, Loader2, X, Eye, EyeOff } from 'lucide-react';
 import api from '../lib/api';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import { useNotification } from '../contexts/NotificationContext';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deviceLimitError, setDeviceLimitError] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
@@ -127,12 +128,24 @@ export default function Login() {
                   <Key className="h-5 w-5 text-dark-500" />
                 </div>
                 <input
-                  type="password"
-                  className="input pl-10"
+                  type={showPassword ? "text" : "password"}
+                  className="input pl-10 pr-10"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-dark-500 hover:text-white transition-colors"
+                  title={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
 
