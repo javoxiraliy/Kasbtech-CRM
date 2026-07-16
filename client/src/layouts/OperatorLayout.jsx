@@ -195,7 +195,7 @@ export default function OperatorLayout() {
 
               {/* Glassmorphic Dropdown */}
               {isBellOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-dark-900/95 border border-dark-800 rounded-xl glass shadow-2xl z-50 overflow-hidden animate-slide-in">
+                <div className="absolute right-[-16px] sm:right-0 mt-2 w-[calc(100vw-32px)] sm:w-80 bg-dark-900/95 border border-dark-800 rounded-xl glass shadow-2xl z-50 overflow-hidden animate-slide-in">
                   <div className="p-3 border-b border-dark-800 bg-dark-900/50 flex items-center justify-between">
                     <span className="text-xs font-bold text-white uppercase tracking-wider">Bildirishnomalar</span>
                     {unreadTasks.length > 0 && (

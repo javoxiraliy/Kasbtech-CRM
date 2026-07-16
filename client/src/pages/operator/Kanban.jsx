@@ -4,9 +4,10 @@ import {
   DragOverlay, 
   closestCorners, 
   KeyboardSensor, 
-  PointerSensor, 
   useSensor, 
-  useSensors 
+  useSensors,
+  MouseSensor,
+  TouchSensor
 } from '@dnd-kit/core';
 import { 
   SortableContext, 
@@ -247,7 +248,8 @@ export default function Kanban() {
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -326,7 +328,7 @@ export default function Kanban() {
           <h1 className="text-2xl font-bold text-white mb-1">Ish stoli</h1>
           <p className="text-dark-400 text-sm">Lidlarni boshqarish (Kanban)</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <form onSubmit={handleSearch} className="relative flex-1 sm:flex-initial sm:max-w-xs">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-dark-500" />

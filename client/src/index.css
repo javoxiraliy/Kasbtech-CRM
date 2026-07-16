@@ -144,7 +144,7 @@
 
 @media (max-width: 640px) {
   .card {
-    @apply rounded-none border-x-0;
+    @apply p-3.5 rounded-xl;
   }
   
   .modal-container {

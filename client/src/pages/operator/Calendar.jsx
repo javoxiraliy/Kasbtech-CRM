@@ -113,10 +113,10 @@ export default function Calendar() {
         </div>
 
         {/* Tab switch control */}
-        <div className="flex bg-dark-900/60 border border-dark-800 p-1.5 rounded-xl shrink-0">
+        <div className="flex flex-col sm:flex-row bg-dark-900/60 border border-dark-800 p-1.5 rounded-xl shrink-0 gap-1.5 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('calls')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full sm:w-auto ${
               activeTab === 'calls'
                 ? 'bg-primary-600/10 text-primary-400 border border-primary-500/20'
                 : 'text-dark-400 hover:text-white border border-transparent'
@@ -133,7 +133,7 @@ export default function Calendar() {
 
           <button
             onClick={() => setActiveTab('tasks')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all relative ${
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all relative w-full sm:w-auto ${
               activeTab === 'tasks'
                 ? 'bg-primary-600/10 text-primary-400 border border-primary-500/20'
                 : 'text-dark-400 hover:text-white border border-transparent'
