@@ -740,15 +740,15 @@ router.post('/homeworks/:homeworkId/review', authenticate, requireMentorOrAdmin,
       }
     });
 
-    // Gamification: Reward coins if approved
+    // Gamification: Reward coins if approved based on the grade percentage
     if (status === 'APPROVED') {
-      const rewardCoins = 10;
+      const rewardCoins = grade ? Math.round(grade) : 10;
       await prisma.coinTransaction.create({
         data: {
           studentId: homework.studentId,
           amount: rewardCoins,
           type: 'HW_SUBMISSION',
-          description: `"${homework.lesson.title}" darsi uy vazifasi tasdiqlangani uchun mukofot koinlari`
+          description: `"${homework.lesson.title}" darsi uy vazifasi tasdiqlandi (Bahosi: ${rewardCoins}%)`
         }
       });
     }
@@ -865,7 +865,7 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
       }
     });
 
-    // Gamification: Reward coins if passed
+    // Gamification: Reward coins if passed based on the quiz score percentage
     if (passed) {
       // Check if student has passed this quiz before (only reward once)
       const previousPass = await prisma.quizAttempt.findFirst({
@@ -873,13 +873,13 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
       });
 
       if (!previousPass) {
-        const rewardCoins = 20;
+        const rewardCoins = scorePercent;
         await prisma.coinTransaction.create({
           data: {
             studentId,
             amount: rewardCoins,
             type: 'QUIZ_PASS',
-            description: `"${quiz.lesson.title}" dars testidan muvaffaqiyatli o'tildi`
+            description: `"${quiz.lesson.title}" dars testidan o'tildi (Natija: ${scorePercent}%)`
           }
         });
       }
