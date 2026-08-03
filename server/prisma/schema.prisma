@@ -53,6 +53,7 @@ enum CourseInterest {
   PYTHON
   AUTOCAD
   THREE_D_MAX
+  CYBERSECURITY
   OTHER
 }
 

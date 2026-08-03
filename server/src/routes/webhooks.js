@@ -90,7 +90,7 @@ router.post('/meta', async (req, res) => {
             const validCourses = [
               "VIDEOGRAPHY", "VIDEO_EDITING", "SMM", "TARGET_PRO", 
               "COMPUTER_GRAPHICS", "COMPUTER_LITERACY", "GRAPHIC_DESIGN", 
-              "WEB_DEVELOPMENT", "PYTHON", "AUTOCAD", "THREE_D_MAX", "OTHER"
+              "WEB_DEVELOPMENT", "PYTHON", "AUTOCAD", "THREE_D_MAX", "CYBERSECURITY", "OTHER"
             ];
             
             let matchedCourse = "OTHER";
@@ -104,6 +104,8 @@ router.post('/meta', async (req, res) => {
                 matchedCourse = "GRAPHIC_DESIGN";
             } else if (courseInterest.toLowerCase().includes('smm')) {
                 matchedCourse = "SMM";
+            } else if (courseInterest.toLowerCase().includes('kiber') || courseInterest.toLowerCase().includes('cyber') || courseInterest.toLowerCase().includes('xavfsizlik') || courseInterest.toLowerCase().includes('security')) {
+                matchedCourse = "CYBERSECURITY";
             }
 
             // Check if lead already exists by leadgen_id? 

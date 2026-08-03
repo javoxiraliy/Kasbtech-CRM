@@ -14,6 +14,7 @@ const COURSE_LABELS = {
   GRAPHIC_DESIGN: 'Grafik dizayn',
   AUTOCAD: 'AutoCAD',
   THREE_D_MAX: '3D MAX',
+  CYBERSECURITY: 'Kiberxavfsizlik',
   OTHER: 'Boshqa',
   VIDEO_EDITING: 'Video montaj',
   WEB_DEVELOPMENT: 'Web dasturlash',

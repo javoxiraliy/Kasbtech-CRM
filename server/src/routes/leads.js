@@ -278,6 +278,7 @@ const COURSE_LABELS = {
   GRAPHIC_DESIGN: 'Grafik dizayn',
   AUTOCAD: 'AutoCAD',
   THREE_D_MAX: '3D MAX',
+  CYBERSECURITY: 'Kiberxavfsizlik',
   OTHER: 'Boshqa',
   VIDEO_EDITING: 'Video montaj',
   WEB_DEVELOPMENT: 'Web dasturlash',
@@ -312,6 +313,7 @@ const normalizeCourse = (val) => {
   if (s.includes('autocad') || s.includes('avtokad')) return 'AUTOCAD';
   if (s.includes('3d') || s.includes('max') || s.includes('3ds')) return 'THREE_D_MAX';
   if (s.includes('kompyuter grafikasi') || s.includes('graphics')) return 'COMPUTER_GRAPHICS';
+  if (s.includes('kiber') || s.includes('cyber') || s.includes('xavfsizlik') || s.includes('security')) return 'CYBERSECURITY';
   
   const upper = val.toUpperCase().trim().replace(/[\s-]/g, '_');
   if (COURSE_LABELS[upper]) return upper;

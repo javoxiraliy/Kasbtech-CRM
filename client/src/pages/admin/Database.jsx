@@ -21,6 +21,7 @@ const COURSE_LABELS = {
   GRAPHIC_DESIGN: 'Grafik dizayn',
   AUTOCAD: 'AutoCAD',
   THREE_D_MAX: '3D MAX',
+  CYBERSECURITY: 'Kiberxavfsizlik',
   OTHER: 'Boshqa',
   VIDEO_EDITING: 'Video montaj',
   WEB_DEVELOPMENT: 'Web dasturlash',
@@ -252,6 +253,9 @@ export default function Database() {
     { value: 'PYTHON', label: 'Python Dasturlash' },
     { value: 'AUTOCAD', label: 'AutoCAD' },
     { value: 'THREE_D_MAX', label: '3D MAX' },
+    { value: 'CYBERSECURITY', label: 'Kiberxavfsizlik' },
+    { value: 'COMPUTER_GRAPHICS', label: 'Kompyuter grafikasi' },
+    { value: 'VIDEO_EDITING', label: 'Video montaj' }
   ];
 
   const EMPLOYMENT_OPTIONS = [
@@ -661,14 +665,9 @@ export default function Database() {
                     value={editingLead.courseInterest}
                     onChange={e => setEditingLead({...editingLead, courseInterest: e.target.value})}
                   >
-                    <option value="VIDEOGRAPHY">Videomontaj "videografiya"</option>
-                    <option value="SMM">SMM</option>
-                    <option value="TARGET_PRO">Target pro</option>
-                    <option value="COMPUTER_GRAPHICS">Kompyuter grafikasi</option>
-                    <option value="COMPUTER_LITERACY">Kompyuter savodxonligi</option>
-                    <option value="GRAPHIC_DESIGN">Grafik dizayn</option>
-                    <option value="AUTOCAD">AutoCAD</option>
-                    <option value="THREE_D_MAX">3D MAX</option>
+                    {COURSE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                     <option value="OTHER">Boshqa</option>
                   </select>
                 </div>

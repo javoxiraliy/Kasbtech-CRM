@@ -44,6 +44,7 @@ const COURSE_LABELS = {
   PYTHON: 'Python Dasturlash',
   AUTOCAD: 'AutoCAD',
   THREE_D_MAX: '3D MAX',
+  CYBERSECURITY: 'Kiberxavfsizlik',
   OTHER: 'Boshqa',
   VIDEO_EDITING: 'Video montaj',
   COMPUTER_GRAPHICS: 'Kompyuter grafikasi'
