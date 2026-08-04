@@ -103,14 +103,7 @@ router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), 
 
     let thumbnailPath = null;
     if (req.file) {
-      const fileBuffer = fs.readFileSync(req.file.path);
-      const base64 = fileBuffer.toString('base64');
-      thumbnailPath = `data:${req.file.mimetype};base64,${base64}`;
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (err) {
-        console.error('Error deleting temp file:', err);
-      }
+      thumbnailPath = `/uploads/${req.file.filename}`;
     }
 
     const course = await prisma.course.create({
@@ -143,14 +136,7 @@ router.put('/courses/:id', authenticate, requireAdmin, upload.single('thumbnail'
     if (isPublished !== undefined) updateData.isPublished = isPublished === 'true' || isPublished === true;
     if (teacherId !== undefined) updateData.teacherId = teacherId || null;
     if (req.file) {
-      const fileBuffer = fs.readFileSync(req.file.path);
-      const base64 = fileBuffer.toString('base64');
-      updateData.thumbnail = `data:${req.file.mimetype};base64,${base64}`;
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (err) {
-        console.error('Error deleting temp file:', err);
-      }
+      updateData.thumbnail = `/uploads/${req.file.filename}`;
     }
 
     const course = await prisma.course.update({

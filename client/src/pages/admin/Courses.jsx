@@ -57,11 +57,18 @@ export default function Courses() {
 
   useEffect(() => {
     fetchCourses();
-    fetchTeachers();
     if (isAdmin) {
+      fetchTeachers();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'teachers' && teachers.length === 0) {
+      fetchTeachers();
+    } else if (activeTab === 'students' && students.length === 0 && isAdmin) {
       fetchStudents();
     }
-  }, [user]);
+  }, [activeTab]);
 
   const fetchTeachers = async () => {
     try {

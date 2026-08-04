@@ -110,6 +110,10 @@ model Lead {
 
   comments Comment[]
 
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@index([nextContactDate])
   @@map("leads")
 }
 
@@ -123,6 +127,8 @@ model Comment {
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
 
+  @@index([leadId])
+  @@index([createdAt])
   @@map("comments")
 }
 
@@ -153,6 +159,8 @@ model Task {
   reportText   String?
   completedAt  DateTime?
 
+  @@index([assignedToId])
+  @@index([isCompleted])
   @@map("tasks")
 }
 
@@ -201,6 +209,8 @@ model Course {
   teacherId   String?
   teacher     User?    @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
 
+  @@index([isPublished])
+  @@index([teacherId])
   @@map("courses")
 }
 
@@ -212,6 +222,7 @@ model Module {
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons   Lesson[]
 
+  @@index([courseId])
   @@map("modules")
 }
 
@@ -229,6 +240,7 @@ model Lesson {
   homeworks   Homework[]
   quizzes     Quiz[]
 
+  @@index([moduleId])
   @@map("lessons")
 }
 
@@ -243,6 +255,8 @@ model Enrollment {
   updatedAt DateTime @updatedAt
 
   @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
   @@map("enrollments")
 }
 
