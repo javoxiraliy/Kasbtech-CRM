@@ -312,6 +312,8 @@ model DeviceSession {
   ipAddress    String?
   lastActiveAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([lastActiveAt])
   @@map("device_sessions")
 }
 

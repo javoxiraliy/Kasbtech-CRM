@@ -623,14 +623,7 @@ router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), 
 
     let fileUrl = null;
     if (req.file) {
-      const fileBuffer = fs.readFileSync(req.file.path);
-      const base64 = fileBuffer.toString('base64');
-      fileUrl = `data:${req.file.mimetype};base64,${base64}`;
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (err) {
-        console.error('Error deleting temp file:', err);
-      }
+      fileUrl = `/uploads/${req.file.filename}`;
     }
 
     if (!fileUrl && !textResponse) {

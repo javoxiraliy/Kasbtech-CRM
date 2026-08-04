@@ -62,6 +62,12 @@ router.post('/login', async (req, res) => {
       { expiresIn: '8h' }
     );
 
+    // 7 kundan eski nofaol qurilma seanslarini avtomatik tozalash
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await prisma.deviceSession.deleteMany({
+      where: { userId: user.id, lastActiveAt: { lt: sevenDaysAgo } }
+    }).catch(err => console.error('Stale session cleanup error:', err));
+
     // Qurilmalar sonini cheklash (STUDENT uchun max 3 ta faol sessiya, boshqalar uchun 2 ta)
     const activeSessions = await prisma.deviceSession.findMany({
       where: { userId: user.id },
@@ -187,14 +193,7 @@ router.put('/profile', authenticate, upload.single('avatar'), async (req, res) =
     if (nickname !== undefined) data.nickname = nickname;
 
     if (req.file) {
-      const fileBuffer = fs.readFileSync(req.file.path);
-      const base64 = fileBuffer.toString('base64');
-      data.avatar = `data:${req.file.mimetype};base64,${base64}`;
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (err) {
-        console.error('Error deleting temp file:', err);
-      }
+      data.avatar = `/uploads/${req.file.filename}`;
     }
 
     if (password) {

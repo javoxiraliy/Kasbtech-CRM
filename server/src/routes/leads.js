@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
     // Automatically update SLA status for NEW leads whose deadline has passed (throttled to once every 30s)
     if (Date.now() - lastSlaUpdate > 30000) {
       lastSlaUpdate = Date.now();
-      await prisma.lead.updateMany({
+      prisma.lead.updateMany({
         where: {
           status: 'NEW',
           slaDeadline: { lt: now },
@@ -657,7 +657,8 @@ router.get('/export/excel', async (req, res) => {
       include: { 
         assignedTo: { select: { name: true } },
         comments: {
-          include: { author: { select: { name: true } } },
+          take: 5,
+          select: { content: true, author: { select: { name: true } } },
           orderBy: { createdAt: 'desc' }
         }
       },
