@@ -1752,7 +1752,7 @@ async function seedDefaultKnowledge() {
 // POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base & course materials RAG
 router.post('/ai-mentor/chat', authenticate, async (req, res) => {
   try {
-    const { message, courseId } = req.body;
+    const { message, courseId, history } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Savol matni kiritilishi shart' });
     }
@@ -1845,8 +1845,26 @@ ${combinedContextText}
       
       const queryClean = message.toLowerCase().trim();
 
+      // 0. Intent: Curriculum / Course Inquiry or Follow-up Context Query ("o'rgatilinadimi", "kursda bormi", "bu bo'yicha ham")
+      const isCurriculumQuery = /o'rgatiladi|o'rgatilinadi|o'rgatami|dasturi|mavzulari|kursdami|kurda|bo'yicha ham|darsdami|nimalar bor|o'rganamiz/i.test(queryClean);
+      
+      if (isCurriculumQuery) {
+        let previousTopic = '';
+        if (Array.isArray(history) && history.length > 0) {
+          const lastUserMsg = [...history].reverse().find(m => m.sender === 'user' && m.text !== message);
+          if (lastUserMsg) {
+            previousTopic = lastUserMsg.text.replace(/nima|qanday|haqida|nma|\?/gi, '').trim();
+          }
+        }
+
+        if (previousTopic) {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\nHa, albatta! Kasbtech Akademiyasining ushbu kursida **"${previousTopic}"** bo'yicha barcha nazariy bilimlardan tortib, amaliy mashg'ulotlar, sozlamalar va real loyihalarda qo'llash sirlari to'liq o'rgatiladi! 🎓✨`;
+        } else {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\nHa, albatta! Kasbtech Akademiyasining ushbu kursida quyidagi barcha zamonaviy va talabgir yo'nalishlar to'liq va amaliy tarzda o'rgatiladi:\n\n1. **Marketing Poydevori va Biznes Tahlil**: Maqsadli auditoriya (Target Audience) va mijoz portretini tuzish.\n2. **Digital Marketing va Sotuv Voronkalari**: Mijozlarni jalb qilish va sotuv zanjirini qurish.\n3. **Targeting (Instagram / Facebook Reklama)**: Reklama kabinetini sozlash, kunlik byudjet va auditoriyalarni to'g'ri tanlash.\n4. **SMM va Short Video Content**: Reels, TikTok va Telegram kanallari uchun sotuvchi kontent va ssenariylar.\n5. **AI va Sun'iy Intellekt Vositalari**: ChatGPT, Midjourney va avtomatlashtirish yordamida tezkor ishlash.\n6. **Frilans va Mijozlar Bilan Ishlash**: Shaxsiy brend va xizmatlarni sotish sirlari.`;
+        }
+      }
       // 1. Intent: Career / Job / Income after course completion
-      if (/ish|daromad|kasb|frilanser|tugatib|so'ng|pul|agentlik|daromadga/i.test(queryClean)) {
+      else if (/ish|daromad|kasb|frilanser|tugatib|so'ng|pul|agentlik|daromadga/i.test(queryClean)) {
         aiReply = `🤖 **Mentor Kasbtech Bot**\n\nKasbtech Akademiyasining ushbu kursini muvaffaqiyatli tamomlab, siz quyidagi yo'nalishlarda ishlashingiz va daromad qilishingiz mumkin:\n\n1. **Digital Marketing va SMM Mutaxassisi**: Kompaniyalar va shaxsiy brendlar uchun marketing strategiyalarini tuzish hamda ijtimoiy tarmoqlarni yuritish.\n2. **Targetolog (Reklama Menejeri)**: Meta (Instagram/Facebook) platformalarida maqsadli auditoriyaga reklamalar yoqish va sotuvlar konversiyasini oshirish.\n3. **AI va Frilanser**: Zamonaviy Sun'iy Intellekt vositalaridan foydalanib masofaviy loyihalarda ishlash yoki shaxsiy agentlik ochish.`;
       }
       // 2. Intent: Homework / Submissions

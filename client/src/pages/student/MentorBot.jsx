@@ -60,7 +60,8 @@ export default function MentorBot() {
     try {
       const res = await api.post('/lms/ai-mentor/chat', {
         message: query.trim(),
-        courseId: selectedCourseId || null
+        courseId: selectedCourseId || null,
+        history: messages.slice(-6).map(m => ({ sender: m.sender, text: m.text }))
       });
 
       const botMsg = {
