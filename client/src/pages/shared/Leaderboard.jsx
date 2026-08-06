@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { 
-  Award, Trophy, TrendingUp, Activity, BookOpen, Search, Star, Crown, Coins, BookOpenCheck, User as UserIcon
+  Trophy, TrendingUp, Activity, BookOpen, Search, Star, Crown, Coins, BookOpenCheck, User as UserIcon
 } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';

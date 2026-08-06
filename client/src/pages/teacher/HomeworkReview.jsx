@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
 import { 
   CheckCheck, 
-  XCircle, 
   FileText, 
   Download, 
   User, 
-  BookOpen, 
   Award,
-  AlertCircle,
   MessageSquare
 } from 'lucide-react';
 import api from '../../lib/api';

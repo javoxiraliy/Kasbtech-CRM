@@ -1,4 +1,4 @@
-import { Sparkles, Flame, Target } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export default function MotivationalBanner() {
   return (

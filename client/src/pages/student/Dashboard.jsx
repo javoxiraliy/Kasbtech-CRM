@@ -3,16 +3,12 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { 
   BookOpen, 
   Award, 
-  Clock, 
   History, 
   Gift, 
   ChevronRight,
-  TrendingUp,
   Lock,
-  Unlock,
   Sparkles,
-  CheckCircle,
-  ShieldCheck
+  CheckCircle
 } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';

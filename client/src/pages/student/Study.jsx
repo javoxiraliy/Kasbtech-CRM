@@ -14,8 +14,6 @@ import {
   HelpCircle,
   Clock,
   Video,
-  FileCheck,
-  XCircle,
   AlertCircle
 } from 'lucide-react';
 import api from '../../lib/api';

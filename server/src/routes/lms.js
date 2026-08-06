@@ -1393,4 +1393,207 @@ router.get('/leaderboard', authenticate, async (req, res) => {
   }
 });
 
+// ==========================================
+// 8. AI MENTOR & BOT KNOWLEDGE BASE
+// ==========================================
+
+// GET /api/lms/bot-knowledge - Fetch all knowledge base items
+router.get('/bot-knowledge', authenticate, async (req, res) => {
+  try {
+    const { courseId, search } = req.query;
+    const where = {};
+    if (courseId) where.courseId = courseId;
+    if (search) {
+      where.OR = [
+        { topic: { contains: search, mode: 'insensitive' } },
+        { question: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const items = await prisma.botKnowledge.findMany({
+      where,
+      include: {
+        course: { select: { id: true, title: true } },
+        createdBy: { select: { id: true, name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json({ items });
+  } catch (error) {
+    console.error('Fetch bot knowledge error:', error);
+    res.status(500).json({ error: 'Bilimlar bazasini yuklashda xatolik' });
+  }
+});
+
+// POST /api/lms/bot-knowledge - Create knowledge base item (Admin, Teacher, Mentor)
+router.post('/bot-knowledge', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const { topic, question, content, courseId } = req.body;
+    if (!topic || !content) {
+      return res.status(400).json({ error: 'Mavzu va kontent kiritilishi shart' });
+    }
+
+    const newItem = await prisma.botKnowledge.create({
+      data: {
+        topic,
+        question: question || null,
+        content,
+        courseId: courseId || null,
+        createdById: req.user.id
+      },
+      include: {
+        course: { select: { id: true, title: true } },
+        createdBy: { select: { id: true, name: true } }
+      }
+    });
+
+    res.status(201).json({ item: newItem });
+  } catch (error) {
+    console.error('Create bot knowledge error:', error);
+    res.status(500).json({ error: 'Bilimlar bazasiga yozuv qo\'shishda xatolik' });
+  }
+});
+
+// PUT /api/lms/bot-knowledge/:id - Update knowledge base item
+router.put('/bot-knowledge/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const { topic, question, content, courseId } = req.body;
+    const existing = await prisma.botKnowledge.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Yozuv topilmadi' });
+    }
+
+    const updated = await prisma.botKnowledge.update({
+      where: { id: req.params.id },
+      data: {
+        topic: topic !== undefined ? topic : existing.topic,
+        question: question !== undefined ? question : existing.question,
+        content: content !== undefined ? content : existing.content,
+        courseId: courseId !== undefined ? courseId : existing.courseId
+      },
+      include: {
+        course: { select: { id: true, title: true } },
+        createdBy: { select: { id: true, name: true } }
+      }
+    });
+
+    res.json({ item: updated });
+  } catch (error) {
+    console.error('Update bot knowledge error:', error);
+    res.status(500).json({ error: 'Bilimlar bazasi yozuvini yangilashda xatolik' });
+  }
+});
+
+// DELETE /api/lms/bot-knowledge/:id - Delete knowledge base item
+router.delete('/bot-knowledge/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const existing = await prisma.botKnowledge.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Yozuv topilmadi' });
+    }
+
+    await prisma.botKnowledge.delete({
+      where: { id: req.params.id }
+    });
+
+    res.json({ message: 'Yozuv muvaffaqiyatli o\'chirildi' });
+  } catch (error) {
+    console.error('Delete bot knowledge error:', error);
+    res.status(500).json({ error: 'Bilimlar bazasi yozuvini o\'chirishda xatolik' });
+  }
+});
+
+// POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base RAG
+router.post('/ai-mentor/chat', authenticate, async (req, res) => {
+  try {
+    const { message, courseId } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Savol matni kiritilishi shart' });
+    }
+
+    // Fetch Knowledge Base entries
+    const where = {};
+    if (courseId) {
+      where.OR = [{ courseId: courseId }, { courseId: null }];
+    }
+    const kbItems = await prisma.botKnowledge.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+
+    // Build context text from Knowledge Base
+    let contextText = '';
+    if (kbItems.length === 0) {
+      contextText = 'Hozircha ma\'lumotlar bazasida hech qanday bilim kiritilmagan.';
+    } else {
+      contextText = kbItems.map((item, idx) => 
+        `[Bilim ${idx + 1}] Mavzu: ${item.topic}\nSavol/Kalit so'z: ${item.question || 'Mavjud emas'}\nKontent/Javob: ${item.content}`
+      ).join('\n\n');
+    }
+
+    // System instruction prompt forcing strict compliance with Knowledge Base
+    const systemPrompt = `Siz "Mentor Kasbtech Bot" – Kasbtech Akademiyasining talabalar uchun yordamchi AI mentorisiz.
+SIZ QUYIDAGI QAT'IY QOIDALARGA AMAL QILISHINGIZ SHART:
+1. Faqat va faqat quyida "=== KASBTECH BILIMLAR BAZASI ===" sarlavhasi ostida keltirilgan ma'lumotlar va bilimlar asosida javob bering.
+2. Agar talabaning savoliga tegishli javob yoki ma'lumot ushbu Bilimlar bazasida MAVJUD BO'LMASA, HECH QACHON o'zingizdan tashqi ma'lumot, taxmin yoki o'ylab topilgan javob bermang!
+3. Bilimlar bazasida javob topilmagan taqdirda, ANQ ushbu ko'rinishda javob bering: "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling."
+4. Javobingizni o'zbek tilida, muloyim, aniq va chiroyli formatlangan ko'rinishda bering.
+
+=== KASBTECH BILIMLAR BAZASI ===
+${contextText}
+=================================`;
+
+    // Retrieve Gemini API Key from database settings or process.env
+    const settingKey = await prisma.setting.findUnique({ where: { key: 'GEMINI_API_KEY' } });
+    const apiKey = settingKey?.value || process.env.GEMINI_API_KEY || 'AQ.Ab8RN6ILdcxXSBbHka0A2UJngGn65ULC42_OgiRDDUS-xvocqA';
+
+    const fullPrompt = `${systemPrompt}\n\nFoydalanuvchi savoli: ${message}`;
+    
+    const contents = [
+      {
+        role: 'user',
+        parts: [{ text: fullPrompt }]
+      }
+    ];
+
+    // Call Gemini API
+    const axios = require('axios');
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    let aiReply = '';
+    try {
+      const response = await axios.post(geminiUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
+      aiReply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    } catch (apiErr) {
+      console.error('Gemini 1.5 Flash error, trying gemini-2.0-flash:', apiErr.response?.data || apiErr.message);
+      try {
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const fallbackResponse = await axios.post(fallbackUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
+        aiReply = fallbackResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      } catch (fallbackErr) {
+        console.error('Gemini fallback API error:', fallbackErr.response?.data || fallbackErr.message);
+        throw fallbackErr;
+      }
+    }
+
+    if (!aiReply) {
+      aiReply = 'Kechirasiz, sun\'iy intellekt botdan javob olishda uzilish yuz berdi. Qayta urinib ko\'ring.';
+    }
+
+    res.json({ reply: aiReply });
+  } catch (error) {
+    console.error('AI Mentor chat error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'AI Mentor bilan bog\'lanishda xatolik yuz berdi' });
+  }
+});
+
 module.exports = router;

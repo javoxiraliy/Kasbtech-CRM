@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, Clock, CheckCircle2, XCircle, AlertCircle, BookOpen, Send, Calendar, Image, File, ExternalLink, FileText, FileSpreadsheet } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle2, XCircle, Send, Image, File, ExternalLink, FileText, FileSpreadsheet } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 

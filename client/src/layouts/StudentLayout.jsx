@@ -6,7 +6,8 @@ import {
   Menu,
   X,
   Award,
-  BookOpen
+  BookOpen,
+  Bot
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
@@ -43,6 +44,7 @@ export default function StudentLayout() {
 
   const navItems = [
     { to: '/student', icon: BookOpen, label: 'Mening Kurslarim' },
+    { to: '/student/mentor-bot', icon: Bot, label: 'Mentor Kasbtech Bot' },
     { to: '/student/leaderboard', icon: Award, label: 'Reyting' }
   ];
 

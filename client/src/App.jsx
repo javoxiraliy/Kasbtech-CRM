@@ -14,6 +14,7 @@ import AdminReports from './pages/admin/AllReports';
 
 import StudentDashboard from './pages/student/Dashboard';
 import StudentStudy from './pages/student/Study';
+import StudentMentorBot from './pages/student/MentorBot';
 
 import OperatorKanban from './pages/operator/Kanban';
 import OperatorCalendar from './pages/operator/Calendar';
@@ -30,6 +31,7 @@ import TeacherTasks from './pages/teacher/Tasks';
 import TeacherHomeworkReview from './pages/teacher/HomeworkReview';
 import StudentManager from './pages/shared/StudentManager';
 import Leaderboard from './pages/shared/Leaderboard';
+import BotKnowledgeBase from './pages/shared/BotKnowledgeBase';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -106,6 +108,7 @@ function App() {
               <Route path="homeworks" element={<TeacherHomeworkReview />} />
               <Route path="students" element={<StudentManager />} />
               <Route path="courses" element={<AdminCourses />} />
+              <Route path="bot-knowledge" element={<BotKnowledgeBase />} />
               <Route path="leaderboard" element={<Leaderboard />} />
               <Route path="reports" element={<Reports />} />
             </Route>
@@ -132,6 +135,7 @@ function App() {
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="courses" element={<AdminCourses />} />
               <Route path="students" element={<StudentManager />} />
+              <Route path="bot-knowledge" element={<BotKnowledgeBase />} />
               <Route path="leaderboard" element={<Leaderboard />} />
               <Route path="reports" element={<Reports />} />
               <Route path="all-reports" element={<AdminReports />} />
@@ -143,6 +147,7 @@ function App() {
               </ProtectedRoute>
             }>
               <Route index element={<StudentDashboard />} />
+              <Route path="mentor-bot" element={<StudentMentorBot />} />
               <Route path="courses/:courseId" element={<StudentStudy />} />
               <Route path="leaderboard" element={<Leaderboard />} />
             </Route>

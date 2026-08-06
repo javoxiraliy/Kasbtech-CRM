@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, User, CheckCircle, XCircle, BookOpen, Key, Mail, Lock, Unlock } from 'lucide-react';
+import { Plus, Search, User, XCircle, BookOpen, Mail, Lock, Unlock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';

@@ -96,6 +96,7 @@ export default function TeacherLayout() {
     { to: '/teacher/homeworks', icon: CheckCheck, label: 'Vazifalarni Tekshirish', end: false },
     { to: '/teacher/courses', icon: BookOpen, label: 'Kurslarni Boshqarish', end: false },
     { to: '/teacher/students', icon: Users, label: 'Talabalar Nazorati', end: false },
+    { to: '/teacher/bot-knowledge', icon: Brain, label: 'Bot Bilimlar Bazasi', end: false },
     { to: '/teacher/leaderboard', icon: Award, label: 'Reyting', end: false },
     { to: '/teacher/reports', icon: FileText, label: 'Hisobotlar', end: false },
   ];

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, Phone, User, MessageSquare, Briefcase, Calendar } from 'lucide-react';
+import { X, Phone, MessageSquare, Briefcase, Calendar } from 'lucide-react';
 import api from '../lib/api';
 
 const STATUS_LABELS = {

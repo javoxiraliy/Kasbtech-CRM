@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { FileText, Send, Calendar, Copy, Check, Paperclip, X, Image, File, Download, ExternalLink, Loader2, FileSpreadsheet, AlertTriangle } from 'lucide-react';
+import { FileText, Send, Calendar, Copy, Check, Paperclip, X, Image, File, ExternalLink, Loader2, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import api from '../../lib/api';
 
 const TEMPLATES = {

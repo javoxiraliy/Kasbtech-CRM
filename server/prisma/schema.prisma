@@ -84,6 +84,7 @@ model User {
   sessions          DeviceSession[]
   coins             CoinTransaction[]
   teacherCourses    Course[]          @relation("CourseTeacher")
+  botKnowledgeEntries BotKnowledge[]  @relation("CreatedBotKnowledge")
 
   @@map("users")
 }
@@ -208,6 +209,7 @@ model Course {
   enrollments Enrollment[]
   teacherId   String?
   teacher     User?    @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  botKnowledgeEntries BotKnowledge[]
 
   @@index([isPublished])
   @@index([teacherId])
@@ -339,6 +341,23 @@ model CoinTransaction {
   createdAt   DateTime @default(now())
 
   @@map("coin_transactions")
+}
+
+model BotKnowledge {
+  id          String   @id @default(cuid())
+  topic       String
+  question    String?
+  content     String   @db.Text
+  courseId    String?
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?    @relation("CreatedBotKnowledge", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([topic])
+  @@index([courseId])
+  @@map("bot_knowledge")
 }
 
 

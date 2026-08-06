@@ -6,10 +6,8 @@ import {
   Edit2, 
   Video, 
   ArrowLeft, 
-  Check, 
   FolderPlus, 
   FileQuestion,
-  HelpCircle,
   Clock,
   Unlock,
   AlertCircle

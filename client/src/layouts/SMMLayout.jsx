@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ClipboardList, LogOut, Bell, User as UserIcon, Menu, X, CheckCheck, AlertCircle, Smartphone, FileText } from 'lucide-react';
+import { ClipboardList, LogOut, Bell, Menu, X, CheckCheck, AlertCircle, Smartphone, FileText } from 'lucide-react';
 import api from '../lib/api';
 import ReportWarningBanner from '../components/ReportWarningBanner';
 import MotivationalBanner from '../components/MotivationalBanner';

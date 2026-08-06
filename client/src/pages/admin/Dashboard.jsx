@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { Users, Target, Clock, TrendingUp, AlertTriangle, GraduationCap, BookOpen, Award } from 'lucide-react';
+import { Users, Target, Clock, TrendingUp, GraduationCap, BookOpen, Award } from 'lucide-react';
 import api from '../../lib/api';
 import OperatorActivityModal from '../../components/OperatorActivityModal';
 

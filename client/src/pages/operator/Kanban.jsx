@@ -11,14 +11,13 @@ import {
 } from '@dnd-kit/core';
 import { 
   SortableContext, 
-  arrayMove, 
   sortableKeyboardCoordinates,
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, Phone, User, Calendar, MessageSquare, Search, Download, Loader2, Plus, X } from 'lucide-react';
-import { formatDistanceToNow, isPast } from 'date-fns';
+import { Clock, Phone, Calendar, MessageSquare, Search, Download, Loader2, Plus, X } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { uz } from 'date-fns/locale';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';

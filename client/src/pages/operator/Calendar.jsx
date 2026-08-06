@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Phone, User, Clock, CheckCircle, ListTodo, ShieldAlert, BookOpen, AlertCircle, Sparkles, Image, File, ExternalLink, FileText, FileSpreadsheet } from 'lucide-react';
+import { Calendar as CalendarIcon, Phone, User, Clock, CheckCircle, ListTodo, BookOpen, Sparkles, Image, File, ExternalLink, FileText, FileSpreadsheet } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import LeadModal from '../../components/LeadModal';

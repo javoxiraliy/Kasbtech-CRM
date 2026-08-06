@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Download, Upload, FileSpreadsheet, Search, Loader2, Edit2, Trash2, X, Plus, User, Phone, BookOpen, Briefcase } from 'lucide-react';
+import { Download, Upload, FileSpreadsheet, Search, Loader2, Edit2, Trash2, X, Plus } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import ConfirmModal from '../../components/ConfirmModal';
