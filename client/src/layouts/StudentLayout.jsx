@@ -7,7 +7,8 @@ import {
   X,
   Award,
   BookOpen,
-  Bot
+  Bot,
+  Gamepad2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
@@ -45,6 +46,7 @@ export default function StudentLayout() {
   const navItems = [
     { to: '/student', icon: BookOpen, label: 'Mening Kurslarim' },
     { to: '/student/mentor-bot', icon: Bot, label: 'Mentor Kasbtech Bot' },
+    { to: '/student/games', icon: Gamepad2, label: "Qiziqarli O'yinlar", badge: "🎮" },
     { to: '/student/leaderboard', icon: Award, label: 'Reyting' }
   ];
 
@@ -102,7 +104,12 @@ export default function StudentLayout() {
               }
             >
               <item.icon className="w-5 h-5" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.badge && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 animate-pulse">
+                  {item.badge}
+                </span>
+              )}
             </NavLink>
           ))}
         </div>

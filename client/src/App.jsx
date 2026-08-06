@@ -15,6 +15,7 @@ import AdminReports from './pages/admin/AllReports';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentStudy from './pages/student/Study';
 import StudentMentorBot from './pages/student/MentorBot';
+import StudentGames from './pages/student/Games';
 
 import OperatorKanban from './pages/operator/Kanban';
 import OperatorCalendar from './pages/operator/Calendar';
@@ -148,6 +149,7 @@ function App() {
             }>
               <Route index element={<StudentDashboard />} />
               <Route path="mentor-bot" element={<StudentMentorBot />} />
+              <Route path="games" element={<StudentGames />} />
               <Route path="courses/:courseId" element={<StudentStudy />} />
               <Route path="leaderboard" element={<Leaderboard />} />
             </Route>

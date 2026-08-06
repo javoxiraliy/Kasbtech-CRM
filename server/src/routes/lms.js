@@ -1048,6 +1048,89 @@ router.get('/coins/balance', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/lms/coins/award - Award coins to student for completing educational games
+router.post('/coins/award', authenticate, async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { amount, description, gameType } = req.body;
+
+    const coinsToAward = Math.min(Math.max(parseInt(amount) || 0, 1), 50); // Cap per game round to prevent abuse
+    if (coinsToAward <= 0) {
+      return res.status(400).json({ error: 'Koin miqdori to\'g\'ri kiritilmadi' });
+    }
+
+    const tx = await prisma.coinTransaction.create({
+      data: {
+        studentId,
+        amount: coinsToAward,
+        type: gameType ? `GAME_${gameType.toUpperCase()}` : 'GAME_REWARD',
+        description: description || 'Interaktiv ta\'limiy o\'yinda g\'oliblik uchun mukofot'
+      }
+    });
+
+    const allTx = await prisma.coinTransaction.findMany({
+      where: { studentId }
+    });
+    const newBalance = allTx.reduce((acc, curr) => acc + curr.amount, 0);
+
+    res.json({
+      success: true,
+      awardedCoins: coinsToAward,
+      newBalance,
+      transaction: tx
+    });
+  } catch (error) {
+    console.error('Award coins error:', error);
+    res.status(500).json({ error: 'Koin mukofotini taqdim etishda xatolik' });
+  }
+});
+
+// GET /api/lms/games/leaderboard - Fetch top students by game scores & KasbCoin activity
+router.get('/games/leaderboard', authenticate, async (req, res) => {
+  try {
+    const students = await prisma.user.findMany({
+      where: { role: 'STUDENT', isActive: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        coins: {
+          select: {
+            amount: true,
+            type: true,
+            description: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    const leaderboard = students.map(student => {
+      const totalCoins = student.coins.reduce((acc, curr) => acc + curr.amount, 0);
+      const gameTransactions = student.coins.filter(c => c.type && c.type.startsWith('GAME_'));
+      const gameCoins = gameTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+      const gamesPlayed = gameTransactions.length;
+
+      return {
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        avatar: student.avatar,
+        totalCoins,
+        gameCoins,
+        gamesPlayed
+      };
+    }).sort((a, b) => b.gameCoins - a.gameCoins || b.totalCoins - a.totalCoins);
+
+    res.json({ leaderboard: leaderboard.slice(0, 20) });
+  } catch (error) {
+    console.error('Fetch game leaderboard error:', error);
+    res.status(500).json({ error: 'O\'yinlar reytingini yuklashda xatolik' });
+  }
+});
+
+
 // ==========================================
 // 8. TEACHER ASSIGNMENT & STUDENT PROFILES
 // ==========================================
