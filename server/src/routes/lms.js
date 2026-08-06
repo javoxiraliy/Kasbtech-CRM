@@ -1511,7 +1511,7 @@ router.delete('/bot-knowledge/:id', authenticate, requireMentorOrAdmin, async (r
   }
 });
 
-// POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base RAG
+// POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base RAG & smart fallback
 router.post('/ai-mentor/chat', authenticate, async (req, res) => {
   try {
     const { message, courseId } = req.body;
@@ -1557,42 +1557,61 @@ ${contextText}
     const apiKey = settingKey?.value || process.env.GEMINI_API_KEY || 'AQ.Ab8RN6ILdcxXSBbHka0A2UJngGn65ULC42_OgiRDDUS-xvocqA';
 
     const fullPrompt = `${systemPrompt}\n\nFoydalanuvchi savoli: ${message}`;
-    
-    const contents = [
-      {
-        role: 'user',
-        parts: [{ text: fullPrompt }]
-      }
-    ];
+    const contents = [{ role: 'user', parts: [{ text: fullPrompt }] }];
 
-    // Call Gemini API
-    const axios = require('axios');
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    
     let aiReply = '';
-    try {
-      const response = await axios.post(geminiUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
-      aiReply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch (apiErr) {
-      console.error('Gemini 1.5 Flash error, trying gemini-2.0-flash:', apiErr.response?.data || apiErr.message);
+    const axios = require('axios');
+
+    // Attempt calling Gemini models
+    const candidateModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    for (const modelName of candidateModels) {
       try {
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        const fallbackResponse = await axios.post(fallbackUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
-        aiReply = fallbackResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      } catch (fallbackErr) {
-        console.error('Gemini fallback API error:', fallbackErr.response?.data || fallbackErr.message);
-        throw fallbackErr;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        const response = await axios.post(geminiUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
+        const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          aiReply = text;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Gemini model ${modelName} API error:`, err.response?.data?.error?.message || err.message);
       }
     }
 
+    // Fallback: If Gemini API fails (quota / network / invalid key), use direct Knowledge Base matching engine
     if (!aiReply) {
-      aiReply = 'Kechirasiz, sun\'iy intellekt botdan javob olishda uzilish yuz berdi. Qayta urinib ko\'ring.';
+      console.log('Gemini API unavailable or quota exceeded, using smart Knowledge Base matching...');
+      
+      const userWords = message.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      let matchedItem = null;
+      let maxScore = 0;
+
+      for (const item of kbItems) {
+        const itemText = `${item.topic} ${item.question || ''} ${item.content}`.toLowerCase();
+        let score = 0;
+        userWords.forEach(word => {
+          if (itemText.includes(word)) score++;
+        });
+
+        if (score > maxScore) {
+          maxScore = score;
+          matchedItem = item;
+        }
+      }
+
+      if (matchedItem && maxScore > 0) {
+        aiReply = `📌 **${matchedItem.topic}**\n\n${matchedItem.content}`;
+      } else {
+        aiReply = "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.";
+      }
     }
 
     res.json({ reply: aiReply });
   } catch (error) {
-    console.error('AI Mentor chat error:', error.response?.data || error.message);
-    res.status(500).json({ error: 'AI Mentor bilan bog\'lanishda xatolik yuz berdi' });
+    console.error('AI Mentor chat error:', error.message);
+    res.json({ 
+      reply: "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling." 
+    });
   }
 });
 

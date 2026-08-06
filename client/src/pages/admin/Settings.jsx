@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Clock, ShieldCheck, Loader2, Facebook } from 'lucide-react';
+import { Save, Clock, ShieldCheck, Loader2, Facebook, Bot } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -160,6 +160,46 @@ export default function Settings() {
           </div>
         </div>
         
+        {/* Gemini AI Bot Setting */}
+        <div className="card glass relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+            <Bot className="w-32 h-32 text-emerald-500" />
+          </div>
+          
+          <div className="relative z-10 flex flex-col sm:flex-row gap-6">
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                <Bot className="w-5 h-5" />
+                <h3 className="text-lg font-semibold text-white">Gemini AI API Kaliti (Mentor Bot)</h3>
+              </div>
+              <p className="text-sm text-dark-400">
+                Mentor Kasbtech Bot talabalar savollariga Bilimlar Bazasi asosida javob berishi uchun Google AI Studio API kalitini kiritishingiz mumkin (masalan: <code className="text-primary-300">AIzaSy...</code>).
+              </p>
+              
+              <div className="flex items-end gap-4 max-w-xl">
+                <div className="flex-1">
+                  <label className="label">API Key</label>
+                  <input 
+                    type="password" 
+                    className="input font-mono text-xs" 
+                    placeholder="AIzaSy..."
+                    value={settings.GEMINI_API_KEY?.value || ''}
+                    onChange={(e) => handleChange('GEMINI_API_KEY', 'value', e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => handleSave('GEMINI_API_KEY')}
+                  disabled={saving === 'GEMINI_API_KEY'}
+                  className="btn-primary bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {saving === 'GEMINI_API_KEY' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Saqlash
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Facebook Integration */}
         <div className="card glass relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
