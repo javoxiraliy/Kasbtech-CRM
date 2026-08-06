@@ -13,7 +13,8 @@ import {
   Gamepad2,
   Lock,
   Star,
-  BookOpen
+  BookOpen,
+  Shuffle
 } from 'lucide-react';
 
 export default function StudentGames() {
@@ -113,7 +114,7 @@ export default function StudentGames() {
               Interaktiv Ta'limiy O'yinlar 🎮
             </h1>
             <p className="text-dark-300 text-sm md:text-base max-w-2xl leading-relaxed">
-              Oson, O'rta va Qiyin bosqichlarni zabt eting! Hormozi kitoblari hamda 40-kunlik marketing darsliklaridan yulduzchalarni yutib, KasbCoin ishlab oling!
+              Kengaytirilgan 36+ turli xil savollar va keyslar banki! Har safar o'yin boshlanganda savollar tasodifiy (random) yangilanadi!
             </p>
           </div>
 
@@ -224,7 +225,7 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">1-O'YIN • BOSQICHLI VIKTORINA</span>
                 <h3 className="text-xl font-bold text-white mt-1">Marketing Blitz Quiz ⚡</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  🟢 Boshlang'ich (Oson), 🟡 O'rta va 🔴 Qiyin darajadagi Hormozi Money Models & 40-kunlik darsliklar imtihoni!
+                  🟢 Oson (12+ savol), 🟡 O'rta (12+ savol) va 🔴 Qiyin (12+ savol) darajadagi ulkan savollar banki. Har safar random yangilanadi!
                 </p>
               </div>
 
@@ -271,7 +272,7 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">2-O'YIN • BOSQICHLI MOSLASHTIRISH</span>
                 <h3 className="text-xl font-bold text-white mt-1">Match Master 🧩</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  Money Models formulalari (Decoy, Anchor, Rollover, Upsell) va Kasbtech atamalarini moslashtiring!
+                  Money Models (Decoy, Anchor, Rollover, Upsell) va Kasbtech 40-kunlik atamalarining 30+ moslashuvchan juftliklari!
                 </p>
               </div>
 
@@ -492,7 +493,7 @@ function LevelSelector({ currentLevel, onLevelChange, progress }) {
             : 'bg-dark-900 border-dark-800 text-dark-400 hover:text-white'
         }`}
       >
-        <span className="flex items-center gap-1.5">🟢 Boshlang'ich</span>
+        <span className="flex items-center gap-1.5">🟢 Oson</span>
         <div className="flex items-center">
           {[1, 2, 3].map(s => (
             <Star key={s} className={`w-3 h-3 ${s <= (progress?.easy || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-dark-700'}`} />
@@ -550,10 +551,10 @@ function LevelSelector({ currentLevel, onLevelChange, progress }) {
 }
 
 /* =========================================================================
-   GAME 1 COMPONENT: MARKETING BLITZ QUIZ (WITH 3 LEVELS)
+   GAME 1 COMPONENT: MARKETING BLITZ QUIZ (WITH MASSIVE SHUFFLED QUESTION BANK)
    ========================================================================= */
 function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
-  const QUIZ_BANK = {
+  const MASTER_QUIZ_BANK = {
     easy: {
       time: 20,
       coinMultiplier: 1.0,
@@ -599,24 +600,64 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           correct: 1
         },
         {
-          q: "Marketolog va Yozuvchi (Adib) yozish maqsadi o'rtasidagi farq nima?",
+          q: "Kasbtech 1-Kun: Digital Marketing an'anaviy marketingdan nimasi bilan ustun?",
           options: [
-            "Yozuvchi zavq berish uchun, Marketolog esa aniq harakatga (sotib olishga) undash uchun yozadi",
-            "Yozuvchi kompyuterda, Marketolog daftarda yozadi",
-            "Ikkala yozish maqsadi bir xil",
-            "Marketolog faqat she'r yozadi"
+            "Faqat maqsadli auditoriyaga 'Snayper' kabi reklama ko'rsatish va har 1$ ning ROI sini Tiynigacha o'lchash",
+            "Ko'chaga katta bilbord ilish bilan",
+            "Televizorga 1000$ berish bilan",
+            "Hech qanday farqi yo'q"
           ],
           correct: 0
         },
         {
-          q: "Marketingda 'Hammaga sotmoqchi bo'lsangiz' nima bo'ladi?",
+          q: "Kasbtech 1-Kun: 4 bosqichli 'Oltin Zanjir' (Funnel) tartibi qanday?",
           options: [
-            "Barcha insonlar sotib oladi",
-            "Hech kimga sota olmaysiz, chunki har xil guruh motivatsiyasi har xil",
-            "Faqat talabalar oladi",
-            "Reklama byudjeti tejaladi"
+            "Traffic (Reklama) -> Sayt (Qabul) -> Lead (Mijoz) -> Sales (Savdo)",
+            "Sales -> Traffic -> Sayt -> Lead",
+            "Lead -> Sales -> Sayt -> Traffic",
+            "Sayt -> Sales -> Traffic -> Lead"
           ],
-          correct: 1
+          correct: 0
+        },
+        {
+          q: "Kasbtech 2-Kun: B2B va B2C savdo tezligi farqi qanday?",
+          options: [
+            "B2C juda tez (hissiyotga tayangan), B2B esa sekin (mantiq va shartnomaga tayangan)",
+            "B2B tez, B2C sekin",
+            "Ikkalasi ham bir xil tezlikda",
+            "B2B faqat telegramda sotiladi"
+          ],
+          correct: 0
+        },
+        {
+          q: "Kasbtech 4-Kun: 'Drel va devordagi teshik' misolida mijoz aslida nimani sotib oladi?",
+          options: [
+            "Drelning temirini emas, devordagi teshik va rasm osilgach olinadigan Xotirjamlikni!",
+            "Faqat drelning o'zini",
+            "5 millimetrli buruni",
+            "Uydagi mebelni"
+          ],
+          correct: 0
+        },
+        {
+          q: "Alex Hormozi Giveaways (Tanlovlar) o'yinida bitta g'olibdan tashqari boshqalarga nima beriladi?",
+          options: [
+            "Kichikroq chegirma/vaucher ('Surprise discount' / 'Participation trophy') taklif qilinadi",
+            "Hech narsa berilmaydi va bloklanadi",
+            "Jarima solinadi",
+            "Uydan haydaladi"
+          ],
+          correct: 0
+        },
+        {
+          q: "Kasbtech 8-Kun: Kopiraytingdagi 'Bitta matn = Bitta maqsad' qoidasi nimani anglatadi?",
+          options: [
+            "Bitta postda mijozdan faqat 1 ta aniq harakat (masalan saytga kirish) so'raladi, chalg'itilmaydi",
+            "Postda 10 ta har bir narsa so'raladi",
+            "Har kuni 1 sahifa insho yoziladi",
+            "Matn yozilmaydi"
+          ],
+          correct: 0
         }
       ]
     },
@@ -631,6 +672,26 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
             "Mijozni aldab pulini yechib olish",
             "Faqat bitta mahsulot sotish",
             "Reklamani o'chirib qo'yish"
+          ],
+          correct: 0
+        },
+        {
+          q: "Alex Hormozi 'Buy X Get Y Free' da nima uchun chegirmadan ko'ra ko'proq tekin buyum berish jozibadorroq deydi?",
+          options: [
+            "Odamlar 'Chegirma' dan ko'ra 'Tekin mahsulot' ni 10 barobar balandroq qadrga ega deb bilishadi",
+            "Chegirma ko'proq pul beradi",
+            "Tekin narsa hech kimga kerak emas",
+            "Faqat kiyim do'konlarida ishlaydi"
+          ],
+          correct: 0
+        },
+        {
+          q: "Alex Hormozi bo'yicha 'Pay Less Now or Pay More Later' qanday ishlaydi?",
+          options: [
+            "Mijozga hozir kamroq to'lab bonuslar olish yoki keyin to'liq to'lash tanlovi beriladi",
+            "Faqat narsalarni bepul tarqatadi",
+            "Mijozni qarzga botiradi",
+            "To'lovni mutlaqo bekor qiladi"
           ],
           correct: 0
         },
@@ -665,12 +726,32 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           correct: 0
         },
         {
-          q: "Odamchalashtirish (80/20 Qoidasi) nima?",
+          q: "Kasbtech 13-Kun: Sotuvchi hikoyaning 4 bosqichi qaysilar?",
           options: [
-            "AI 80% qora mehnatni qiladi, 20% insoniy tahrir bilan oddiy so'zlashuv tiliga almashtiriladi",
-            "80 ta post va 20 ta video chiqarish",
-            "80% chegirma berish",
-            "20 soat kompyuterda o'tirish"
+            "Jarlik (Muammo) -> Soxta Yechimlar -> Kashfiyot (Offer) -> Transformatsiya (Natija)",
+            "Muammo -> Narx -> Chegirma -> Sotuv",
+            "Kirish -> Asosiy -> Xulosa -> Rasm",
+            "Salom -> Savol -> Buyruq -> Xayr"
+          ],
+          correct: 0
+        },
+        {
+          q: "Kasbtech 23-Kun: CTR (Click-Through Rate) va CPL (Cost Per Lead) nimani bildiradi?",
+          options: [
+            "CTR = Reklamaga bosishlar foizi (Kreativ sifati), CPL = Bitta ariza/lid narxi",
+            "CTR = Sayt tezligi, CPL = Oylik maosh",
+            "CTR = Telegram obunachisi, CPL = Instagram layki",
+            "CTR = Bot javobi, CPL = Sayt domeni"
+          ],
+          correct: 0
+        },
+        {
+          q: "Kasbtech 28-Kun: 'Speed to Lead' (Javob berish tezligi) qoidasi nima?",
+          options: [
+            "Mijoz yozgach dastlabki 5 daqiqa ichida javob berilmasa, xarid ehtimoli 80% ga tushib ketadi",
+            "5 kundan keyin javob berish",
+            "Faqat telefonda gaplashish",
+            "Mijozga 1 soatdan keyin javob yozish"
           ],
           correct: 0
         },
@@ -701,6 +782,16 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           correct: 0
         },
         {
+          q: "Alex Hormozi bo'yicha 'Rollover Upsell' qanday ishlaydi?",
+          options: [
+            "Mijozning oldingi to'lagan pulini (yoki 90%+ chegirmali gift cardini) keyingi uzoq muddatli qimmatroq obunaga o'tkazish",
+            "Puldanoq kechib yuborish",
+            "Faqat 1 oylik xizmat berish",
+            "Chegirmani bekor qilish"
+          ],
+          correct: 0
+        },
+        {
           q: "Trial With Penalty (Jarima bilan sinov) downsellida mijoz qachon to'lov qiladi?",
           options: [
             "Faqat berilgan shartlar yoki vazifalarni bajarmay o'tkazib yuborganda",
@@ -711,42 +802,52 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           correct: 0
         },
         {
-          q: "1 daqiqalik video ssenariysi matnida inson o'rtacha nechta so'z gapirishi kerak?",
+          q: "Alex Hormozi bo'yicha 'Feature Downsell' vaqtida narx qanday tushiriladi?",
           options: [
-            "130 - 150 ta so'z",
-            "300 - 400 ta so'z",
-            "50 ta so'z",
-            "1000 ta so'z"
+            "Oddiy chegirma bermasdan, mahsulotning ma'lum bir imkoniyatini (masalan kafolatni yoki 1:1 qo'ng'iroqni) olib tashlab narx tushiriladi",
+            "Shunchaki 50% skidka qilinadi",
+            "Mahsulot tekinga beriladi",
+            "Narx oshiriladi"
           ],
           correct: 0
         },
         {
-          q: "'Stol ustida o'qish' (Table Read) texnikasi nima uchun o'tkaziladi?",
+          q: "Kasbtech 26-Kun: Vertikal va Gorizontal Mashtablash (Scaling) farqi nima?",
           options: [
-            "Ssenariyni syomkadan oldin ovoz chiqarib o'qib, tili aylanmaydigan rasmiy so'zlarni soddalashtirish uchun",
-            "Stol ustiga rasm chizish uchun",
-            "Videoni 10 soatda montaj qilish uchun",
-            "ChatGPT kodi xatosini tekshirish uchun"
+            "Vertikal = Ishlab turgan reklama byudjetini har 3 kunda max 20% ga oshirish; Gorizontal = Ad Set ni duplicate qilib yangi auditoriya berish",
+            "Vertikal = Instagram, Gorizontal = Telegram",
+            "Vertikal = Arzonlashtirish, Gorizontal = Qimmatlashtirish",
+            "Bir xil narsa"
           ],
           correct: 0
         },
         {
-          q: "Lookalike (LAL) auditoriya nima va u qanday yaratiladi?",
+          q: "Kasbtech 31-Kun: Meta '24-Hour Rule' (24 soatlik qoida) va Smart Delay botda qanday ishlaydi?",
           options: [
-            "Pixel yig'gan 100+ real xaridorlar bazasidan Meta algoritmi orqali 1% o'xshashlikdagi eng aniq xaridorlarni topish",
-            "Rasmga qarab odam tanlash",
-            "Instagram obunachilarini sanash",
-            "Faqat tanishlarga reklama berish"
+            "Mijoz oxirgi marta yozgach 24 soat ichida bepul bot xabari yuborish mumkin; Smart Delay esa qochgan mijozga Follow-up yuboradi",
+            "Bot 24 soat uxlaydi",
+            "Mijozga har soatda spam yuboriladi",
+            "Instagram hisob bloklanadi"
           ],
           correct: 0
         },
         {
-          q: "Call to Action (Harakatga undash) nima uchun har doim 1 ta aniq buyruq bo'lishi shart?",
+          q: "Kasbtech 37-Kun: 'Rule of 100' va Loom Video Audit outreach usuli nima?",
           options: [
-            "Odamlar avtopilotda bo'ladi, agar ko'p narsa so'ralsa hech narsa qilmaydi va o'tib ketadi",
-            "Instagram qoidasi bo'yicha",
-            "Chunki 2 ta gap yozish taqiqlangan",
-            "Faqat layk bosish uchun"
+            "Kuniga 100 ta harakat qilish va tadbirkor saytidagi teshikni 3 minutlik videoda ko'rsatib bepul qiymat berish",
+            "100 ta rasm chizish",
+            "100 dollarga reklama yoqish",
+            "100 ta postni o'chirish"
+          ],
+          correct: 0
+        },
+        {
+          q: "Kasbtech 38-Kun: Zoom uchrashuvida 'Frame' (Freym) ni ushlash nimani anglatadi?",
+          options: [
+            "Kim ko'p savol bersa uchrashuvni o'sha boshqaradi; shifokor kabi muammoni aniqlab (Discovery/The Gap) keyin Pitch qilinadi",
+            "Kameraga qaramaslik",
+            "Faqat o'zini maqtash",
+            "Narxni darhol aytish"
           ],
           correct: 0
         }
@@ -754,22 +855,26 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
     }
   };
 
-  const levelData = QUIZ_BANK[currentLevel] || QUIZ_BANK.easy;
-  const questionsList = levelData.questions;
+  const masterData = MASTER_QUIZ_BANK[currentLevel] || MASTER_QUIZ_BANK.easy;
 
+  // State for shuffled questions
+  const [questionsList, setQuestionsList] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(levelData.time);
+  const [timeLeft, setTimeLeft] = useState(masterData.time);
   const [gameOver, setGameOver] = useState(false);
 
   useEffect(() => {
+    // Shuffle and pick questions on level switch or restart
+    const shuffled = [...masterData.questions].sort(() => Math.random() - 0.5);
+    setQuestionsList(shuffled);
     setCurrentIndex(0);
     setSelectedOption(null);
     setScore(0);
     setStreak(0);
-    setTimeLeft(levelData.time);
+    setTimeLeft(masterData.time);
     setGameOver(false);
   }, [currentLevel]);
 
@@ -780,7 +885,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
       setTimeLeft(prev => {
         if (prev <= 1) {
           handleAnswer(-1);
-          return levelData.time;
+          return masterData.time;
         }
         return prev - 1;
       });
@@ -793,7 +898,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
     if (selectedOption !== null) return;
     setSelectedOption(optionIdx);
 
-    const isCorrect = optionIdx === questionsList[currentIndex].correct;
+    const isCorrect = optionIdx === questionsList[currentIndex]?.correct;
     if (isCorrect) {
       setScore(prev => prev + 15 + streak * 3);
       setStreak(prev => prev + 1);
@@ -805,7 +910,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
       if (currentIndex + 1 < questionsList.length) {
         setCurrentIndex(prev => prev + 1);
         setSelectedOption(null);
-        setTimeLeft(levelData.time);
+        setTimeLeft(masterData.time);
       } else {
         setGameOver(true);
         const finalScore = score + (isCorrect ? 15 + streak * 3 : 0);
@@ -816,7 +921,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
         onSaveProgress(currentLevel, calculatedStars);
 
         const baseReward = currentLevel === 'easy' ? 10 : currentLevel === 'medium' ? 15 : 25;
-        const awardedCoins = Math.round(baseReward * levelData.coinMultiplier);
+        const awardedCoins = Math.round(baseReward * masterData.coinMultiplier);
 
         onComplete(
           awardedCoins, 
@@ -867,7 +972,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
             <div className="w-full bg-dark-800 h-2.5 rounded-full overflow-hidden">
               <div 
                 className="bg-gradient-to-r from-amber-500 to-yellow-400 h-full transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / questionsList.length) * 100}%` }}
+                style={{ width: `${((currentIndex + 1) / (questionsList.length || 1)) * 100}%` }}
               />
             </div>
           </div>
@@ -929,17 +1034,19 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => {
+                const shuffled = [...masterData.questions].sort(() => Math.random() - 0.5);
+                setQuestionsList(shuffled);
                 setCurrentIndex(0);
                 setSelectedOption(null);
                 setScore(0);
                 setStreak(0);
-                setTimeLeft(levelData.time);
+                setTimeLeft(masterData.time);
                 setGameOver(false);
               }}
               className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-dark-950 font-bold text-sm flex items-center gap-2"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Qaytadan O'ynash</span>
+              <span>Qaytadan O'ynash (Random)</span>
             </button>
             <button
               onClick={onBack}
@@ -955,7 +1062,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
 }
 
 /* =========================================================================
-   GAME 2 COMPONENT: MATCH MASTER (WITH 3 LEVELS FROM HORMOZI & KASBTECH)
+   GAME 2 COMPONENT: MATCH MASTER (WITH DYNAMIC SHUFFLE)
    ========================================================================= */
 function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const MATCH_BANKS = {
@@ -965,7 +1072,7 @@ function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSavePro
       { id: 3, term: "SWOT Analiz", match: "Strengths, Weaknesses, Opportunities, Threats" },
       { id: 4, term: "Shifokor Qoidasi", match: "Avval analitik tashxis, keyin reklama" },
       { id: 5, term: "Hook (Ilmoq)", match: "Dastlabki 3 soniyada e'tiborni ushlash" },
-      { id: 6, term: "Mukammal Prompt", match: "Rol + Vaziya + Kontekst + Format" }
+      { id: 6, term: "Mukammal Prompt", match: "Rol + Vazifa + Kontekst + Format" }
     ],
     medium: [
       { id: 1, term: "Decoy Offer", match: "Chalg'ituvchi o'lja orqali Premium variantni sotish" },
@@ -987,7 +1094,7 @@ function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSavePro
       { id: 7, term: "Table Read", match: "Ssenariyni ovoz chiqarib tahrirlash" },
       { id: 8, term: "130-150 So'z Qoidasi", match: "1 minutlik video matn me'yori" },
       { id: 9, term: "B-roll Stock", match: "Insonsiz kadr orti videolari prompti" },
-      { id: 10, term: "The Gap (Bo'shliq)", match: "Zoomda mijoz o'z muammosini iqror bo'lishi" }
+      { id: 10, term: "The Gap (Bo'shliq)", match: "Zoomda mijoz o'z muammosiga iqror bo'lishi" }
     ]
   };
 
@@ -1116,7 +1223,7 @@ function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSavePro
 }
 
 /* =========================================================================
-   GAME 3 COMPONENT: AI MARKETER SIMULATOR (WITH 3 DIFFICULTY SCENARIOS)
+   GAME 3 COMPONENT: AI MARKETER SIMULATOR (WITH DYNAMIC SCENARIO SELECTION)
    ========================================================================= */
 function SimulatorGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const SCENARIOS_BANK = {
@@ -1164,7 +1271,7 @@ function SimulatorGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
         {
           text: "B) 'Mayli siz uchun $150 ga tushirib beraman' deb chegirma berish",
           score: 20,
-          feedback: "Falokat! Chegirma xizmat qiymatini tushirdi va shubha uyg me'yorda uyg'otdi. Shartnoma barbod bo'ldi."
+          feedback: "Falokat! Chegirma xizmat qiymatini tushirdi va shubha uyg'otdi. Shartnoma barbod bo'ldi."
         }
       ]
     }
