@@ -1857,8 +1857,65 @@ ${combinedContextText}
       else if (/tartib|o'zlashtirish|ochiladi|keyingi|bosqich|qoida/i.test(queryClean)) {
         aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Darslarni o'zlashtirish va tartib qoidalari:**\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriqni bajarib platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz topshiriqni tekshirib tasdiqlagach, keyingi dars qulfdan ochiladi.`;
       }
-      // 4. Score matching against KB Items & Lessons
-      else {
+      // 4. Comprehensive Marketing & Technical Knowledge Matrix for Instant High-Precision AI Answers
+      const technicalMatrix = [
+        {
+          regex: /affiliate|sheriklik|komissiya/i,
+          title: "Affiliate Marketing (Sheriklik Marketingi)",
+          content: "Affiliate Marketing (Sheriklik marketingi) — bu boshqa kompaniya yoki brendlarning mahsulot va xizmatlarini reklama qilib, har bir amalga oshirilgan sotuv yoki harakat uchun komissiya (foiz) ko'rinishida daromad olish modelidir.\n\n**Qanday ishlaydi:**\n1. Sheriklik dasturiga (Affiliate Program) a'zo bo'lasiz va shaxsiy referal havolangizni (link) olasiz.\n2. Havolani ijtimoiy tarmoqlar, Telegram kanal yoki saytingizda ulashasiz.\n3. Mijozlar sizning havolangiz orqali harid amalga oshirganda, sizga belgilangan sotuv foizi (komissiya) to'lanadi."
+        },
+        {
+          regex: /seo|search engine|qidiruv tizimi/i,
+          title: "SEO (Search Engine Optimization)",
+          content: "SEO (Search Engine Optimization) — bu veb-saytni Google, Yandex kabi qidiruv tizimlarining yuqori o'rinlariga (TOP-10) bepul (organik) olib chiqish va qidiruv orqali mijozlar oqimini jalb qilish jarayonidir."
+        },
+        {
+          regex: /smm|social media|tarmoq/i,
+          title: "SMM (Social Media Marketing)",
+          content: "SMM (Social Media Marketing) — bu Instagram, Telegram, Facebook, TikTok kabi ijtimoiy tarmoqlar orqali brendni rivojlantirish, maqsadli auditoriyani jalb qilish va sotuvlarni oshirish faoliyatidir."
+        },
+        {
+          regex: /target|targetolog|reklama yoqish/i,
+          title: "Targeting (Target Reklama)",
+          content: "Targeting (Target reklama) — bu ijtimoiy tarmoqlarda reklama xabarini faqat ma'lum bir yosh, jins, hudud va qiziqishlarga ega bo'lgan aniq maqsadli auditoriyaga (Target Audience) ko'rsatish texnologiyasidir."
+        },
+        {
+          regex: /copywriting|kopirayt|reklama matn/i,
+          title: "Copywriting (Kopirayting)",
+          content: "Copywriting (Kopirayting) — bu sotuvchi va ta'sirchan reklama matnlari, post sarlavhalari, takliflar (OFFER) va sotuv ssenariylarini yozish san'atidir."
+        },
+        {
+          regex: /digital|raqamli/i,
+          title: "Digital Marketing (Raqamli Marketing)",
+          content: "Digital Marketing — bu raqamli texnologiyalar, internet, ijtimoiy tarmoqlar, qidiruv tizimlari va sotuv voronkalari (Sales Funnel) orqali mahsulot yoki xizmatlarni ilgari surish faoliyati."
+        },
+        {
+          regex: /voronka|funnel|sotuv zanjiri/i,
+          title: "Sales Funnel (Sotuv Voronkasi)",
+          content: "Sales Funnel (Sotuv Voronkasi) — bu potensial mijozning brend bilan birinchi tanishuvidan to harid qilgunga qadar bosib o'tadigan mantiqiy bosqichlar zanjiridir (E'tibor -> Qiziqish -> Istak -> Harakat)."
+        },
+        {
+          regex: /reels|tiktok|shorts|short content/i,
+          title: "Short Video Content (Reels va TikTok)",
+          content: "Reels va TikTok — bu qisqa, ta'sirchan va e'tiborni tez tortuvchi sotuvchi videolar orqali bepul (organik) qamrov (reach) va mijozlarni jalb qilish usulidir."
+        },
+        {
+          regex: /python|dasturlash|kod/i,
+          title: "Python Dasturlash Tili",
+          content: "Python — bu o'rganish uchun juda sodda, universal va kuchli dasturlash tili bo'lib, veb-dasturlash, AI (Sun'iy Intellekt), ma'lumotlar tahlili (Data Science) va avtomatlashtirishda keng qo'llaniladi."
+        },
+        {
+          regex: /ai|gpt|chatgpt|midjourney|prompt/i,
+          title: "Sun'iy Intellekt (AI) va Prompt Engineering",
+          content: "Sun'iy Intellekt (AI) va Prompt Engineering — bu AI modellariga (ChatGPT, Midjourney, Claude) to'g'ri va aniq topshiriqlar (prompts) berish orqali matnlar, rasmlar va g'oyalarni sekundlar ichida yaratish texnologiyasidir."
+        }
+      ];
+
+      let matchedDict = technicalMatrix.find(item => item.regex.test(queryClean));
+      if (matchedDict) {
+        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${matchedDict.title}**\n\n${matchedDict.content}`;
+      } else {
+        // High-Precision Knowledge Base Score Matching (Requires score >= 6 to prevent single-word false matches)
         const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
         const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar', 'men']);
         const keyWords = rawWords.filter(w => !stopWords.has(w));
@@ -1889,7 +1946,7 @@ ${combinedContextText}
         const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
         const bestMatch = allMatches[0];
 
-        if (bestMatch && bestMatch.score >= 3) {
+        if (bestMatch && bestMatch.score >= 6) {
           let cleanContent = bestMatch.content.trim();
           if (cleanContent.length > 500) {
             const paragraphs = cleanContent.split(/\n\s*\n/).filter(p => p.trim().length > 10);
@@ -1897,7 +1954,7 @@ ${combinedContextText}
           }
           aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title}**\n\n${cleanContent}`;
         } else {
-          aiReply = "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda va kurs darslarida aniq ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.";
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\nKasbtech Akademiyasining AI Mentori sifatida sizga yordam berishdan xursandman! Ushbu mavzu bo'yicha batafsil ma'lumotlar platformadagi kurs darslarida va amaliy qo'llanmalarda tushuntirib o'tilgan. Savolingiz bo'yicha qo'shimcha tushuncha kerak bo'lsa, o'z ustozingizga yoki akademiya administratorlariga murojaat qilishingiz mumkin.`;
         }
       }
     }
