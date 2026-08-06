@@ -13,10 +13,7 @@ import {
   Gamepad2,
   Lock,
   Star,
-  ShieldCheck,
-  Flame,
-  Award,
-  ChevronRight
+  BookOpen
 } from 'lucide-react';
 
 export default function StudentGames() {
@@ -102,21 +99,21 @@ export default function StudentGames() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/70 via-indigo-900/60 to-blue-900/70 border border-purple-500/30 p-6 md:p-8 backdrop-blur-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/80 via-indigo-900/70 to-blue-900/80 border border-purple-500/30 p-6 md:p-8 backdrop-blur-xl shadow-2xl">
         <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-10 -top-10 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold tracking-wide">
-              <Gamepad2 className="w-4 h-4 text-purple-400" />
-              <span>Kasbtech Interactive Gamification Hub</span>
+              <BookOpen className="w-4 h-4 text-purple-400" />
+              <span>Alex Hormozi "$100M Money Models" + KASBTECH 40-Kunlik Kurs O'yinlari</span>
             </div>
             <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">
               Interaktiv Ta'limiy O'yinlar 🎮
             </h1>
             <p className="text-dark-300 text-sm md:text-base max-w-2xl leading-relaxed">
-              Boshlang'ich, O'rta va Qiyin darajadagi bosqichlarni zabt eting, yulduzchalarni to'plang, reytingda yetakchi bo'ling va KasbCoin ishlab oling!
+              Oson, O'rta va Qiyin bosqichlarni zabt eting! Hormozi kitoblari hamda 40-kunlik marketing darsliklaridan yulduzchalarni yutib, KasbCoin ishlab oling!
             </p>
           </div>
 
@@ -227,22 +224,22 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">1-O'YIN • BOSQICHLI VIKTORINA</span>
                 <h3 className="text-xl font-bold text-white mt-1">Marketing Blitz Quiz ⚡</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  🟢 Boshlang'ich, 🟡 O'rta va 🔴 Qiyin darajadagi 1-8 mavzular savollari. Vaqtli timer va Combo multiplier!
+                  🟢 Boshlang'ich (Oson), 🟡 O'rta va 🔴 Qiyin darajadagi Hormozi Money Models & 40-kunlik darsliklar imtihoni!
                 </p>
               </div>
 
               {/* Difficulty badges */}
               <div className="space-y-2 pt-2 border-t border-dark-800">
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Boshlang'ich (20s)</span>
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Oson (20s timer)</span>
                   <span>+10 KasbCoin</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 O'rta (15s)</span>
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 O'rta (15s timer)</span>
                   <span>+15 KasbCoin (x1.5)</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 Qiyin (10s)</span>
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 Qiyin (10s timer)</span>
                   <span>+25 KasbCoin (x2.5)</span>
                 </div>
               </div>
@@ -274,22 +271,22 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">2-O'YIN • BOSQICHLI MOSLASHTIRISH</span>
                 <h3 className="text-xl font-bold text-white mt-1">Match Master 🧩</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  Marketing atamalari, formula va AIDA elementlarini moslashtirish. Bosqichma-bosqich kartalar soni ortadi!
+                  Money Models formulalari (Decoy, Anchor, Rollover, Upsell) va Kasbtech atamalarini moslashtiring!
                 </p>
               </div>
 
               {/* Difficulty badges */}
               <div className="space-y-2 pt-2 border-t border-dark-800">
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 6 ta Juftlik (Easy)</span>
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 6 ta Juftlik (Oson)</span>
                   <span>+10 KasbCoin</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 8 ta Juftlik (Medium)</span>
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 8 ta Juftlik (O'rta)</span>
                   <span>+15 KasbCoin</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 10 ta Juftlik (Hard)</span>
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 10 ta Juftlik (Qiyin)</span>
                   <span>+25 KasbCoin</span>
                 </div>
               </div>
@@ -321,7 +318,7 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">3-O'YIN • STRATEGIK SIMULYATOR</span>
                 <h3 className="text-xl font-bold text-white mt-1">AI Marketer Simulator 🚀</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  Real bizneskeyslarda Bosh Marketolog bo'ling. Hook, UTP va AI promptlarni tanlab sotuv va ROI ni 3x ga oshiring!
+                  Real bizneskeyslarda Bosh Marketolog rolini o'ynang. Attraction, Upsell, Downsell va Continuity zanjirini quring!
                 </p>
               </div>
 
@@ -332,11 +329,11 @@ export default function StudentGames() {
                   <span>+15 KasbCoin</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 Kiyim Do'koni Keysi</span>
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 Erkaklar Kiyim Keysi</span>
                   <span>+20 KasbCoin</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 AI Kurs Video Kampaniyasi</span>
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 High-Ticket $1000 Keysi</span>
                   <span>+30 KasbCoin</span>
                 </div>
               </div>
@@ -483,13 +480,13 @@ function LevelSelector({ currentLevel, onLevelChange, progress }) {
   const isHardUnlocked = (progress?.medium || 0) > 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-dark-950/60 p-2 rounded-2xl border border-dark-800">
+    <div className="flex flex-wrap items-center gap-3 bg-dark-950/60 p-2.5 rounded-2xl border border-dark-800">
       <span className="text-xs font-bold text-dark-400 uppercase tracking-wider px-3">Darajani Tanlang:</span>
       
       {/* Easy Level */}
       <button
         onClick={() => onLevelChange('easy')}
-        className={`flex-1 min-w-[130px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
+        className={`flex-1 min-w-[140px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
           currentLevel === 'easy'
             ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10 scale-105'
             : 'bg-dark-900 border-dark-800 text-dark-400 hover:text-white'
@@ -507,7 +504,7 @@ function LevelSelector({ currentLevel, onLevelChange, progress }) {
       <button
         disabled={!isMediumUnlocked}
         onClick={() => isMediumUnlocked && onLevelChange('medium')}
-        className={`flex-1 min-w-[130px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
+        className={`flex-1 min-w-[140px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
           !isMediumUnlocked 
             ? 'bg-dark-900/40 border-dark-800 text-dark-600 cursor-not-allowed opacity-60' 
             : currentLevel === 'medium'
@@ -517,7 +514,7 @@ function LevelSelector({ currentLevel, onLevelChange, progress }) {
       >
         <span className="flex items-center gap-1.5">
           {!isMediumUnlocked && <Lock className="w-3 h-3 text-dark-500" />}
-          🟡 O'rta
+          🟡 O'rta (Intermediate)
         </span>
         <div className="flex items-center">
           {[1, 2, 3].map(s => (
@@ -530,7 +527,7 @@ function LevelSelector({ currentLevel, onLevelChange, progress }) {
       <button
         disabled={!isHardUnlocked}
         onClick={() => isHardUnlocked && onLevelChange('hard')}
-        className={`flex-1 min-w-[130px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
+        className={`flex-1 min-w-[140px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
           !isHardUnlocked 
             ? 'bg-dark-900/40 border-dark-800 text-dark-600 cursor-not-allowed opacity-60' 
             : currentLevel === 'hard'
@@ -540,7 +537,7 @@ function LevelSelector({ currentLevel, onLevelChange, progress }) {
       >
         <span className="flex items-center gap-1.5">
           {!isHardUnlocked && <Lock className="w-3 h-3 text-dark-500" />}
-          🔴 Qiyin
+          🔴 Qiyin (Advanced)
         </span>
         <div className="flex items-center">
           {[1, 2, 3].map(s => (
@@ -561,6 +558,16 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
       time: 20,
       coinMultiplier: 1.0,
       questions: [
+        {
+          q: "Alex Hormozi kitobi bo'yicha 'Attraction Offer' ning asosiy vazifasi nima?",
+          options: [
+            "Begona odamlarni birinchi marta mijozga aylantirish va xarajatni qoplash",
+            "Mijozdan ko'proq pul undirish",
+            "Mijozni bloklash",
+            "Eski tovarlarni tashlab yuborish"
+          ],
+          correct: 0
+        },
         {
           q: "Shifokor qoidasi marketingda nimani anglatadi?",
           options: [
@@ -610,16 +617,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
             "Reklama byudjeti tejaladi"
           ],
           correct: 1
-        },
-        {
-          q: "SMMchi Sanjar Avatari misolida og'riqli nuqta nima edi?",
-          options: [
-            "Videoni 5 soatlab tayyorlash va daromad kamligi (3 mln)",
-            "Telefonining yo'qligi",
-            "Instagram ishlamay qolishi",
-            "Ingliz tilini bilmasligi"
-          ],
-          correct: 0
         }
       ]
     },
@@ -627,6 +624,16 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
       time: 15,
       coinMultiplier: 1.5,
       questions: [
+        {
+          q: "Alex Hormozi bo'yicha 'Decoy Offer' (Chalg'ituvchi o'lja) qanday ishlaydi?",
+          options: [
+            "Arzon/oddiy taklif yoniga o'ta jozibador Premium variantni qo'yib, mijozni premiumga undash",
+            "Mijozni aldab pulini yechib olish",
+            "Faqat bitta mahsulot sotish",
+            "Reklamani o'chirib qo'yish"
+          ],
+          correct: 0
+        },
         {
           q: "Facebook Ad Library (Reklama kutubxonasi) orqali nima qilinadi?",
           options: [
@@ -638,19 +645,19 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           correct: 0
         },
         {
-          q: "UTP yaratishning 3 ta oltin qoidasi qaysilar?",
+          q: "PAS va AIDA formulalari o'rtasidagi tub farq nima?",
           options: [
-            "Aniqlik (raqamlar), Haqqoniylik, Mijoz og'rig'iga zarba",
-            "Arzonlik, Kattalik, Tezlik",
-            "Tekin berish, Qarz berish, Kafolatsizlik",
-            "She'riy til, Uzunlik, Adabiyot"
+            "PAS og'riq va muammodan qochish orqali, AIDA esa xohish va orzu orqali sotadi",
+            "PAS faqat inglizcha, AIDA o'zbekcha",
+            "PAS sayt uchun, AIDA bot uchun",
+            "Ular bir xil formula"
           ],
           correct: 0
         },
         {
           q: "Mukammal AI Prompt Formulasi tarkibiy qismlari qaysilar?",
           options: [
-            "ROL + KONTEKST + MAQSAD + FORMAT",
+            "ROL + VAZIFA + KONTEKST + FORMAT va OHANG",
             "NOMI + NARXI + MANZILI",
             "AI + CHATGPT + GEMINI",
             "SAVOL + JAVOB + MATN"
@@ -676,16 +683,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
             "Faqat Telegramda ishlaydiganlar"
           ],
           correct: 1
-        },
-        {
-          q: "Nima uchun 'Bizda hammadan arzon' deyish xavfli UTP hisoblanadi?",
-          options: [
-            "Ertaga raqobatchi 1000 so'm arzon qilsa mijoz o'tib ketadi, biznes o'ladi",
-            "Mijozlar arzon narsani juda yaxshi ko'radi",
-            "Pulingiz ko'payib ketadi",
-            "Chunki arzon mahsulot bo'lmaydi"
-          ],
-          correct: 0
         }
       ]
     },
@@ -694,22 +691,22 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
       coinMultiplier: 2.5,
       questions: [
         {
-          q: "Mijoz e'tiborini ushlash uchun Hook (Ilmoq) ning 3 ta turi qaysilar?",
+          q: "Hormozi kitobidagi 'Anchor Upsell' mexanikasi qanday ishlaydi?",
           options: [
-            "Og'riqqa zarba (Savol), Shok fakt / Bayonot, Katta Natija / Va'da",
-            "Qisqa, Uzun, O'rta",
-            "Audio, Video, Rasm",
-            "Instagram, Telegram, TikTok"
+            "Avval 5x-10x qimmat 'Anchor' ko'rsatilib, mijoz 'Gasp' qilgach asosiy taklif arzon va jozibador bo'lib ko'rinadi",
+            "Kema langarini sotish",
+            "Arzon narsani qimmatga sotish",
+            "Chegirma e'lon qilish"
           ],
           correct: 0
         },
         {
-          q: "AIDA formulasi bosqichlari tartibi qanday?",
+          q: "Trial With Penalty (Jarima bilan sinov) downsellida mijoz qachon to'lov qiladi?",
           options: [
-            "Attention (E'tibor), Interest (Qiziqish), Desire (Xohish), Action (Harakat)",
-            "Action, Desire, Interest, Attention",
-            "Analiz, Indeks, Diagramma, Audit",
-            "Auditoriya, Ilmoq, Daromad, Aksiya"
+            "Faqat berilgan shartlar yoki vazifalarni bajarmay o'tkazib yuborganda",
+            "O'sha zahoti oldindan",
+            "Hech qachon to'lamaydi",
+            "3 yildan keyin"
           ],
           correct: 0
         },
@@ -717,14 +714,14 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           q: "1 daqiqalik video ssenariysi matnida inson o'rtacha nechta so'z gapirishi kerak?",
           options: [
             "130 - 150 ta so'z",
-            "300 - 400 ta so me me'yorda so'z",
+            "300 - 400 ta so'z",
             "50 ta so'z",
             "1000 ta so'z"
           ],
           correct: 0
         },
         {
-          q: "'Stol ustida o'qish' (Table Read) texnikasi nima uchun o me'yorda o'tkaziladi?",
+          q: "'Stol ustida o'qish' (Table Read) texnikasi nima uchun o'tkaziladi?",
           options: [
             "Ssenariyni syomkadan oldin ovoz chiqarib o'qib, tili aylanmaydigan rasmiy so'zlarni soddalashtirish uchun",
             "Stol ustiga rasm chizish uchun",
@@ -734,12 +731,12 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           correct: 0
         },
         {
-          q: "Kameraga chiqishni xohlamagan holda ssenariy Vizualiga qanday prompt beriladi?",
+          q: "Lookalike (LAL) auditoriya nima va u qanday yaratiladi?",
           options: [
-            "Videoda inson qatnashmaydi, B-roll stock videolar va harakatlanuvchi matnlar bo'lsin",
-            "Menga animatsion multifilm chizib ber",
-            "Kamerani o'chirib qo'y",
-            "Faqat audio yoz"
+            "Pixel yig'gan 100+ real xaridorlar bazasidan Meta algoritmi orqali 1% o'xshashlikdagi eng aniq xaridorlarni topish",
+            "Rasmga qarab odam tanlash",
+            "Instagram obunachilarini sanash",
+            "Faqat tanishlarga reklama berish"
           ],
           correct: 0
         },
@@ -747,7 +744,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
           q: "Call to Action (Harakatga undash) nima uchun har doim 1 ta aniq buyruq bo'lishi shart?",
           options: [
             "Odamlar avtopilotda bo'ladi, agar ko'p narsa so'ralsa hech narsa qilmaydi va o'tib ketadi",
-            "Instagrom qoidasi bo me me'yori bo'yicha",
+            "Instagram qoidasi bo'yicha",
             "Chunki 2 ta gap yozish taqiqlangan",
             "Faqat layk bosish uchun"
           ],
@@ -958,7 +955,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
 }
 
 /* =========================================================================
-   GAME 2 COMPONENT: MATCH MASTER (WITH 3 LEVELS)
+   GAME 2 COMPONENT: MATCH MASTER (WITH 3 LEVELS FROM HORMOZI & KASBTECH)
    ========================================================================= */
 function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const MATCH_BANKS = {
@@ -968,29 +965,29 @@ function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSavePro
       { id: 3, term: "SWOT Analiz", match: "Strengths, Weaknesses, Opportunities, Threats" },
       { id: 4, term: "Shifokor Qoidasi", match: "Avval analitik tashxis, keyin reklama" },
       { id: 5, term: "Hook (Ilmoq)", match: "Dastlabki 3 soniyada e'tiborni ushlash" },
-      { id: 6, term: "Mukammal Prompt", match: "Rol + Kontekst + Maqsad + Format" }
+      { id: 6, term: "Mukammal Prompt", match: "Rol + Vaziya + Kontekst + Format" }
     ],
     medium: [
-      { id: 1, term: "Facebook Ad Library", match: "Raqobatchilar faol reklamalari josusligi" },
-      { id: 2, term: "Formula 1 UTP", match: "Mijoz + Natija + Vaqt + Qanday qilib" },
-      { id: 3, term: "Egri Raqobatchi", match: "Boshqa mahsulot orqali bitta muammoni hal qiluvchi" },
-      { id: 4, term: "80/20 Qoidasi", match: "80% AI karkasi + 20% insoniy odamchalashtirish" },
-      { id: 5, term: "SMMchi Sanjar", match: "Avatar timsoli (23 yosh, 3 mln oylik)" },
-      { id: 6, term: "FOMO Triggeri", match: "Imkoniyatni boy berish qo'rquvi" },
-      { id: 7, term: "Status Triggeri", match: "Jamiyatdagi o me'yorda obro' va Ego xohishi" },
+      { id: 1, term: "Decoy Offer", match: "Chalg'ituvchi o'lja orqali Premium variantni sotish" },
+      { id: 2, term: "Facebook Ad Library", match: "Raqobatchilar faol reklamalari josusligi" },
+      { id: 3, term: "Formula 1 UTP", match: "Mijoz + Natija + Vaqt + Qanday qilib" },
+      { id: 4, term: "Egri Raqobatchi", match: "Boshqa mahsulot orqali bitta muammoni hal qiluvchi" },
+      { id: 5, term: "80/20 Qoidasi", match: "80% AI karkasi + 20% insoniy odamchalashtirish" },
+      { id: 6, term: "SMMchi Sanjar", match: "Avatar timsoli (23 yosh, 3 mln oylik)" },
+      { id: 7, term: "FOMO Triggeri", match: "Imkoniyatni boy berish qo'rquvi" },
       { id: 8, term: "Pozitsiyalash", match: "Brend nomi eshitilganda mijoz tasavvuri" }
     ],
     hard: [
-      { id: 1, term: "Attention (AIDA)", match: "1-3 soniyalik kuchli Hook/Ilmoq" },
-      { id: 2, term: "Interest (AIDA)", match: "Muammoni kattalashtirib tushunish" },
-      { id: 3, term: "Desire (AIDA)", match: "Yechim va UTP taklifi" },
-      { id: 4, term: "Action (AIDA)", match: "1 ta aniq harakatga undash buyrug'i" },
-      { id: 5, term: "Table Read", match: "Ssenariyni ovoz chiqarib tahrirlash" },
-      { id: 6, term: "130-150 So'z Qoidasi", match: "1 minutlik video matn me'yori" },
-      { id: 7, term: "B-roll Stock", match: "Insonsiz kadr orti videolari prompti" },
-      { id: 8, term: "Call to Action", match: "Directga yozing / Obuna bo'ling" },
-      { id: 9, term: "Mystery Shopping", match: "Sirli xaridor bo'lib tahlil qilish" },
-      { id: 10, term: "Sun Szi Iqtibosi", match: "Dushmaningni bilsang ming jangda yengilmaysan" }
+      { id: 1, term: "Anchor Upsell", match: "5x-10x qimmat variant orqali asosiy offerni sotish" },
+      { id: 2, term: "Rollover Upsell", match: "Oldingi to'lovni uzoq muddatli obunaga ko'chirish" },
+      { id: 3, term: "Trial With Penalty", match: "Shart bajarilmagandagina jarima to'lash sinovi" },
+      { id: 4, term: "Feature Downsell", match: "Kafolat yoki xususiyatni olib tashlab narx tushirish" },
+      { id: 5, term: "Lookalike (LAL)", match: "100+ real mijozlarga 1% o'xshashlikdagi auditoriya" },
+      { id: 6, term: "Meta 24-Hour Rule", match: "Mijoz yozgach 24 soat ichida bepul bot xabari" },
+      { id: 7, term: "Table Read", match: "Ssenariyni ovoz chiqarib tahrirlash" },
+      { id: 8, term: "130-150 So'z Qoidasi", match: "1 minutlik video matn me'yori" },
+      { id: 9, term: "B-roll Stock", match: "Insonsiz kadr orti videolari prompti" },
+      { id: 10, term: "The Gap (Bo'shliq)", match: "Zoomda mijoz o'z muammosini iqror bo'lishi" }
     ]
   };
 
@@ -1124,7 +1121,7 @@ function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSavePro
 function SimulatorGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const SCENARIOS_BANK = {
     easy: {
-      title: "🟢 Boshlang'ich Keys: Onlayn Kitob Do'koni Savdosini Oshirish",
+      title: "🟢 Boshlang'ich Keys: Onlayn Kitob Do'koni Savdosini Oshirish (Hormozi Attraction Offer)",
       context: "Do'konda sifatli kitoblar bor, lekin foydalanuvchilar faqat Instagramda rasm ko'rib o'tib ketishmoqda.",
       options: [
         {
@@ -1135,12 +1132,12 @@ function SimulatorGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
         {
           text: "B) Hook: 'Kitob o'qishga vaqt topsha olmayapsizmi?' + UTP: 'Kuniga 15 daqiqada 1 ta kitob mazmunini o'rgatuvchi audiolari bilan birga yetkazamiz'",
           score: 100,
-          feedback: "A'lo natija! Vaqt yetishmasligi og'rig me'yoriga va audio bonus taklifiga zarba berildi!"
+          feedback: "A'lo natija! Vaqt yetishmasligi og'rig'iga va audio bonus taklifiga zarba berildi!"
         }
       ]
     },
     medium: {
-      title: "🟡 O'rta Keys: Jizzaxdagi Erkaklar Kiyim Do'koni Savdosini 3x ga Oshirish",
+      title: "🟡 O'rta Keys: Jizzaxdagi Erkaklar Kiyim Do'koni (Hormozi Decoy + Classic Upsell)",
       context: "Do'konda sifatli kostyum-shimlar bor, lekin mijozlar faqat narx so'rab kelib ketishmoqda.",
       options: [
         {
@@ -1156,18 +1153,18 @@ function SimulatorGame({ currentLevel, onLevelChange, levelProgress, onSaveProgr
       ]
     },
     hard: {
-      title: "🔴 Qiyin Keys: Kasbtech AI + Digital Marketing Kursi Reklama Kampaniyasi",
-      context: "Bozorda eski zerikarli SMM kurslari ko'p. Talabalar 'AI o'rganish murakkab bo'lsa-chi?' deb qo'rqishmoqda.",
+      title: "🔴 Qiyin Keys: $1000 High-Ticket B2B Service (Hormozi Anchor Upsell + Frame Closing)",
+      context: "Tadbirkor bilan Zoom uchrashuvidasiz. U: '$1000 juda qimmat, boshqa SMMchilar $200 ga qiladi' demoqda.",
       options: [
         {
-          text: "A) Hook: 'SMM o'rganish — vaqtni bekorga sarflash. Agar unda Sun'iy Intellektni ishlatmasangiz!' + Table Read qilingan 45s ssenariy va 2 ustunli B-roll Vizual prompti",
+          text: "A) Frame Shifokor uslubi: '$200 lik SMMchilar sizga qancha savdo keltirdi? Nol! Men esa $1000 so'rayapman, lekin tizim orqali sizga $10,000 lik mijoz olib kelaman. Pul tejamoqchimisiz yoki pul topmoqchimisiz?'",
           score: 100,
-          feedback: "Mukammal strategiya! Shok fakt Hook, AIDA tuzilmasi hamda Table Read odamchalashtirishi sotuvni 4.5x ga oshirdi!"
+          feedback: "Mukammal Shifokor Frame va Anchor yopish! Tadbirkor $10,000 lik kelajak daromad uchun $1000 sarmoya kiritishga indamay rozi bo'ldi!"
         },
         {
-          text: "B) 'Biz 5 yildan beri ishlaymiz, keling o'qing' deb e'lon joylash",
-          score: 30,
-          feedback: "Buni hamma aytadi. UTP va e'tibor ushlash mutlaqo yo'q."
+          text: "B) 'Mayli siz uchun $150 ga tushirib beraman' deb chegirma berish",
+          score: 20,
+          feedback: "Falokat! Chegirma xizmat qiymatini tushirdi va shubha uyg me'yorda uyg'otdi. Shartnoma barbod bo'ldi."
         }
       ]
     }
