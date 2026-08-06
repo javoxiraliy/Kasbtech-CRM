@@ -1965,7 +1965,14 @@ ${combinedContextText}
 
         if (bestMatch) {
           let contentText = bestMatch.content.trim();
-          aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **${bestMatch.title.replace(/^Dars:\s*/i, '')}**\n\n${contentText}\n\n💡 *Kasbtech Akademiyasi Bilimlar Bazasi mutaxassislari tomonidan taqdim etilgan.*`;
+          
+          // Format raw unformatted database text into clean paragraphs and bullet points
+          let formattedContent = contentText
+            .replace(/([.!?])\s*([A-ZА-Я0-9📌💡•])/g, '$1\n\n$2')
+            .replace(/(Ushbu dars|O'rganiladigan|Muhim|Oltin qoida|Xato fikrlash|Shifokor qoidasi|Analizisiz qilingan|Tahlil qilish bizga|Biznes, xizmat yoki)/gi, '\n\n🔹 **$1**')
+            .replace(/\n{3,}/g, '\n\n');
+
+          aiReply = `🤖 **Mentor Kasbtech Bot** *(AI Mentor)*\n\nAssalomu alaykum! **"${bestMatch.title.replace(/^Dars:\s*/i, '')}"** bo'yicha dars va bilimlar bazasidagi ma'lumotlar asosida javobni tushuntirib beraman:\n\n${formattedContent}\n\n💡 *Kasbtech Akademiyasi Bilimlar Bazasi mutaxassislari tomonidan taqdim etilgan.*`;
         } else {
           aiReply = `Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.`;
         }
