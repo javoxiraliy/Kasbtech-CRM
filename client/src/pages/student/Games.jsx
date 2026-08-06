@@ -73,7 +73,20 @@ export default function StudentGames() {
   useEffect(() => {
     loadLeaderboard();
     loadDuels();
+    loadCoinBalance();
   }, []);
+
+  const loadCoinBalance = async () => {
+    try {
+      const res = await api.get('/lms/coins/balance');
+      const transactions = res.data.transactions || [];
+      const gameTxs = transactions.filter(t => t.type && (t.type.startsWith('GAME_') || t.type.includes('DUEL')));
+      const gameSum = gameTxs.reduce((acc, curr) => acc + curr.amount, 0);
+      setGameCoinsEarned(gameSum > 0 ? gameSum : res.data.balance || 0);
+    } catch (err) {
+      console.error('Error loading coin balance:', err);
+    }
+  };
 
   const saveLevelStars = (gameKey, levelKey, stars) => {
     setLevelProgress(prev => {
@@ -183,6 +196,7 @@ export default function StudentGames() {
         });
         setTimeout(() => setRewardNotification(null), 4500);
         loadLeaderboard();
+        loadCoinBalance();
       }
     } catch (err) {
       console.error('Award error:', err);
@@ -197,6 +211,7 @@ export default function StudentGames() {
         setActivePlayDuel(null);
         if (res.data.duel.status === 'COMPLETED') {
           loadLeaderboard();
+          loadCoinBalance();
           if (fetchCoinBalance) fetchCoinBalance();
         }
       }
