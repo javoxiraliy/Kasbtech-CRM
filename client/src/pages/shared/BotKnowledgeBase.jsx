@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Plus, Search, Edit2, Trash2, BookOpen, User, X, Check, Loader2, Sparkles, HelpCircle, FileText } from 'lucide-react';
+import { Brain, Plus, Search, Edit2, Trash2, BookOpen, User, X, Check, Loader2, Sparkles, HelpCircle, FileText, RefreshCw } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +12,7 @@ export default function BotKnowledgeBase() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [syncing, setSyncing] = useState(false);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,6 +54,20 @@ export default function BotKnowledgeBase() {
       showNotification('Bilimlar bazasini yuklashda xatolik', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncCourses = async () => {
+    setSyncing(true);
+    try {
+      const res = await api.post('/lms/bot-knowledge/sync-courses');
+      showNotification(res.data.message || 'Darslar bilimlar bazasiga sinxronlandi', 'success');
+      fetchItems();
+    } catch (err) {
+      console.error('Error syncing course knowledge:', err);
+      showNotification('Darslarni sinxronlashda xatolik', 'error');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -147,13 +162,25 @@ export default function BotKnowledgeBase() {
           </div>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-medium text-sm shadow-lg shadow-primary-600/20 transition-all cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Yangi Bilim Qo'shish</span>
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
+          <button
+            onClick={handleSyncCourses}
+            disabled={syncing}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-dark-800 hover:bg-dark-700 text-emerald-400 font-medium text-sm border border-emerald-500/30 transition-all cursor-pointer"
+            title="Platformadagi barcha kurs darslarini avtomatik bilimlar bazasiga sinxronlash"
+          >
+            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            <span>Darslarni Avto-Sinxronlash</span>
+          </button>
+
+          <button
+            onClick={handleOpenAddModal}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-medium text-sm shadow-lg shadow-primary-600/20 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Yangi Bilim Qo'shish</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search */}
@@ -202,14 +229,24 @@ export default function BotKnowledgeBase() {
           <Brain className="w-12 h-12 text-dark-500 mx-auto mb-3 opacity-50" />
           <h3 className="text-base font-semibold text-white">Bilimlar bazasi bo'sh</h3>
           <p className="text-xs text-dark-400 mt-1 max-w-md mx-auto">
-            Hali hech qanday bilim kiritilmagan. Talabalar botdan unumli foydalana olishi uchun yangi bilim qo'shing.
+            Hali hech qanday bilim kiritilmagan. Platformadagi barcha kurs darslarini 1 ta tugma bilan avto-yuklang yoki yangi bilim qo'shing.
           </p>
-          <button
-            onClick={handleOpenAddModal}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600/20 text-primary-400 border border-primary-500/30 rounded-xl text-xs font-semibold hover:bg-primary-600/30 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Birinchi bilimni qo'shish
-          </button>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={handleSyncCourses}
+              disabled={syncing}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold hover:bg-emerald-500/30 transition-all cursor-pointer"
+            >
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Darslarni Avto-Sinxronlash
+            </button>
+            <button
+              onClick={handleOpenAddModal}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600/20 text-primary-400 border border-primary-500/30 rounded-xl text-xs font-semibold hover:bg-primary-600/30 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Birinchi bilimni qo'shish
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1511,7 +1511,61 @@ router.delete('/bot-knowledge/:id', authenticate, requireMentorOrAdmin, async (r
   }
 });
 
-// POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base RAG & smart fallback
+// POST /api/lms/bot-knowledge/sync-courses - Auto-sync course lessons into Bot Knowledge Base (Teacher/Admin only)
+router.post('/bot-knowledge/sync-courses', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const courses = await prisma.course.findMany({
+      include: {
+        modules: {
+          include: {
+            lessons: true
+          }
+        }
+      }
+    });
+
+    let createdCount = 0;
+    for (const course of courses) {
+      for (const moduleItem of course.modules) {
+        for (const lesson of moduleItem.lessons) {
+          if (!lesson.title) continue;
+          
+          const topicName = `Dars: ${lesson.title}`;
+          const existing = await prisma.botKnowledge.findFirst({
+            where: {
+              topic: topicName,
+              courseId: course.id
+            }
+          });
+
+          if (!existing) {
+            const contentText = lesson.description || `${course.title} kursining "${moduleItem.title}" modulidagi ${lesson.title} darsi. Ushbu dars bo'yicha ma'lumotlar va topshiriqlar platformada mavjud.`;
+            await prisma.botKnowledge.create({
+              data: {
+                topic: topicName,
+                question: `${lesson.title} bo'yicha ma'lumot va dars mavzusi`,
+                content: contentText,
+                courseId: course.id,
+                createdById: req.user.id
+              }
+            });
+            createdCount++;
+          }
+        }
+      }
+    }
+
+    res.json({ 
+      message: `${createdCount} ta dars bilimlar bazasiga avtomatik sinxronlandi va qo'shildi!`,
+      count: createdCount 
+    });
+  } catch (error) {
+    console.error('Sync course knowledge error:', error);
+    res.status(500).json({ error: 'Darslarni sinxronlashda xatolik yuz berdi' });
+  }
+});
+
+// POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base & course materials RAG
 router.post('/ai-mentor/chat', authenticate, async (req, res) => {
   try {
     const { message, courseId } = req.body;
@@ -1530,26 +1584,45 @@ router.post('/ai-mentor/chat', authenticate, async (req, res) => {
       take: 100
     });
 
-    // Build context text from Knowledge Base
-    let contextText = '';
-    if (kbItems.length === 0) {
-      contextText = 'Hozircha ma\'lumotlar bazasida hech qanday bilim kiritilmagan.';
-    } else {
-      contextText = kbItems.map((item, idx) => 
-        `[Bilim ${idx + 1}] Mavzu: ${item.topic}\nSavol/Kalit so'z: ${item.question || 'Mavjud emas'}\nKontent/Javob: ${item.content}`
-      ).join('\n\n');
+    // Fetch all course lessons to complement Knowledge Base
+    const lessonsWhere = {};
+    if (courseId) {
+      lessonsWhere.module = { courseId: courseId };
     }
+    const lessons = await prisma.lesson.findMany({
+      where: lessonsWhere,
+      include: {
+        module: {
+          select: {
+            title: true,
+            course: { select: { title: true } }
+          }
+        }
+      },
+      take: 100
+    });
+
+    // Build context text from Knowledge Base and Lessons
+    let kbText = kbItems.length === 0 
+      ? 'Bilimlar bazasi yozuvlari mavjud emas.' 
+      : kbItems.map((item, idx) => `[Bilim ${idx + 1}] Mavzu: ${item.topic}\nSavol/Kalit so'z: ${item.question || 'Mavjud emas'}\nKontent/Javob: ${item.content}`).join('\n\n');
+
+    let lessonText = lessons.length === 0 
+      ? 'Darslar ma\'lumotlari mavjud emas.' 
+      : lessons.map((l, idx) => `[Dars ${idx + 1}] Kurs: ${l.module?.course?.title || 'Noma\'lum'}, Modul: ${l.module?.title || 'Noma\'lum'}, Dars nomi: ${l.title}\nDars ta'rifi/Mazmuni: ${l.description || 'Ta\'rif kiritilmagan'}`).join('\n\n');
+
+    const combinedContextText = `=== BILIMLAR BAZASI ===\n${kbText}\n\n=== KURS DARSLARI VA O'QUV MATERIALLARI ===\n${lessonText}`;
 
     // System instruction prompt forcing strict compliance with Knowledge Base
     const systemPrompt = `Siz "Mentor Kasbtech Bot" – Kasbtech Akademiyasining talabalar uchun yordamchi AI mentorisiz.
 SIZ QUYIDAGI QAT'IY QOIDALARGA AMAL QILISHINGIZ SHART:
-1. Faqat va faqat quyida "=== KASBTECH BILIMLAR BAZASI ===" sarlavhasi ostida keltirilgan ma'lumotlar va bilimlar asosida javob bering.
-2. Agar talabaning savoliga tegishli javob yoki ma'lumot ushbu Bilimlar bazasida MAVJUD BO'LMASA, HECH QACHON o'zingizdan tashqi ma'lumot, taxmin yoki o'ylab topilgan javob bermang!
+1. Quyida "=== KASBTECH BILIMLAR BAZASI VA DARSLAR ===" sarlavhasi ostida keltirilgan barcha ma'lumotlarni to'liq o'qib chiqib va tahlil qilib, foydalanuvchi/talabaning savoliga aniq, tushunarli, chiroyli va muloyim javob bering.
+2. Agar talabaning savoliga tegishli javob yoki ma'lumot ushbu Bilimlar bazasida va Darslarda MAVJUD BO'LMASA, HECH QACHON o'zingizdan tashqi ma'lumot yoki o'ylab topilgan javob bermang!
 3. Bilimlar bazasida javob topilmagan taqdirda, ANQ ushbu ko'rinishda javob bering: "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling."
 4. Javobingizni o'zbek tilida, muloyim, aniq va chiroyli formatlangan ko'rinishda bering.
 
-=== KASBTECH BILIMLAR BAZASI ===
-${contextText}
+=== KASBTECH BILIMLAR BAZASI VA DARSLAR ===
+${combinedContextText}
 =================================`;
 
     // Retrieve Gemini API Key from database settings or process.env
@@ -1586,6 +1659,7 @@ ${contextText}
       let matchedItem = null;
       let maxScore = 0;
 
+      // Match against kbItems
       for (const item of kbItems) {
         const itemText = `${item.topic} ${item.question || ''} ${item.content}`.toLowerCase();
         let score = 0;
@@ -1595,12 +1669,26 @@ ${contextText}
 
         if (score > maxScore) {
           maxScore = score;
-          matchedItem = item;
+          matchedItem = { title: item.topic, content: item.content };
+        }
+      }
+
+      // Match against lessons
+      for (const l of lessons) {
+        const lessonText = `${l.title} ${l.description || ''} ${l.module?.title || ''}`.toLowerCase();
+        let score = 0;
+        userWords.forEach(word => {
+          if (lessonText.includes(word)) score++;
+        });
+
+        if (score > maxScore) {
+          maxScore = score;
+          matchedItem = { title: `Dars: ${l.title}`, content: l.description || `${l.title} darsi bo'yicha ma'lumot.` };
         }
       }
 
       if (matchedItem && maxScore > 0) {
-        aiReply = `📌 **${matchedItem.topic}**\n\n${matchedItem.content}`;
+        aiReply = `📌 **${matchedItem.title}**\n\n${matchedItem.content}`;
       } else {
         aiReply = "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.";
       }
