@@ -398,7 +398,7 @@ export default function Database() {
             accept=".xlsx, .xls"
             className="hidden"
             ref={fileInputRef}
-            onChange={handleImport}
+            onChange={handleFileSelect}
           />
           <button 
             onClick={() => fileInputRef.current?.click()}
