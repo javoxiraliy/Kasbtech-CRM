@@ -216,7 +216,7 @@ export default function StudentGames() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold tracking-wide">
               <BookOpen className="w-4 h-4 text-purple-400" />
-              <span>Alex Hormozi "$100M Money Models" + KASBTECH 1v1 Multiplayer Gamification</span>
+              <span>Kompleks Marketing & Pul Modellari + KASBTECH 1v1 Multiplayer Gamification</span>
             </div>
             <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">
               Interaktiv Ta'limiy O'yinlar 🎮
@@ -895,7 +895,7 @@ function LevelSelector({ currentLevel, onLevelChange, currentCategory, onCategor
 
   const categories = [
     { id: "all", label: "🌐 Barcha Mavzular" },
-    { id: "hormozi", label: "💰 1-Bo'lim: Hormozi Money Models" },
+    { id: "hormozi", label: "💰 1-Bo'lim: Pul Modellari va Takliflar Strategiyasi" },
     { id: "foundation", label: "🎯 2-Bo'lim: Poydevor & Kopirayting" },
     { id: "web_target", label: "💻 3-Bo'lim: Sayt & Meta Target" },
     { id: "bot_sales", label: "🤖 4-Bo'lim: ChatPlace & Savdo" }
@@ -1006,7 +1006,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
     easy: [
       {
         cat: 'hormozi',
-        q: "Alex Hormozi kitobi bo'yicha 'Attraction Offer' ning asosiy vazifasi nima?",
+        q: "Marketingda 'Attraction Offer' (Jalb qiluvchi taklif) ning asosiy vazifasi nima?",
         options: [
           "Begona odamlarni birinchi marta mijozga aylantirish va xarajatni qoplash",
           "Mijozdan ko'proq pul undirish",
@@ -1017,7 +1017,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
       },
       {
         cat: 'hormozi',
-        q: "Alex Hormozi kitobida 'Giveaways' (Tanlovlar) grand prize g'olibidan tashqari boshqalarga nima beriladi?",
+        q: "Marketingda 'Giveaways' (Tanlovlar) o'yinida grand prize g'olibidan tashqari boshqalarga nima beriladi?",
         options: [
           "Kichikroq chegirma/vaucher ('Surprise discount') taklif qilinadi",
           "Hech narsa berilmaydi va bloklanadi",
@@ -1107,7 +1107,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
     medium: [
       {
         cat: 'hormozi',
-        q: "Alex Hormozi bo'yicha 'Decoy Offer' (Chalg'ituvchi o'lja) qanday ishlaydi?",
+        q: "Marketingda 'Decoy Offer' (Chalg'ituvchi o'lja) qanday ishlaydi?",
         options: [
           "Arzon/oddiy taklif yoniga o'ta jozibador Premium variantni qo'yib, mijozni premiumga undash",
           "Mijozni aldab pulini yechib olish",
@@ -1118,7 +1118,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
       },
       {
         cat: 'hormozi',
-        q: "Alex Hormozi 'Buy X Get Y Free' da nima uchun chegirmadan ko'ra ko'proq tekin buyum berish jozibadorroq deydi?",
+        q: "Marketingda 'Buy X Get Y Free' da nima uchun chegirmadan ko'ra ko'proq tekin buyum berish jozibadorroq deb qaraladi?",
         options: [
           "Odamlar 'Chegirma' dan ko'ra 'Tekin mahsulot' ni 10 barobar balandroq qadrga ega deb bilishadi",
           "Chegirma ko'proq pul beradi",
@@ -1129,7 +1129,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
       },
       {
         cat: 'hormozi',
-        q: "Alex Hormozi bo'yicha 'Menu Upsell' tarkibidagi 4 ta taktika qaysilar?",
+        q: "Marketingda 'Menu Upsell' tarkibidagi 4 ta taktika qaysilar?",
         options: [
           "Unselling, Prescription, A/B tanlov va Card On File",
           "AIDA, PAS, SWOT, CRM",
@@ -1208,7 +1208,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
     hard: [
       {
         cat: 'hormozi',
-        q: "Hormozi kitobidagi 'Anchor Upsell' mexanikasi qanday ishlaydi?",
+        q: "Marketingdagi 'Anchor Upsell' (Langar taklifi) mexanikasi qanday ishlaydi?",
         options: [
           "Avval 5x-10x qimmat 'Anchor' ko'rsatilib, mijoz 'Gasp' qilgach asosiy taklif arzon va jozibador bo'lib ko'rinadi",
           "Kema langarini sotish",
@@ -1219,7 +1219,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
       },
       {
         cat: 'hormozi',
-        q: "Alex Hormozi bo'yicha 'Rollover Upsell' qanday ishlaydi?",
+        q: "Marketingda 'Rollover Upsell' qanday ishlaydi?",
         options: [
           "Mijozning oldingi to'lagan pulini (yoki 90%+ chegirmali gift cardini) keyingi uzoq muddatli qimmatroq obunaga o'tkazish",
           "Puldanoq kechib yuborish",
@@ -1241,7 +1241,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
       },
       {
         cat: 'hormozi',
-        q: "Alex Hormozi bo'yicha 'Feature Downsell' vaqtida narx qanday tushiriladi?",
+        q: "Marketingda 'Feature Downsell' vaqtida narx qanday tushiriladi?",
         options: [
           "Oddiy chegirma bermasdan, mahsulotning ma'lum bir imkoniyatini (masalan kafolatni) olib tashlab narx tushiriladi",
           "Shunchaki 50% skidka qilinadi",
@@ -1686,7 +1686,7 @@ function MatchMasterGame({ currentLevel, onLevelChange, currentCategory, onCateg
 function SimulatorGame({ currentLevel, onLevelChange, currentCategory, onCategoryChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const SCENARIOS_BANK = {
     easy: {
-      title: "🟢 Boshlang'ich Keys: Onlayn Kitob Do'koni Savdosini Oshirish (Hormozi Attraction Offer)",
+      title: "🟢 Boshlang'ich Keys: Onlayn Kitob Do'koni Savdosini Oshirish (Attraction Offer)",
       context: "Do'konda sifatli kitoblar bor, lekin foydalanuvchilar faqat Instagramda rasm ko'rib o'tib ketishmoqda.",
       options: [
         {
@@ -1702,7 +1702,7 @@ function SimulatorGame({ currentLevel, onLevelChange, currentCategory, onCategor
       ]
     },
     medium: {
-      title: "🟡 O'rta Keys: Jizzaxdagi Erkaklar Kiyim Do'koni (Hormozi Decoy + Classic Upsell)",
+      title: "🟡 O'rta Keys: Jizzaxdagi Erkaklar Kiyim Do'koni (Decoy + Classic Upsell)",
       context: "Do'konda sifatli kostyum-shimlar bor, lekin mijozlar faqat narx so'rab kelib ketishmoqda.",
       options: [
         {
@@ -1718,7 +1718,7 @@ function SimulatorGame({ currentLevel, onLevelChange, currentCategory, onCategor
       ]
     },
     hard: {
-      title: "🔴 Qiyin Keys: $1000 High-Ticket B2B Service (Hormozi Anchor Upsell + Frame Closing)",
+      title: "🔴 Qiyin Keys: $1000 High-Ticket B2B Service (Anchor Upsell + Frame Closing)",
       context: "Tadbirkor bilan Zoom uchrashuvidasiz. U: '$1000 juda qimmat, boshqa SMMchilar $200 ga qiladi' demoqda.",
       options: [
         {
