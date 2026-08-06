@@ -10,7 +10,13 @@ import {
   XCircle, 
   RotateCcw, 
   ArrowRight,
-  Gamepad2
+  Gamepad2,
+  Lock,
+  Star,
+  ShieldCheck,
+  Flame,
+  Award,
+  ChevronRight
 } from 'lucide-react';
 
 export default function StudentGames() {
@@ -19,13 +25,49 @@ export default function StudentGames() {
   const [gameLeaderboard, setGameLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [rewardNotification, setRewardNotification] = useState(null);
-
-  // User stats stored locally & fetched
   const [gameCoinsEarned, setGameCoinsEarned] = useState(0);
+
+  // Level progress stored in localStorage
+  const [levelProgress, setLevelProgress] = useState(() => {
+    try {
+      const saved = localStorage.getItem('kasbtech_game_levels');
+      return saved ? JSON.parse(saved) : {
+        blitz: { easy: 0, medium: 0, hard: 0 },
+        match: { easy: 0, medium: 0, hard: 0 },
+        simulator: { easy: 0, medium: 0, hard: 0 }
+      };
+    } catch {
+      return {
+        blitz: { easy: 0, medium: 0, hard: 0 },
+        match: { easy: 0, medium: 0, hard: 0 },
+        simulator: { easy: 0, medium: 0, hard: 0 }
+      };
+    }
+  });
+
+  const [selectedGameLevel, setSelectedGameLevel] = useState('easy'); // 'easy' | 'medium' | 'hard'
 
   useEffect(() => {
     loadLeaderboard();
   }, []);
+
+  const saveLevelStars = (gameKey, levelKey, stars) => {
+    setLevelProgress(prev => {
+      const updated = {
+        ...prev,
+        [gameKey]: {
+          ...prev[gameKey],
+          [levelKey]: Math.max(prev[gameKey][levelKey] || 0, stars)
+        }
+      };
+      try {
+        localStorage.setItem('kasbtech_game_levels', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Error saving level progress:', err);
+      }
+      return updated;
+    });
+  };
 
   const loadLeaderboard = async () => {
     setLoadingLeaderboard(true);
@@ -49,7 +91,7 @@ export default function StudentGames() {
           coins: amount,
           message: description
         });
-        setTimeout(() => setRewardNotification(null), 4000);
+        setTimeout(() => setRewardNotification(null), 4500);
         loadLeaderboard();
       }
     } catch (err) {
@@ -60,43 +102,43 @@ export default function StudentGames() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/60 via-indigo-900/50 to-blue-900/60 border border-purple-500/20 p-6 md:p-8 backdrop-blur-xl">
-        <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-10 -top-10 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/70 via-indigo-900/60 to-blue-900/70 border border-purple-500/30 p-6 md:p-8 backdrop-blur-xl">
+        <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-10 -top-10 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold tracking-wide">
               <Gamepad2 className="w-4 h-4 text-purple-400" />
-              <span>Kasbtech Gamification Hub</span>
+              <span>Kasbtech Interactive Gamification Hub</span>
             </div>
             <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">
               Interaktiv Ta'limiy O'yinlar 🎮
             </h1>
-            <p className="text-dark-300 text-sm md:text-base max-w-2xl">
-              1-8 mavzular bo'yicha bilimlaringizni sinang, reytingda 1-o'ringa ko'tariling va haqiqiy KasbCoin vaucherlarini yuting!
+            <p className="text-dark-300 text-sm md:text-base max-w-2xl leading-relaxed">
+              Boshlang'ich, O'rta va Qiyin darajadagi bosqichlarni zabt eting, yulduzchalarni to'plang, reytingda yetakchi bo'ling va KasbCoin ishlab oling!
             </p>
           </div>
 
           {/* User Fast Stats Badge */}
-          <div className="flex items-center gap-3 bg-dark-900/80 border border-purple-500/30 p-4 rounded-2xl shrink-0">
+          <div className="flex items-center gap-4 bg-dark-900/90 border border-purple-500/30 p-4 rounded-2xl shrink-0 shadow-xl">
             <div className="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-2xl animate-pulse">
               🪙
             </div>
             <div>
-              <p className="text-xs text-dark-400 font-medium">Jami O'yindan Yutildi</p>
-              <p className="text-xl font-bold text-yellow-400">+{gameCoinsEarned} KasbCoin</p>
+              <p className="text-xs text-dark-400 font-semibold uppercase tracking-wider">O'yindan Yutilgan KasbCoin</p>
+              <p className="text-2xl font-black text-yellow-400">+{gameCoinsEarned} KasbCoin</p>
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 mt-6 overflow-x-auto pb-2 border-t border-purple-500/20 pt-4">
+        <div className="flex items-center gap-2 mt-6 overflow-x-auto pb-2 border-t border-purple-500/20 pt-4 scrollbar-none">
           <button
             onClick={() => setActiveTab('menu')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'menu'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/40 scale-105'
                 : 'bg-dark-800/60 text-dark-300 hover:text-white hover:bg-dark-800'
             }`}
           >
@@ -105,10 +147,10 @@ export default function StudentGames() {
           </button>
 
           <button
-            onClick={() => setActiveTab('blitz')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+            onClick={() => { setActiveTab('blitz'); setSelectedGameLevel('easy'); }}
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'blitz'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/40 scale-105'
                 : 'bg-dark-800/60 text-dark-300 hover:text-white hover:bg-dark-800'
             }`}
           >
@@ -117,10 +159,10 @@ export default function StudentGames() {
           </button>
 
           <button
-            onClick={() => setActiveTab('match')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+            onClick={() => { setActiveTab('match'); setSelectedGameLevel('easy'); }}
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'match'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/40 scale-105'
                 : 'bg-dark-800/60 text-dark-300 hover:text-white hover:bg-dark-800'
             }`}
           >
@@ -129,10 +171,10 @@ export default function StudentGames() {
           </button>
 
           <button
-            onClick={() => setActiveTab('simulator')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+            onClick={() => { setActiveTab('simulator'); setSelectedGameLevel('easy'); }}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'simulator'
-                ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/30'
+                ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/40 scale-105 font-bold'
                 : 'bg-dark-800/60 text-dark-300 hover:text-white hover:bg-dark-800'
             }`}
           >
@@ -142,9 +184,9 @@ export default function StudentGames() {
 
           <button
             onClick={() => setActiveTab('leaderboard')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'leaderboard'
-                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/40 scale-105'
                 : 'bg-dark-800/60 text-dark-300 hover:text-white hover:bg-dark-800'
             }`}
           >
@@ -156,95 +198,155 @@ export default function StudentGames() {
 
       {/* Floating Reward Toast Notification */}
       {rewardNotification && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-yellow-500 to-amber-600 text-dark-950 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-dark-950 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce border border-yellow-300">
           <div className="text-3xl">🪙</div>
           <div>
             <p className="font-extrabold text-base">+{rewardNotification.coins} KasbCoin Yutdingiz!</p>
-            <p className="text-xs font-semibold opacity-90">{rewardNotification.message}</p>
+            <p className="text-xs font-bold opacity-90">{rewardNotification.message}</p>
           </div>
         </div>
       )}
 
-      {/* Tab 1: MENU CARD SELECTION */}
+      {/* Tab 1: MENU CARD SELECTION WITH DIFFICULTY BADGES */}
       {activeTab === 'menu' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1: Blitz */}
-          <div className="group bg-dark-900/60 border border-dark-800 hover:border-amber-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10 flex flex-col justify-between">
+          <div className="group bg-dark-900/70 border border-dark-800 hover:border-amber-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-amber-500/10 flex flex-col justify-between">
             <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
-                <Zap className="w-7 h-7" />
+              <div className="flex items-center justify-between">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                  <Zap className="w-7 h-7" />
+                </div>
+                <div className="flex items-center gap-1 text-xs text-yellow-400 font-bold bg-yellow-500/10 px-2.5 py-1 rounded-full border border-yellow-500/20">
+                  <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                  <span>{levelProgress.blitz.easy + levelProgress.blitz.medium + levelProgress.blitz.hard}/9 Yulduz</span>
+                </div>
               </div>
+
               <div>
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">1-O'YIN • VIKTORINA</span>
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">1-O'YIN • BOSQICHLI VIKTORINA</span>
                 <h3 className="text-xl font-bold text-white mt-1">Marketing Blitz Quiz ⚡</h3>
-                <p className="text-dark-400 text-sm mt-2">
-                  SWOT, Target Audience, UTP va Kopirayting bo'yicha 10 ta tezkor savol. Vaqtli timer va Combo bonuslar!
+                <p className="text-dark-400 text-sm mt-2 leading-relaxed">
+                  🟢 Boshlang'ich, 🟡 O'rta va 🔴 Qiyin darajadagi 1-8 mavzular savollari. Vaqtli timer va Combo multiplier!
                 </p>
               </div>
-              <div className="flex items-center gap-4 text-xs text-dark-300 pt-2 border-t border-dark-800">
-                <span>⏱️ 15 soniya/savol</span>
-                <span>🪙 Max +15 KasbCoin</span>
+
+              {/* Difficulty badges */}
+              <div className="space-y-2 pt-2 border-t border-dark-800">
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Boshlang'ich (20s)</span>
+                  <span>+10 KasbCoin</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 O'rta (15s)</span>
+                  <span>+15 KasbCoin (x1.5)</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 Qiyin (10s)</span>
+                  <span>+25 KasbCoin (x2.5)</span>
+                </div>
               </div>
             </div>
+
             <button
-              onClick={() => setActiveTab('blitz')}
-              className="mt-6 w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-dark-950 font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              onClick={() => { setActiveTab('blitz'); setSelectedGameLevel('easy'); }}
+              className="mt-6 w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-dark-950 font-extrabold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
             >
-              <span>Boshlash</span>
+              <span>Darajalarni Tanlash</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Card 2: Match Master */}
-          <div className="group bg-dark-900/60 border border-dark-800 hover:border-emerald-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10 flex flex-col justify-between">
+          <div className="group bg-dark-900/70 border border-dark-800 hover:border-emerald-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-emerald-500/10 flex flex-col justify-between">
             <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-                <Puzzle className="w-7 h-7" />
+              <div className="flex items-center justify-between">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                  <Puzzle className="w-7 h-7" />
+                </div>
+                <div className="flex items-center gap-1 text-xs text-yellow-400 font-bold bg-yellow-500/10 px-2.5 py-1 rounded-full border border-yellow-500/20">
+                  <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                  <span>{levelProgress.match.easy + levelProgress.match.medium + levelProgress.match.hard}/9 Yulduz</span>
+                </div>
               </div>
+
               <div>
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">2-O'YIN • MOSLASHTIRISH</span>
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">2-O'YIN • BOSQICHLI MOSLASHTIRISH</span>
                 <h3 className="text-xl font-bold text-white mt-1">Match Master 🧩</h3>
-                <p className="text-dark-400 text-sm mt-2">
-                  Marketing atamalari, formula va misollarni to'g'ri juftliklarga moslashtiring. Xotira va bilim imtihoni!
+                <p className="text-dark-400 text-sm mt-2 leading-relaxed">
+                  Marketing atamalari, formula va AIDA elementlarini moslashtirish. Bosqichma-bosqich kartalar soni ortadi!
                 </p>
               </div>
-              <div className="flex items-center gap-4 text-xs text-dark-300 pt-2 border-t border-dark-800">
-                <span>🧠 6 ta Juftlik</span>
-                <span>🪙 Max +15 KasbCoin</span>
+
+              {/* Difficulty badges */}
+              <div className="space-y-2 pt-2 border-t border-dark-800">
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 6 ta Juftlik (Easy)</span>
+                  <span>+10 KasbCoin</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 8 ta Juftlik (Medium)</span>
+                  <span>+15 KasbCoin</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 10 ta Juftlik (Hard)</span>
+                  <span>+25 KasbCoin</span>
+                </div>
               </div>
             </div>
+
             <button
-              onClick={() => setActiveTab('match')}
-              className="mt-6 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-dark-950 font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              onClick={() => { setActiveTab('match'); setSelectedGameLevel('easy'); }}
+              className="mt-6 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-dark-950 font-extrabold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
             >
-              <span>Boshlash</span>
+              <span>Darajalarni Tanlash</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Card 3: AI Marketer Simulator */}
-          <div className="group bg-dark-900/60 border border-dark-800 hover:border-cyan-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/10 flex flex-col justify-between">
+          <div className="group bg-dark-900/70 border border-dark-800 hover:border-cyan-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-cyan-500/10 flex flex-col justify-between">
             <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
-                <Sparkles className="w-7 h-7" />
+              <div className="flex items-center justify-between">
+                <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-7 h-7" />
+                </div>
+                <div className="flex items-center gap-1 text-xs text-yellow-400 font-bold bg-yellow-500/10 px-2.5 py-1 rounded-full border border-yellow-500/20">
+                  <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                  <span>{levelProgress.simulator.easy + levelProgress.simulator.medium + levelProgress.simulator.hard}/9 Yulduz</span>
+                </div>
               </div>
+
               <div>
-                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">3-O'YIN • SIMULYATOR</span>
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">3-O'YIN • STRATEGIK SIMULYATOR</span>
                 <h3 className="text-xl font-bold text-white mt-1">AI Marketer Simulator 🚀</h3>
-                <p className="text-dark-400 text-sm mt-2">
-                  Haqiqiy bizneskeyslarda Bosh Marketolog bo'ling. Hook, UTP va AI promptlarni tanlab sotuvni 3x ga oshiring!
+                <p className="text-dark-400 text-sm mt-2 leading-relaxed">
+                  Real bizneskeyslarda Bosh Marketolog bo'ling. Hook, UTP va AI promptlarni tanlab sotuv va ROI ni 3x ga oshiring!
                 </p>
               </div>
-              <div className="flex items-center gap-4 text-xs text-dark-300 pt-2 border-t border-dark-800">
-                <span>🎯 2 ta Strategik Keys</span>
-                <span>🪙 Max +20 KasbCoin</span>
+
+              {/* Difficulty badges */}
+              <div className="space-y-2 pt-2 border-t border-dark-800">
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Kitob Do'koni Keysi</span>
+                  <span>+15 KasbCoin</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 Kiyim Do'koni Keysi</span>
+                  <span>+20 KasbCoin</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 AI Kurs Video Kampaniyasi</span>
+                  <span>+30 KasbCoin</span>
+                </div>
               </div>
             </div>
+
             <button
-              onClick={() => setActiveTab('simulator')}
-              className="mt-6 w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-dark-950 font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              onClick={() => { setActiveTab('simulator'); setSelectedGameLevel('easy'); }}
+              className="mt-6 w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-dark-950 font-extrabold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
             >
-              <span>Boshlash</span>
+              <span>Darajalarni Tanlash</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -253,22 +355,43 @@ export default function StudentGames() {
 
       {/* GAME 1: MARKETING BLITZ QUIZ */}
       {activeTab === 'blitz' && (
-        <BlitzQuizGame onComplete={handleAwardCoins} onBack={() => setActiveTab('menu')} />
+        <BlitzQuizGame 
+          currentLevel={selectedGameLevel}
+          onLevelChange={setSelectedGameLevel}
+          levelProgress={levelProgress.blitz}
+          onSaveProgress={(lvl, stars) => saveLevelStars('blitz', lvl, stars)}
+          onComplete={handleAwardCoins} 
+          onBack={() => setActiveTab('menu')} 
+        />
       )}
 
       {/* GAME 2: MATCH MASTER */}
       {activeTab === 'match' && (
-        <MatchMasterGame onComplete={handleAwardCoins} onBack={() => setActiveTab('menu')} />
+        <MatchMasterGame 
+          currentLevel={selectedGameLevel}
+          onLevelChange={setSelectedGameLevel}
+          levelProgress={levelProgress.match}
+          onSaveProgress={(lvl, stars) => saveLevelStars('match', lvl, stars)}
+          onComplete={handleAwardCoins} 
+          onBack={() => setActiveTab('menu')} 
+        />
       )}
 
       {/* GAME 3: AI MARKETER SIMULATOR */}
       {activeTab === 'simulator' && (
-        <SimulatorGame onComplete={handleAwardCoins} onBack={() => setActiveTab('menu')} />
+        <SimulatorGame 
+          currentLevel={selectedGameLevel}
+          onLevelChange={setSelectedGameLevel}
+          levelProgress={levelProgress.simulator}
+          onSaveProgress={(lvl, stars) => saveLevelStars('simulator', lvl, stars)}
+          onComplete={handleAwardCoins} 
+          onBack={() => setActiveTab('menu')} 
+        />
       )}
 
       {/* LEADERBOARD TAB */}
       {activeTab === 'leaderboard' && (
-        <div className="bg-dark-900/60 border border-dark-800 rounded-3xl p-6 md:p-8 space-y-6">
+        <div className="bg-dark-900/80 border border-dark-800 rounded-3xl p-6 md:p-8 space-y-6 backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -309,7 +432,7 @@ export default function StudentGames() {
                     return (
                       <tr 
                         key={item.id}
-                        className={`hover:bg-dark-800/30 transition-colors ${
+                        className={`hover:bg-dark-800/40 transition-colors ${
                           isGold ? 'bg-yellow-500/5' : isSilver ? 'bg-slate-400/5' : isBronze ? 'bg-amber-700/5' : ''
                         }`}
                       >
@@ -327,7 +450,7 @@ export default function StudentGames() {
                             <div>
                               <p className="text-sm font-bold text-white flex items-center gap-1.5">
                                 {item.name}
-                                {isGold && <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">O'yin Qiroli</span>}
+                                {isGold && <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-bold">O'yin Qiroli</span>}
                               </p>
                               <p className="text-xs text-dark-400">{item.email}</p>
                             </div>
@@ -336,7 +459,7 @@ export default function StudentGames() {
                         <td className="py-3 px-4 text-center text-sm font-semibold text-dark-300">
                           {item.gamesPlayed} ta o'yin
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-yellow-400 text-sm">
+                        <td className="py-3 px-4 text-right font-black text-yellow-400 text-sm">
                           +{item.gameCoins} 🪙
                         </td>
                       </tr>
@@ -353,98 +476,305 @@ export default function StudentGames() {
 }
 
 /* =========================================================================
-   GAME 1 COMPONENT: MARKETING BLITZ QUIZ
+   DIFFICULTY LEVEL SELECTOR BAR COMPONENT
    ========================================================================= */
-function BlitzQuizGame({ onComplete, onBack }) {
-  const QUESTIONS = [
-    {
-      q: "Shifokor qoidasi marketingda nimani anglatadi?",
-      options: [
-        "Tekshirmasdan turib darhol reklama (Target) yoqish",
-        "Avval biznesni analiz/tashxis qilish, keyin reklama yoqish",
-        "Tadbirkorlarga tibbiy xizmat ko'rsatish",
-        "Har kuni Instagramda 5 ta post joylash"
-      ],
-      correct: 1
+function LevelSelector({ currentLevel, onLevelChange, progress }) {
+  const isMediumUnlocked = (progress?.easy || 0) > 0;
+  const isHardUnlocked = (progress?.medium || 0) > 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 bg-dark-950/60 p-2 rounded-2xl border border-dark-800">
+      <span className="text-xs font-bold text-dark-400 uppercase tracking-wider px-3">Darajani Tanlang:</span>
+      
+      {/* Easy Level */}
+      <button
+        onClick={() => onLevelChange('easy')}
+        className={`flex-1 min-w-[130px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
+          currentLevel === 'easy'
+            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10 scale-105'
+            : 'bg-dark-900 border-dark-800 text-dark-400 hover:text-white'
+        }`}
+      >
+        <span className="flex items-center gap-1.5">🟢 Boshlang'ich</span>
+        <div className="flex items-center">
+          {[1, 2, 3].map(s => (
+            <Star key={s} className={`w-3 h-3 ${s <= (progress?.easy || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-dark-700'}`} />
+          ))}
+        </div>
+      </button>
+
+      {/* Medium Level */}
+      <button
+        disabled={!isMediumUnlocked}
+        onClick={() => isMediumUnlocked && onLevelChange('medium')}
+        className={`flex-1 min-w-[130px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
+          !isMediumUnlocked 
+            ? 'bg-dark-900/40 border-dark-800 text-dark-600 cursor-not-allowed opacity-60' 
+            : currentLevel === 'medium'
+            ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-500/10 scale-105'
+            : 'bg-dark-900 border-dark-800 text-dark-400 hover:text-white'
+        }`}
+      >
+        <span className="flex items-center gap-1.5">
+          {!isMediumUnlocked && <Lock className="w-3 h-3 text-dark-500" />}
+          🟡 O'rta
+        </span>
+        <div className="flex items-center">
+          {[1, 2, 3].map(s => (
+            <Star key={s} className={`w-3 h-3 ${s <= (progress?.medium || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-dark-700'}`} />
+          ))}
+        </div>
+      </button>
+
+      {/* Hard Level */}
+      <button
+        disabled={!isHardUnlocked}
+        onClick={() => isHardUnlocked && onLevelChange('hard')}
+        className={`flex-1 min-w-[130px] p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-between ${
+          !isHardUnlocked 
+            ? 'bg-dark-900/40 border-dark-800 text-dark-600 cursor-not-allowed opacity-60' 
+            : currentLevel === 'hard'
+            ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-md shadow-rose-500/10 scale-105'
+            : 'bg-dark-900 border-dark-800 text-dark-400 hover:text-white'
+        }`}
+      >
+        <span className="flex items-center gap-1.5">
+          {!isHardUnlocked && <Lock className="w-3 h-3 text-dark-500" />}
+          🔴 Qiyin
+        </span>
+        <div className="flex items-center">
+          {[1, 2, 3].map(s => (
+            <Star key={s} className={`w-3 h-3 ${s <= (progress?.hard || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-dark-700'}`} />
+          ))}
+        </div>
+      </button>
+    </div>
+  );
+}
+
+/* =========================================================================
+   GAME 1 COMPONENT: MARKETING BLITZ QUIZ (WITH 3 LEVELS)
+   ========================================================================= */
+function BlitzQuizGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
+  const QUIZ_BANK = {
+    easy: {
+      time: 20,
+      coinMultiplier: 1.0,
+      questions: [
+        {
+          q: "Shifokor qoidasi marketingda nimani anglatadi?",
+          options: [
+            "Tekshirmasdan turib darhol reklama (Target) yoqish",
+            "Avval biznesni analiz/tashxis qilish, keyin reklama yoqish",
+            "Tadbirkorlarga tibbiy xizmat ko'rsatish",
+            "Har kuni Instagramda 5 ta post joylash"
+          ],
+          correct: 1
+        },
+        {
+          q: "Domino's Pitsaning mashhur UTP va'dasi qanday edi?",
+          options: [
+            "Pitsa eng arzon va eng sifatli",
+            "30 daqiqada yetkazamiz, kechiksak — bepul!",
+            "Har bir pitsaga tekin pepsi beramiz",
+            "O'zbekistondagi eng kattasi"
+          ],
+          correct: 1
+        },
+        {
+          q: "Mijoz Portreti (Avatar) va Maqsadli Auditoriya o'rtasidagi farq nimada?",
+          options: [
+            "Ular bir xil narsa",
+            "Auditoriya = Katta stadion, Avatar = Bitta aniq muxlis tasviri",
+            "Avatar = Faqat ayollar, Auditoriya = Erkaklar",
+            "Auditoriya = AI, Avatar = Insho"
+          ],
+          correct: 1
+        },
+        {
+          q: "Marketolog va Yozuvchi (Adib) yozish maqsadi o'rtasidagi farq nima?",
+          options: [
+            "Yozuvchi zavq berish uchun, Marketolog esa aniq harakatga (sotib olishga) undash uchun yozadi",
+            "Yozuvchi kompyuterda, Marketolog daftarda yozadi",
+            "Ikkala yozish maqsadi bir xil",
+            "Marketolog faqat she'r yozadi"
+          ],
+          correct: 0
+        },
+        {
+          q: "Marketingda 'Hammaga sotmoqchi bo'lsangiz' nima bo'ladi?",
+          options: [
+            "Barcha insonlar sotib oladi",
+            "Hech kimga sota olmaysiz, chunki har xil guruh motivatsiyasi har xil",
+            "Faqat talabalar oladi",
+            "Reklama byudjeti tejaladi"
+          ],
+          correct: 1
+        },
+        {
+          q: "SMMchi Sanjar Avatari misolida og'riqli nuqta nima edi?",
+          options: [
+            "Videoni 5 soatlab tayyorlash va daromad kamligi (3 mln)",
+            "Telefonining yo'qligi",
+            "Instagram ishlamay qolishi",
+            "Ingliz tilini bilmasligi"
+          ],
+          correct: 0
+        }
+      ]
     },
-    {
-      q: "Domino's Pitsaning mashhur UTP va'dasi qanday edi?",
-      options: [
-        "Pitsa eng arzon va eng sifatli",
-        "30 daqiqada yetkazamiz, kechiksak — bepul!",
-        "Har bir pitsaga tekin pepsi beramiz",
-        "O'zbekistondagi eng kattasi"
-      ],
-      correct: 1
+    medium: {
+      time: 15,
+      coinMultiplier: 1.5,
+      questions: [
+        {
+          q: "Facebook Ad Library (Reklama kutubxonasi) orqali nima qilinadi?",
+          options: [
+            "Raqobatchilarning faol reklamalarini 'Marketing josusligi' qilib tahlil etish",
+            "Instagram akkauntlarni bloklash",
+            "Sayt kodlarini buzib kirish",
+            "Kredit olish"
+          ],
+          correct: 0
+        },
+        {
+          q: "UTP yaratishning 3 ta oltin qoidasi qaysilar?",
+          options: [
+            "Aniqlik (raqamlar), Haqqoniylik, Mijoz og'rig'iga zarba",
+            "Arzonlik, Kattalik, Tezlik",
+            "Tekin berish, Qarz berish, Kafolatsizlik",
+            "She'riy til, Uzunlik, Adabiyot"
+          ],
+          correct: 0
+        },
+        {
+          q: "Mukammal AI Prompt Formulasi tarkibiy qismlari qaysilar?",
+          options: [
+            "ROL + KONTEKST + MAQSAD + FORMAT",
+            "NOMI + NARXI + MANZILI",
+            "AI + CHATGPT + GEMINI",
+            "SAVOL + JAVOB + MATN"
+          ],
+          correct: 0
+        },
+        {
+          q: "Odamchalashtirish (80/20 Qoidasi) nima?",
+          options: [
+            "AI 80% qora mehnatni qiladi, 20% insoniy tahrir bilan oddiy so'zlashuv tiliga almashtiriladi",
+            "80 ta post va 20 ta video chiqarish",
+            "80% chegirma berish",
+            "20 soat kompyuterda o'tirish"
+          ],
+          correct: 0
+        },
+        {
+          q: "Egri (Bilvosita) Raqobatchi nima?",
+          options: [
+            "Aynan bir xil mahsulot sotadiganlar",
+            "Mahsuloti boshqa, lekin mijozingizning bitta muammosini hal qiladigan alternativalar",
+            "Noqonuniy ishlaydiganlar",
+            "Faqat Telegramda ishlaydiganlar"
+          ],
+          correct: 1
+        },
+        {
+          q: "Nima uchun 'Bizda hammadan arzon' deyish xavfli UTP hisoblanadi?",
+          options: [
+            "Ertaga raqobatchi 1000 so'm arzon qilsa mijoz o'tib ketadi, biznes o'ladi",
+            "Mijozlar arzon narsani juda yaxshi ko'radi",
+            "Pulingiz ko'payib ketadi",
+            "Chunki arzon mahsulot bo'lmaydi"
+          ],
+          correct: 0
+        }
+      ]
     },
-    {
-      q: "AIDA formulasi nimani anglatadi?",
-      options: [
-        "Attention, Interest, Desire, Action",
-        "Analiz, Indeks, Diagramma, Audit",
-        "Avtomatlashtirish, Internet, Daromad, Agentlik",
-        "Auditoriya, Ilmoq, Daromad, Aksiya"
-      ],
-      correct: 0
-    },
-    {
-      q: "Mijoz Portreti (Avatar) va Maqsadli Auditoriya o'rtasidagi farq nimada?",
-      options: [
-        "Ular bir xil narsa",
-        "Auditoriya = Katta stadion, Avatar = Bitta aniq muxlis tasviri",
-        "Avatar = Faqat ayollar, Auditoriya = Erkaklar",
-        "Auditoriya = AI, Avatar = Insho"
-      ],
-      correct: 1
-    },
-    {
-      q: "Hook (Ilmoq) ning asosiy vazifasi nima?",
-      options: [
-        "Videoning oxirida rahmat aytish",
-        "Mijoz e'tiborini dastlabki 3 soniyada ushlab qolish",
-        "Raqobatchilarni haqorat qilish",
-        "Sayt yaratish"
-      ],
-      correct: 1
-    },
-    {
-      q: "Mukammal AI Prompt formulasi qaysi?",
-      options: [
-        "ROL + KONTEKST + MAQSAD + FORMAT",
-        "NOMI + NARXI + MANZILI",
-        "AI + CHATGPT + GEMINI",
-        "SAVOL + JAVOB + MATN"
-      ],
-      correct: 0
-    },
-    {
-      q: "Facebook Ad Library bilan nima qilish mumkin?",
-      options: [
-        "Raqobatchilarning faol reklamalarini 'Marketing josusligi' qilish",
-        "Bepul pitsa buyurtma qilish",
-        "Sayt kodlarini buzib kirish",
-        "Instagram akkauntni bloklash"
-      ],
-      correct: 0
-    },
-    {
-      q: "Odamchalashtirish (Table Read) qoidasi nima?",
-      options: [
-        "AI bergan matnni ovoz chiqarib o'qib, oddiy o'zbek tiliga tahrirlash",
-        "Stol ustida ovqat yeyish",
-        "Kitobiy rasmiy tilda gapirish",
-        "AI yozgan matnni o'qimasdan joylash"
-      ],
-      correct: 0
+    hard: {
+      time: 10,
+      coinMultiplier: 2.5,
+      questions: [
+        {
+          q: "Mijoz e'tiborini ushlash uchun Hook (Ilmoq) ning 3 ta turi qaysilar?",
+          options: [
+            "Og'riqqa zarba (Savol), Shok fakt / Bayonot, Katta Natija / Va'da",
+            "Qisqa, Uzun, O'rta",
+            "Audio, Video, Rasm",
+            "Instagram, Telegram, TikTok"
+          ],
+          correct: 0
+        },
+        {
+          q: "AIDA formulasi bosqichlari tartibi qanday?",
+          options: [
+            "Attention (E'tibor), Interest (Qiziqish), Desire (Xohish), Action (Harakat)",
+            "Action, Desire, Interest, Attention",
+            "Analiz, Indeks, Diagramma, Audit",
+            "Auditoriya, Ilmoq, Daromad, Aksiya"
+          ],
+          correct: 0
+        },
+        {
+          q: "1 daqiqalik video ssenariysi matnida inson o'rtacha nechta so'z gapirishi kerak?",
+          options: [
+            "130 - 150 ta so'z",
+            "300 - 400 ta so me me'yorda so'z",
+            "50 ta so'z",
+            "1000 ta so'z"
+          ],
+          correct: 0
+        },
+        {
+          q: "'Stol ustida o'qish' (Table Read) texnikasi nima uchun o me'yorda o'tkaziladi?",
+          options: [
+            "Ssenariyni syomkadan oldin ovoz chiqarib o'qib, tili aylanmaydigan rasmiy so'zlarni soddalashtirish uchun",
+            "Stol ustiga rasm chizish uchun",
+            "Videoni 10 soatda montaj qilish uchun",
+            "ChatGPT kodi xatosini tekshirish uchun"
+          ],
+          correct: 0
+        },
+        {
+          q: "Kameraga chiqishni xohlamagan holda ssenariy Vizualiga qanday prompt beriladi?",
+          options: [
+            "Videoda inson qatnashmaydi, B-roll stock videolar va harakatlanuvchi matnlar bo'lsin",
+            "Menga animatsion multifilm chizib ber",
+            "Kamerani o'chirib qo'y",
+            "Faqat audio yoz"
+          ],
+          correct: 0
+        },
+        {
+          q: "Call to Action (Harakatga undash) nima uchun har doim 1 ta aniq buyruq bo'lishi shart?",
+          options: [
+            "Odamlar avtopilotda bo'ladi, agar ko'p narsa so'ralsa hech narsa qilmaydi va o'tib ketadi",
+            "Instagrom qoidasi bo me me'yori bo'yicha",
+            "Chunki 2 ta gap yozish taqiqlangan",
+            "Faqat layk bosish uchun"
+          ],
+          correct: 0
+        }
+      ]
     }
-  ];
+  };
+
+  const levelData = QUIZ_BANK[currentLevel] || QUIZ_BANK.easy;
+  const questionsList = levelData.questions;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(levelData.time);
   const [gameOver, setGameOver] = useState(false);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setScore(0);
+    setStreak(0);
+    setTimeLeft(levelData.time);
+    setGameOver(false);
+  }, [currentLevel]);
 
   useEffect(() => {
     if (gameOver || selectedOption !== null) return;
@@ -452,45 +782,65 @@ function BlitzQuizGame({ onComplete, onBack }) {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          handleAnswer(-1); // Timeout
-          return 15;
+          handleAnswer(-1);
+          return levelData.time;
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentIndex, selectedOption, gameOver]);
+  }, [currentIndex, selectedOption, gameOver, currentLevel]);
 
   const handleAnswer = (optionIdx) => {
     if (selectedOption !== null) return;
     setSelectedOption(optionIdx);
 
-    const isCorrect = optionIdx === QUESTIONS[currentIndex].correct;
+    const isCorrect = optionIdx === questionsList[currentIndex].correct;
     if (isCorrect) {
-      setScore(prev => prev + 10 + streak * 2);
+      setScore(prev => prev + 15 + streak * 3);
       setStreak(prev => prev + 1);
     } else {
       setStreak(0);
     }
 
     setTimeout(() => {
-      if (currentIndex + 1 < QUESTIONS.length) {
+      if (currentIndex + 1 < questionsList.length) {
         setCurrentIndex(prev => prev + 1);
         setSelectedOption(null);
-        setTimeLeft(15);
+        setTimeLeft(levelData.time);
       } else {
         setGameOver(true);
-        const finalCoins = Math.min(Math.round(score / 5) + 5, 15);
-        onComplete(finalCoins, `Marketing Blitz Quiz-da ${score} ball to'plaganingiz uchun`, 'blitz');
+        const finalScore = score + (isCorrect ? 15 + streak * 3 : 0);
+        let calculatedStars = 1;
+        if (finalScore >= 70) calculatedStars = 3;
+        else if (finalScore >= 40) calculatedStars = 2;
+
+        onSaveProgress(currentLevel, calculatedStars);
+
+        const baseReward = currentLevel === 'easy' ? 10 : currentLevel === 'medium' ? 15 : 25;
+        const awardedCoins = Math.round(baseReward * levelData.coinMultiplier);
+
+        onComplete(
+          awardedCoins, 
+          `Marketing Blitz (${currentLevel.toUpperCase()}) da ${finalScore} ball to'plaganingiz uchun`, 
+          `blitz_${currentLevel}`
+        );
       }
     }, 1200);
   };
 
-  const currentQ = QUESTIONS[currentIndex];
+  const currentQ = questionsList[currentIndex];
 
   return (
-    <div className="bg-dark-900/80 border border-amber-500/30 rounded-3xl p-6 md:p-8 space-y-6">
+    <div className="bg-dark-900/80 border border-amber-500/30 rounded-3xl p-6 md:p-8 space-y-6 backdrop-blur-xl">
+      {/* Level Selector */}
+      <LevelSelector 
+        currentLevel={currentLevel}
+        onLevelChange={onLevelChange}
+        progress={levelProgress}
+      />
+
       {/* Quiz Top bar */}
       <div className="flex items-center justify-between border-b border-dark-800 pb-4">
         <button onClick={onBack} className="text-dark-400 hover:text-white text-xs font-semibold flex items-center gap-1">
@@ -511,30 +861,30 @@ function BlitzQuizGame({ onComplete, onBack }) {
         <div className="space-y-6 max-w-2xl mx-auto">
           {/* Progress & Timer */}
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-dark-400 font-medium">
-              <span>Savol {currentIndex + 1} / {QUESTIONS.length}</span>
-              <span className={timeLeft <= 5 ? 'text-red-400 font-bold animate-ping' : 'text-amber-400'}>
+            <div className="flex justify-between text-xs text-dark-400 font-semibold">
+              <span>Savol {currentIndex + 1} / {questionsList.length}</span>
+              <span className={timeLeft <= 4 ? 'text-red-400 font-bold animate-ping' : 'text-amber-400'}>
                 ⏱️ {timeLeft}s
               </span>
             </div>
-            <div className="w-full bg-dark-800 h-2 rounded-full overflow-hidden">
+            <div className="w-full bg-dark-800 h-2.5 rounded-full overflow-hidden">
               <div 
                 className="bg-gradient-to-r from-amber-500 to-yellow-400 h-full transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / QUESTIONS.length) * 100}%` }}
+                style={{ width: `${((currentIndex + 1) / questionsList.length) * 100}%` }}
               />
             </div>
           </div>
 
           {/* Question Text */}
-          <div className="bg-dark-800/50 border border-dark-700/60 p-6 rounded-2xl">
+          <div className="bg-dark-800/60 border border-dark-700 p-6 rounded-2xl">
             <h3 className="text-lg md:text-xl font-bold text-white leading-relaxed">
-              {currentQ.q}
+              {currentQ?.q}
             </h3>
           </div>
 
           {/* Options */}
           <div className="grid grid-cols-1 gap-3">
-            {currentQ.options.map((opt, idx) => {
+            {currentQ?.options.map((opt, idx) => {
               let btnStyle = "bg-dark-800/60 border-dark-700 text-dark-200 hover:bg-dark-700/80 hover:text-white";
               if (selectedOption !== null) {
                 if (idx === currentQ.correct) {
@@ -569,12 +919,14 @@ function BlitzQuizGame({ onComplete, onBack }) {
             🏆
           </div>
           <div>
-            <h3 className="text-2xl font-extrabold text-white">Viktorina Yakunlandi!</h3>
+            <h3 className="text-2xl font-extrabold text-white">
+              {currentLevel.toUpperCase()} Darajasi Yakunlandi!
+            </h3>
             <p className="text-dark-300 text-sm mt-1">Siz {score} ball to'pladingiz!</p>
           </div>
 
           <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-300 text-sm font-bold">
-            🎉 +{Math.min(Math.round(score / 5) + 5, 15)} KasbCoin Hisobingizga O'tkazildi!
+            🎉 KasbCoin Mukofoti Hisobingizga O'tkazildi!
           </div>
 
           <div className="flex gap-3 justify-center">
@@ -584,7 +936,7 @@ function BlitzQuizGame({ onComplete, onBack }) {
                 setSelectedOption(null);
                 setScore(0);
                 setStreak(0);
-                setTimeLeft(15);
+                setTimeLeft(levelData.time);
                 setGameOver(false);
               }}
               className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-dark-950 font-bold text-sm flex items-center gap-2"
@@ -606,17 +958,43 @@ function BlitzQuizGame({ onComplete, onBack }) {
 }
 
 /* =========================================================================
-   GAME 2 COMPONENT: MATCH MASTER
+   GAME 2 COMPONENT: MATCH MASTER (WITH 3 LEVELS)
    ========================================================================= */
-function MatchMasterGame({ onComplete, onBack }) {
-  const PAIRS = [
-    { id: 1, term: "Domino's Pizza", match: "30 minutda pitsa / bepul" },
-    { id: 2, term: "AIDA Formulasi", match: "Attention, Interest, Desire, Action" },
-    { id: 3, term: "SWOT Analiz", match: "Strengths, Weaknesses, Opportunities, Threats" },
-    { id: 4, term: "Shifokor Qoidasi", match: "Avval analitik tashxis, keyin reklama" },
-    { id: 5, term: "Hook (Ilmoq)", match: "Dastlabki 3 soniyada e'tiborni ushlash" },
-    { id: 6, term: "Mukammal Prompt", match: "Rol + Kontekst + Maqsad + Format" }
-  ];
+function MatchMasterGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
+  const MATCH_BANKS = {
+    easy: [
+      { id: 1, term: "Domino's Pizza", match: "30 minutda pitsa / bepul" },
+      { id: 2, term: "AIDA Formulasi", match: "Attention, Interest, Desire, Action" },
+      { id: 3, term: "SWOT Analiz", match: "Strengths, Weaknesses, Opportunities, Threats" },
+      { id: 4, term: "Shifokor Qoidasi", match: "Avval analitik tashxis, keyin reklama" },
+      { id: 5, term: "Hook (Ilmoq)", match: "Dastlabki 3 soniyada e'tiborni ushlash" },
+      { id: 6, term: "Mukammal Prompt", match: "Rol + Kontekst + Maqsad + Format" }
+    ],
+    medium: [
+      { id: 1, term: "Facebook Ad Library", match: "Raqobatchilar faol reklamalari josusligi" },
+      { id: 2, term: "Formula 1 UTP", match: "Mijoz + Natija + Vaqt + Qanday qilib" },
+      { id: 3, term: "Egri Raqobatchi", match: "Boshqa mahsulot orqali bitta muammoni hal qiluvchi" },
+      { id: 4, term: "80/20 Qoidasi", match: "80% AI karkasi + 20% insoniy odamchalashtirish" },
+      { id: 5, term: "SMMchi Sanjar", match: "Avatar timsoli (23 yosh, 3 mln oylik)" },
+      { id: 6, term: "FOMO Triggeri", match: "Imkoniyatni boy berish qo'rquvi" },
+      { id: 7, term: "Status Triggeri", match: "Jamiyatdagi o me'yorda obro' va Ego xohishi" },
+      { id: 8, term: "Pozitsiyalash", match: "Brend nomi eshitilganda mijoz tasavvuri" }
+    ],
+    hard: [
+      { id: 1, term: "Attention (AIDA)", match: "1-3 soniyalik kuchli Hook/Ilmoq" },
+      { id: 2, term: "Interest (AIDA)", match: "Muammoni kattalashtirib tushunish" },
+      { id: 3, term: "Desire (AIDA)", match: "Yechim va UTP taklifi" },
+      { id: 4, term: "Action (AIDA)", match: "1 ta aniq harakatga undash buyrug'i" },
+      { id: 5, term: "Table Read", match: "Ssenariyni ovoz chiqarib tahrirlash" },
+      { id: 6, term: "130-150 So'z Qoidasi", match: "1 minutlik video matn me'yori" },
+      { id: 7, term: "B-roll Stock", match: "Insonsiz kadr orti videolari prompti" },
+      { id: 8, term: "Call to Action", match: "Directga yozing / Obuna bo'ling" },
+      { id: 9, term: "Mystery Shopping", match: "Sirli xaridor bo'lib tahlil qilish" },
+      { id: 10, term: "Sun Szi Iqtibosi", match: "Dushmaningni bilsang ming jangda yengilmaysan" }
+    ]
+  };
+
+  const currentPairs = MATCH_BANKS[currentLevel] || MATCH_BANKS.easy;
 
   const [cards, setCards] = useState([]);
   const [selectedCards, setSelectedCards] = useState([]);
@@ -626,15 +1004,14 @@ function MatchMasterGame({ onComplete, onBack }) {
 
   useEffect(() => {
     initGame();
-  }, []);
+  }, [currentLevel]);
 
   const initGame = () => {
     const list = [];
-    PAIRS.forEach(p => {
+    currentPairs.forEach(p => {
       list.push({ cardId: `term-${p.id}`, pairId: p.id, text: p.term, type: 'term' });
       list.push({ cardId: `match-${p.id}`, pairId: p.id, text: p.match, type: 'match' });
     });
-    // Shuffle
     setCards(list.sort(() => Math.random() - 0.5));
     setSelectedCards([]);
     setMatchedIds([]);
@@ -651,33 +1028,42 @@ function MatchMasterGame({ onComplete, onBack }) {
     if (newSelected.length === 2) {
       setMoves(prev => prev + 1);
       if (newSelected[0].pairId === newSelected[1].pairId && newSelected[0].type !== newSelected[1].type) {
-        // Correct match!
         setMatchedIds(prev => [...prev, card.pairId]);
         setSelectedCards([]);
-        if (matchedIds.length + 1 === PAIRS.length) {
+        if (matchedIds.length + 1 === currentPairs.length) {
           setCompleted(true);
-          onComplete(15, "Match Master o'yinida barcha juftliklarni topganingiz uchun", 'match');
+          const stars = moves <= currentPairs.length + 3 ? 3 : moves <= currentPairs.length + 6 ? 2 : 1;
+          onSaveProgress(currentLevel, stars);
+
+          const baseCoin = currentLevel === 'easy' ? 10 : currentLevel === 'medium' ? 15 : 25;
+          onComplete(baseCoin, `Match Master (${currentLevel.toUpperCase()}) da ${moves} ta urinish uchun`, `match_${currentLevel}`);
         }
       } else {
-        // Wrong match
         setTimeout(() => setSelectedCards([]), 1000);
       }
     }
   };
 
   return (
-    <div className="bg-dark-900/80 border border-emerald-500/30 rounded-3xl p-6 md:p-8 space-y-6">
+    <div className="bg-dark-900/80 border border-emerald-500/30 rounded-3xl p-6 md:p-8 space-y-6 backdrop-blur-xl">
+      {/* Level Selector */}
+      <LevelSelector 
+        currentLevel={currentLevel}
+        onLevelChange={onLevelChange}
+        progress={levelProgress}
+      />
+
       <div className="flex items-center justify-between border-b border-dark-800 pb-4">
         <button onClick={onBack} className="text-dark-400 hover:text-white text-xs font-semibold flex items-center gap-1">
           ← Menuga qaytish
         </button>
         <div className="text-sm font-bold text-white">
-          Urinishlar: <span className="text-emerald-400">{moves}</span> | Topildi: <span className="text-emerald-400">{matchedIds.length} / {PAIRS.length}</span>
+          Urinishlar: <span className="text-emerald-400">{moves}</span> | Topildi: <span className="text-emerald-400">{matchedIds.length} / {currentPairs.length}</span>
         </div>
       </div>
 
       {!completed ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className={`grid gap-3 ${currentPairs.length > 8 ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'}`}>
           {cards.map(card => {
             const isMatched = matchedIds.includes(card.pairId);
             const isSelected = selectedCards.some(c => c.cardId === card.cardId);
@@ -691,7 +1077,7 @@ function MatchMasterGame({ onComplete, onBack }) {
                   isMatched
                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 cursor-default opacity-80'
                     : isSelected
-                    ? 'bg-purple-600 border-purple-400 text-white scale-105 shadow-lg shadow-purple-600/30'
+                    ? 'bg-purple-600 border-purple-400 text-white scale-105 shadow-lg shadow-purple-600/30 font-bold'
                     : 'bg-dark-800/80 border-dark-700 text-dark-200 hover:border-emerald-500/50 hover:bg-dark-700'
                 }`}
               >
@@ -711,7 +1097,7 @@ function MatchMasterGame({ onComplete, onBack }) {
           </div>
 
           <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-300 text-sm font-bold">
-            🎉 +15 KasbCoin Hisobingizga Qo'shildi!
+            🎉 KasbCoin Mukofoti Hisobingizga O'tkazildi!
           </div>
 
           <div className="flex gap-3 justify-center">
@@ -733,84 +1119,93 @@ function MatchMasterGame({ onComplete, onBack }) {
 }
 
 /* =========================================================================
-   GAME 3 COMPONENT: AI MARKETER SIMULATOR
+   GAME 3 COMPONENT: AI MARKETER SIMULATOR (WITH 3 DIFFICULTY SCENARIOS)
    ========================================================================= */
-function SimulatorGame({ onComplete, onBack }) {
-  const SCENARIOS = [
-    {
-      id: 1,
-      title: "1-Keys: Jizzaxdagi erkaklar kiyim do'koni sotuvini 3x ga oshirish",
+function SimulatorGame({ currentLevel, onLevelChange, levelProgress, onSaveProgress, onComplete, onBack }) {
+  const SCENARIOS_BANK = {
+    easy: {
+      title: "🟢 Boshlang'ich Keys: Onlayn Kitob Do'koni Savdosini Oshirish",
+      context: "Do'konda sifatli kitoblar bor, lekin foydalanuvchilar faqat Instagramda rasm ko'rib o'tib ketishmoqda.",
+      options: [
+        {
+          text: "A) Reklamaga: 'Eng arzon va sifatli kitoblar bizda' deb oddiy e'lon joylash",
+          score: 35,
+          feedback: "Natija past. Arzon so'zi UTP hisoblanmaydi va qiymat bermaydi."
+        },
+        {
+          text: "B) Hook: 'Kitob o'qishga vaqt topsha olmayapsizmi?' + UTP: 'Kuniga 15 daqiqada 1 ta kitob mazmunini o'rgatuvchi audiolari bilan birga yetkazamiz'",
+          score: 100,
+          feedback: "A'lo natija! Vaqt yetishmasligi og'rig me'yoriga va audio bonus taklifiga zarba berildi!"
+        }
+      ]
+    },
+    medium: {
+      title: "🟡 O'rta Keys: Jizzaxdagi Erkaklar Kiyim Do'koni Savdosini 3x ga Oshirish",
       context: "Do'konda sifatli kostyum-shimlar bor, lekin mijozlar faqat narx so'rab kelib ketishmoqda.",
       options: [
         {
-          text: "A) Reklamaga: 'Eng arzon va sifatli kostyumlar bizda' deb rasm qo'yish",
-          score: 30,
-          feedback: "Natija past! Arzon degan so'z mijozda shubha uyg'otadi va brendni 'poddelka' qilib ko'rsatadi."
-        },
-        {
-          text: "B) Hook: 'Muhim uchrashuvda 1-taassurotni boy bermaslik siri!' + UTP: 'Agar o'lcham tushmasa, 24 soatda almashtirib beramiz'",
+          text: "A) Hook: 'Muhim uchrashuvda 1-taassurotni boy bermaslik siri!' + UTP: 'O'lcham tushmasa, 24 soatda almashtirib beramiz'",
           score: 100,
-          feedback: "A'lo strategiya! Status (Ego) triggeri va almashtirish kafolati mijozning qo'rquvini bittada yengdi! ROI +320%"
+          feedback: "A'lo strategiya! Status (Ego) triggeri va almashtirish kafolati mijoz qo'rquvini bittada yengdi! ROI +320%"
         },
         {
-          text: "C) 10 daqiqalik uzun video chiqarib barcha matolarni tushuntirish",
+          text: "B) 10 daqiqalik uzun video chiqarib barcha matolarni kitobiy tushuntirish",
           score: 40,
           feedback: "Videoni hech kim oxirigacha ko'rmaydi. 3 soniya qoidasi buzildi."
         }
       ]
     },
-    {
-      id: 2,
-      title: "2-Keys: AI + Digital Marketing kursiga talabalarni jalb qilish",
-      context: "Bozorda eski SMM kurslari ko'p. Talabalar 'AI o'rganish qiyin bo'lsa-chi?' deb qo'rqishmoqda.",
+    hard: {
+      title: "🔴 Qiyin Keys: Kasbtech AI + Digital Marketing Kursi Reklama Kampaniyasi",
+      context: "Bozorda eski zerikarli SMM kurslari ko'p. Talabalar 'AI o'rganish murakkab bo'lsa-chi?' deb qo'rqishmoqda.",
       options: [
         {
-          text: "A) Hook: 'SMM o'rganish — vaqtni bekorga sarflash. Agar AI ishlatmasangiz!' + AI prompt orqali 30 daqiqada video tayyorlashni ko'rsatish",
+          text: "A) Hook: 'SMM o'rganish — vaqtni bekorga sarflash. Agar unda Sun'iy Intellektni ishlatmasangiz!' + Table Read qilingan 45s ssenariy va 2 ustunli B-roll Vizual prompti",
           score: 100,
-          feedback: "Dahshatli natija! Shok fakt Hook va amaliy yechim talabalarning vaqt yetishmasligi og'rig'iga aniq tegdi!"
+          feedback: "Mukammal strategiya! Shok fakt Hook, AIDA tuzilmasi hamda Table Read odamchalashtirishi sotuvni 4.5x ga oshirdi!"
         },
         {
-          text: "B) 'Bizning o'quv markazimiz 5 yildan beri ishlaydi, keling o'qing' deb e'lon joylash",
-          score: 35,
-          feedback: "Buni hamma aytadi. Zerikarli va UTP mutlaqo yo'q."
+          text: "B) 'Biz 5 yildan beri ishlaymiz, keling o'qing' deb e'lon joylash",
+          score: 30,
+          feedback: "Buni hamma aytadi. UTP va e'tibor ushlash mutlaqo yo'q."
         }
       ]
     }
-  ];
+  };
 
-  const [scenarioIndex, setScenarioIndex] = useState(0);
+  const currentScen = SCENARIOS_BANK[currentLevel] || SCENARIOS_BANK.easy;
   const [selectedOption, setSelectedOption] = useState(null);
-  const [totalScore, setTotalScore] = useState(0);
   const [completed, setCompleted] = useState(false);
 
-  const handleSelectOption = (opt) => {
-    setSelectedOption(opt);
-  };
+  useEffect(() => {
+    setSelectedOption(null);
+    setCompleted(false);
+  }, [currentLevel]);
 
   const handleNext = () => {
-    const addedScore = selectedOption ? selectedOption.score : 0;
-    const newTotal = totalScore + addedScore;
-    setTotalScore(newTotal);
+    setCompleted(true);
+    const stars = selectedOption?.score >= 90 ? 3 : 1;
+    onSaveProgress(currentLevel, stars);
 
-    if (scenarioIndex + 1 < SCENARIOS.length) {
-      setScenarioIndex(prev => prev + 1);
-      setSelectedOption(null);
-    } else {
-      setCompleted(true);
-      onComplete(20, "AI Marketer Simulator strategik keyslarini muvaffaqiyatli bajarganingiz uchun", 'simulator');
-    }
+    const baseCoins = currentLevel === 'easy' ? 15 : currentLevel === 'medium' ? 20 : 30;
+    onComplete(baseCoins, `AI Marketer Simulator (${currentLevel.toUpperCase()}) keysi muvaffaqiyati uchun`, `simulator_${currentLevel}`);
   };
 
-  const currentScen = SCENARIOS[scenarioIndex];
-
   return (
-    <div className="bg-dark-900/80 border border-cyan-500/30 rounded-3xl p-6 md:p-8 space-y-6">
+    <div className="bg-dark-900/80 border border-cyan-500/30 rounded-3xl p-6 md:p-8 space-y-6 backdrop-blur-xl">
+      {/* Level Selector */}
+      <LevelSelector 
+        currentLevel={currentLevel}
+        onLevelChange={onLevelChange}
+        progress={levelProgress}
+      />
+
       <div className="flex items-center justify-between border-b border-dark-800 pb-4">
         <button onClick={onBack} className="text-dark-400 hover:text-white text-xs font-semibold flex items-center gap-1">
           ← Menuga qaytish
         </button>
         <div className="text-sm font-bold text-white">
-          Keys: <span className="text-cyan-400">{scenarioIndex + 1} / {SCENARIOS.length}</span>
+          Daraja: <span className="text-cyan-400 uppercase">{currentLevel}</span>
         </div>
       </div>
 
@@ -819,7 +1214,7 @@ function SimulatorGame({ onComplete, onBack }) {
           <div className="bg-dark-800/60 border border-dark-700 p-5 rounded-2xl space-y-2">
             <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">STRATEGIK BOSH MARKETOLOG VAZIFASI</span>
             <h3 className="text-lg font-bold text-white">{currentScen.title}</h3>
-            <p className="text-dark-300 text-sm">{currentScen.context}</p>
+            <p className="text-dark-300 text-sm leading-relaxed">{currentScen.context}</p>
           </div>
 
           <div className="space-y-3">
@@ -829,10 +1224,10 @@ function SimulatorGame({ onComplete, onBack }) {
               return (
                 <button
                   key={idx}
-                  onClick={() => handleSelectOption(opt)}
+                  onClick={() => setSelectedOption(opt)}
                   className={`w-full p-4 rounded-xl border text-left text-sm transition-all ${
                     isSelected 
-                      ? 'bg-cyan-600/20 border-cyan-500 text-white font-semibold' 
+                      ? 'bg-cyan-600/20 border-cyan-500 text-white font-bold' 
                       : 'bg-dark-800/40 border-dark-700 text-dark-200 hover:bg-dark-700/60'
                   }`}
                 >
@@ -854,9 +1249,9 @@ function SimulatorGame({ onComplete, onBack }) {
             <button
               disabled={!selectedOption}
               onClick={handleNext}
-              className="px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-600 disabled:opacity-40 text-dark-950 font-bold text-sm transition-colors flex items-center gap-2"
+              className="px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-600 disabled:opacity-40 text-dark-950 font-extrabold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-cyan-500/20"
             >
-              <span>Keyingi Keysga O'tish</span>
+              <span>Natijani Ko'rish</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -867,20 +1262,18 @@ function SimulatorGame({ onComplete, onBack }) {
             🚀
           </div>
           <div>
-            <h3 className="text-2xl font-extrabold text-white">AI Marketolog Simulyatsiyasi Yakunlandi!</h3>
-            <p className="text-dark-300 text-sm mt-1">Siz muvaffaqiyatli strategiyalar tuzib +{totalScore} ball to'pladingiz!</p>
+            <h3 className="text-2xl font-extrabold text-white">AI Marketer Simulyatsiyasi Yakunlandi!</h3>
+            <p className="text-dark-300 text-sm mt-1">Siz muvaffaqiyatli strategik qaror qabul qildingiz!</p>
           </div>
 
           <div className="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-300 text-sm font-bold">
-            🎉 +20 KasbCoin Mukofoti Taqdim Etildi!
+            🎉 KasbCoin Mukofoti Hisobingizga Qo'shildi!
           </div>
 
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => {
-                setScenarioIndex(0);
                 setSelectedOption(null);
-                setTotalScore(0);
                 setCompleted(false);
               }}
               className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-dark-950 font-bold text-sm flex items-center gap-2"
