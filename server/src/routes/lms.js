@@ -2033,9 +2033,6 @@ ${combinedContextText}
       } else {
         aiReply = `🤖 **Mentor Kasbtech Bot**\n\nKasbtech Akademiyasining AI Mentori sifatida sizga yordam berishdan xursandman! Ushbu mavzu bo'yicha batafsil ma'lumotlar platformadagi kurs darslarida va amaliy qo'llanmalarda tushuntirib o'tilgan. Savolingiz bo'yicha qo'shimcha tushuncha kerak bo'lsa, o'z ustozingizga yoki akademiya administratorlariga murojaat qilishingiz mumkin.`;
       }
-    }cha qo'shimcha tushuncha kerak bo'lsa, o'z ustozingizga yoki akademiya administratorlariga murojaat qilishingiz mumkin.`;
-        }
-      }
     }
 
     res.json({ reply: aiReply });
