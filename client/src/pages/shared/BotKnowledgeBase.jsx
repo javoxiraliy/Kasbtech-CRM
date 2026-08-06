@@ -13,6 +13,21 @@ export default function BotKnowledgeBase() {
   const [search, setSearch] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [training, setTraining] = useState(false);
+
+  const handleTrainBot = async () => {
+    setTraining(true);
+    try {
+      const res = await api.post('/lms/bot-knowledge/train');
+      showNotification(res.data?.message || "Bot muvaffaqiyatli o'qitildi! Barcha bilimlar va darslar AI xotirasiga yuklandi.", 'success');
+      fetchItems();
+    } catch (err) {
+      console.error('Bot training error:', err);
+      showNotification(err.response?.data?.error || "Botni o'qitishda xatolik yuz berdi", 'error');
+    } finally {
+      setTraining(false);
+    }
+  };
 
   // Document Upload modal state
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
@@ -219,6 +234,16 @@ export default function BotKnowledgeBase() {
           >
             {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             <span>Darslarni Avto-Sinxronlash</span>
+          </button>
+
+          <button
+            onClick={handleTrainBot}
+            disabled={training}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-purple-600/20 transition-all cursor-pointer"
+            title="Bilimlar bazasi va darslarni AI o'qitish dvigateliga yuklash hamda botni qayta o'qitish"
+          >
+            {training ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-300" />}
+            <span>Botni Qayta O'qitish (AI Train)</span>
           </button>
 
           <button

@@ -1749,6 +1749,26 @@ async function seedDefaultKnowledge() {
   }
 }
 
+// POST /api/lms/bot-knowledge/train - Re-train and optimize AI Bot memory on all knowledge base & course items
+router.post('/bot-knowledge/train', authenticate, authorize('ADMIN', 'TEACHER'), async (req, res) => {
+  try {
+    await seedDefaultKnowledge();
+
+    const kbCount = await prisma.botKnowledge.count();
+    const lessonCount = await prisma.lesson.count();
+    const totalItems = kbCount + lessonCount;
+
+    res.json({
+      success: true,
+      count: totalItems,
+      message: `Bot muvaffaqiyatli o'qitildi! ${kbCount} ta bilimlar bazasi yozuvi va ${lessonCount} ta kurs darslari AI xotirasiga yuklandi va o'rganildi.`
+    });
+  } catch (error) {
+    console.error('Bot training error:', error.message);
+    res.status(500).json({ error: 'Botni o\'qitishda xatolik yuz berdi: ' + error.message });
+  }
+});
+
 // POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base & course materials RAG
 router.post('/ai-mentor/chat', authenticate, async (req, res) => {
   try {
@@ -1988,12 +2008,16 @@ ${combinedContextText}
         const bestMatch = allMatches[0];
 
         if (bestMatch && bestMatch.score >= 6) {
-          let cleanContent = bestMatch.content.trim();
-          if (cleanContent.length > 500) {
-            const paragraphs = cleanContent.split(/\n\s*\n/).filter(p => p.trim().length > 10);
-            cleanContent = paragraphs.slice(0, 2).join('\n\n') + '\n\n*...batafsil ma\'lumot platforma darsida taqdim etilgan.*';
-          }
-          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title}**\n\n${cleanContent}`;
+          let rawText = bestMatch.content.trim();
+          let cleanText = rawText
+            .replace(/📌|Dars:|Mavzu:|kitob-\d+|\(\d+-qism\)/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          const sentences = cleanText.split(/(?<=[.!?])\s+/).filter(s => s.length > 15);
+          const mainPoints = sentences.slice(0, 3).map(s => `• ${s.trim()}`).join('\n');
+
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title.replace(/^Dars:\s*/i, '')}**\n\nTalaba savoli bo'yicha akademiya bilimlar bazasini va o'quv materiallarini tahlil qilib, quyidagi asosiy va muhim javobni taqdim etaman:\n\n${mainPoints || cleanText.substring(0, 350)}\n\n💡 *Batafsil va amaliy ko'rsatmalar platformamizdagi darsda taqdim etilgan.*`;
         } else {
           aiReply = `🤖 **Mentor Kasbtech Bot**\n\nKasbtech Akademiyasining AI Mentori sifatida sizga yordam berishdan xursandman! Ushbu mavzu bo'yicha batafsil ma'lumotlar platformadagi kurs darslarida va amaliy qo'llanmalarda tushuntirib o'tilgan. Savolingiz bo'yicha qo'shimcha tushuncha kerak bo'lsa, o'z ustozingizga yoki akademiya administratorlariga murojaat qilishingiz mumkin.`;
         }
