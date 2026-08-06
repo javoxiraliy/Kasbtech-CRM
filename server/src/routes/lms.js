@@ -1839,47 +1839,66 @@ ${combinedContextText}
       }
     }
 
-    // Fallback: Smart Semantic Relevance Synthesizer Engine
+    // Fallback: Smart Intent Classifier & Summarizer Engine
     if (!aiReply) {
-      console.log('Using Smart Semantic Relevance Synthesizer Engine...');
+      console.log('Using Smart Intent Classifier & Summarizer Engine...');
       
       const queryClean = message.toLowerCase().trim();
-      const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
-      const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar']);
-      const keyWords = rawWords.filter(w => !stopWords.has(w));
 
-      function calcScore(text) {
-        if (!text) return 0;
-        const lower = text.toLowerCase();
-        let s = 0;
-        if (lower.includes(queryClean)) s += 10;
-        keyWords.forEach(kw => {
-          if (lower.includes(kw)) s += 3;
-        });
-        return s;
+      // 1. Intent: Career / Job / Income after course completion
+      if (/ish|daromad|kasb|frilanser|tugatib|so'ng|pul|agentlik|daromadga/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot**\n\nKasbtech Akademiyasining ushbu kursini muvaffaqiyatli tamomlab, siz quyidagi yo'nalishlarda ishlashingiz va daromad qilishingiz mumkin:\n\n1. **Digital Marketing va SMM Mutaxassisi**: Kompaniyalar va shaxsiy brendlar uchun marketing strategiyalarini tuzish hamda ijtimoiy tarmoqlarni yuritish.\n2. **Targetolog (Reklama Menejeri)**: Meta (Instagram/Facebook) platformalarida maqsadli auditoriyaga reklamalar yoqish va sotuvlar konversiyasini oshirish.\n3. **AI va Frilanser**: Zamonaviy Sun'iy Intellekt vositalaridan foydalanib masofaviy loyihalarda ishlash yoki shaxsiy agentlik ochish.`;
       }
+      // 2. Intent: Homework / Submissions
+      else if (/vazifa|topshiriq|yuklash|topshirish|tekshirish|baholash/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Uy vazifasini topshirish tartibi:**\n\n1. Dars sahifasiga kirib, dars pastidagi **'Uy vazifasi'** bo'limini ochasiz.\n2. Bajarilgan amaliy topshiriq faylingizni (rasm, PDF, arxiv yoki hujjat) yuklaysiz va izohingizni qoldirasiz.\n3. **'Vazifani topshirish'** tugmasini bosing.\n4. Ustozingiz vazifangizni tekshirib, 'Tasdiqlandi' (APPROVED) holatiga o'tkazgach, keyingi dars avtomatik ochiladi.`;
+      }
+      // 3. Intent: Progression / Rules
+      else if (/tartib|o'zlashtirish|ochiladi|keyingi|bosqich|qoida/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Darslarni o'zlashtirish va tartib qoidalari:**\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriqni bajarib platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz topshiriqni tekshirib tasdiqlagach, keyingi dars qulfdan ochiladi.`;
+      }
+      // 4. Score matching against KB Items & Lessons
+      else {
+        const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
+        const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar', 'men']);
+        const keyWords = rawWords.filter(w => !stopWords.has(w));
 
-      // Score KB Items
-      const scoredKB = kbItems.map(item => ({
-        title: item.topic,
-        content: item.content,
-        score: calcScore(`${item.topic} ${item.question || ''} ${item.content}`)
-      }));
+        function calcScore(text) {
+          if (!text) return 0;
+          const lower = text.toLowerCase();
+          let s = 0;
+          if (lower.includes(queryClean)) s += 10;
+          keyWords.forEach(kw => {
+            if (lower.includes(kw)) s += 3;
+          });
+          return s;
+        }
 
-      // Score Lessons
-      const scoredLessons = lessons.map(l => ({
-        title: `Dars: ${l.title}`,
-        content: l.description || `${l.title} darsi bo'yicha o'quv materiali.`,
-        score: calcScore(`${l.title} ${l.description || ''} ${l.module?.title || ''}`)
-      }));
+        const scoredKB = kbItems.map(item => ({
+          title: item.topic,
+          content: item.content,
+          score: calcScore(`${item.topic} ${item.question || ''} ${item.content}`)
+        }));
 
-      const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
-      const bestMatch = allMatches[0];
+        const scoredLessons = lessons.map(l => ({
+          title: `Dars: ${l.title}`,
+          content: l.description || `${l.title} darsi bo'yicha o'quv materiali.`,
+          score: calcScore(`${l.title} ${l.description || ''} ${l.module?.title || ''}`)
+        }));
 
-      if (bestMatch && bestMatch.score >= 3) {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title}**\n\n${bestMatch.content}`;
-      } else {
-        aiReply = "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda va kurs darslarida aniq ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.";
+        const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
+        const bestMatch = allMatches[0];
+
+        if (bestMatch && bestMatch.score >= 3) {
+          let cleanContent = bestMatch.content.trim();
+          if (cleanContent.length > 500) {
+            const paragraphs = cleanContent.split(/\n\s*\n/).filter(p => p.trim().length > 10);
+            cleanContent = paragraphs.slice(0, 2).join('\n\n') + '\n\n*...batafsil ma\'lumot platforma darsida taqdim etilgan.*';
+          }
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title}**\n\n${cleanContent}`;
+        } else {
+          aiReply = "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda va kurs darslarida aniq ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.";
+        }
       }
     }
 
