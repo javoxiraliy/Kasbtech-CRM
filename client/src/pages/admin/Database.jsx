@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Download, Upload, FileSpreadsheet, Search, Loader2, Edit2, Trash2, X, Plus } from 'lucide-react';
+import { Download, Upload, FileSpreadsheet, Search, Loader2, Edit2, Trash2, X, Plus, UserPlus, CheckSquare, Square } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -76,6 +76,16 @@ export default function Database() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   
+  // Import Modal & Operator Assignment state
+  const [isImportAssignModalOpen, setIsImportAssignModalOpen] = useState(false);
+  const [selectedImportFile, setSelectedImportFile] = useState(null);
+  const [selectedImportOperatorIds, setSelectedImportOperatorIds] = useState([]);
+
+  // Bulk Assignment Modal state
+  const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
+  const [selectedBulkOperatorIds, setSelectedBulkOperatorIds] = useState([]);
+  const [assigning, setAssigning] = useState(false);
+
   const fileInputRef = useRef(null);
   const { addNotification } = useNotification();
 
@@ -92,7 +102,10 @@ export default function Database() {
   const fetchOperators = async () => {
     try {
       const res = await api.get('/admin/users');
-      setOperators(res.data.users.filter(u => u.role === 'OPERATOR'));
+      const ops = res.data.users.filter(u => u.role === 'OPERATOR');
+      setOperators(ops);
+      setSelectedImportOperatorIds(ops.map(o => o.id));
+      setSelectedBulkOperatorIds(ops.map(o => o.id));
     } catch (error) {
       console.error('Fetch operators error:', error);
     }
@@ -161,12 +174,24 @@ export default function Database() {
     }
   };
 
-  const handleImport = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setSelectedImportFile(file);
+    setSelectedImportOperatorIds(operators.map(o => o.id));
+    setIsImportAssignModalOpen(true);
+  };
+
+  const handleConfirmImport = async () => {
+    if (!selectedImportFile) return;
+    if (selectedImportOperatorIds.length === 0) {
+      addNotification('warning', "Kamida bitta operatorni tanlashingiz shart");
+      return;
+    }
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', selectedImportFile);
+    formData.append('operatorIds', JSON.stringify(selectedImportOperatorIds));
 
     setImporting(true);
     try {
@@ -174,6 +199,8 @@ export default function Database() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       addNotification('success', res.data.message);
+      setIsImportAssignModalOpen(false);
+      setSelectedImportFile(null);
       fetchLeads();
     } catch (error) {
       const errorMsg = error.response?.data?.details || error.response?.data?.error || "Import qilishda xatolik yuz berdi";
@@ -181,6 +208,30 @@ export default function Database() {
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmBulkAssign = async () => {
+    if (selectedIds.length === 0) return;
+    if (selectedBulkOperatorIds.length === 0) {
+      addNotification('warning', "Kamida bitta operatorni tanlang");
+      return;
+    }
+
+    setAssigning(true);
+    try {
+      const res = await api.post('/leads/bulk-assign', {
+        ids: selectedIds,
+        operatorIds: selectedBulkOperatorIds
+      });
+      addNotification('success', res.data.message);
+      setIsBulkAssignModalOpen(false);
+      setSelectedIds([]);
+      fetchLeads();
+    } catch (error) {
+      addNotification('error', error.response?.data?.error || "Biriktirishda xatolik");
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -439,15 +490,27 @@ export default function Database() {
             )}
           </form>
           
-          <div className="text-sm text-dark-400 font-medium flex items-center justify-between lg:justify-end gap-4 shrink-0">
+          <div className="text-sm text-dark-400 font-medium flex items-center justify-between lg:justify-end gap-3 shrink-0">
             {selectedIds.length > 0 && (
-              <button 
-                onClick={handleBulkDelete}
-                className="text-red-400 hover:text-red-300 flex items-center gap-1 bg-red-500/10 px-2 py-1 rounded transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                Tanlanganlarni o'chirish ({selectedIds.length})
-              </button>
+              <>
+                <button 
+                  onClick={() => {
+                    setSelectedBulkOperatorIds(operators.map(o => o.id));
+                    setIsBulkAssignModalOpen(true);
+                  }}
+                  className="text-primary-400 hover:text-primary-300 flex items-center gap-1.5 bg-primary-500/10 hover:bg-primary-500/20 px-3 py-1.5 rounded-lg transition-colors font-medium text-xs"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Operatorga Biriktirish ({selectedIds.length})
+                </button>
+                <button 
+                  onClick={handleBulkDelete}
+                  className="text-red-400 hover:text-red-300 flex items-center gap-1 bg-red-500/10 px-2 py-1 rounded transition-colors text-xs"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  O'chirish ({selectedIds.length})
+                </button>
+              </>
             )}
             <div>Saralangan: <span className="text-white">{leads.length}</span> ta</div>
           </div>
@@ -890,6 +953,224 @@ export default function Database() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Excel Import - Operator Selection & Assignment Modal */}
+      {isImportAssignModalOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="card glass max-w-lg w-full p-6 space-y-6">
+            <div className="flex justify-between items-center border-b border-dark-800 pb-4">
+              <div className="flex items-center gap-2 text-primary-400">
+                <Upload className="w-5 h-5" />
+                <h3 className="text-lg font-bold text-white">Import va Operatorlarga Biriktirish</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsImportAssignModalOpen(false);
+                  setSelectedImportFile(null);
+                }} 
+                className="text-dark-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {selectedImportFile && (
+              <div className="bg-dark-900/60 p-3 rounded-lg border border-dark-800 text-xs text-dark-300 flex items-center justify-between">
+                <span className="font-mono text-white truncate max-w-[280px]">📄 {selectedImportFile.name}</span>
+                <span>{(selectedImportFile.size / 1024).toFixed(1)} KB</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-dark-300 uppercase tracking-wider">
+                  Ruxsat berilgan operatorlar: ({selectedImportOperatorIds.length}/{operators.length})
+                </label>
+                <div className="flex gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedImportOperatorIds(operators.map(o => o.id))}
+                    className="text-xs text-primary-400 hover:underline"
+                  >
+                    Barchasi
+                  </button>
+                  <span className="text-dark-600">|</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedImportOperatorIds([])}
+                    className="text-xs text-dark-400 hover:underline"
+                  >
+                    Tozalash
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                {operators.length === 0 ? (
+                  <p className="text-xs text-dark-500 italic">Faol operatorlar topilmadi.</p>
+                ) : (
+                  operators.map(op => {
+                    const isChecked = selectedImportOperatorIds.includes(op.id);
+                    return (
+                      <div 
+                        key={op.id}
+                        onClick={() => {
+                          if (isChecked) {
+                            setSelectedImportOperatorIds(selectedImportOperatorIds.filter(id => id !== op.id));
+                          } else {
+                            setSelectedImportOperatorIds([...selectedImportOperatorIds, op.id]);
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                          isChecked 
+                            ? 'bg-primary-500/10 border-primary-500/50 text-white' 
+                            : 'bg-dark-900/40 border-dark-800 text-dark-400 hover:border-dark-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isChecked ? (
+                            <CheckSquare className="w-4 h-4 text-primary-400 shrink-0" />
+                          ) : (
+                            <Square className="w-4 h-4 text-dark-600 shrink-0" />
+                          )}
+                          <span className="text-sm font-medium">{op.name}</span>
+                        </div>
+                        <span className="text-xs text-dark-400 font-mono">{op.email}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {selectedImportOperatorIds.length > 0 && (
+                <p className="text-xs text-emerald-400 bg-emerald-500/10 p-2.5 rounded border border-emerald-500/20">
+                  💡 Yuklangan lidlar tanlangan <b>{selectedImportOperatorIds.length}</b> ta operator o'rtasida teng taqsimlanadi.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-4 flex gap-3 border-t border-dark-800">
+              <button 
+                type="button" 
+                onClick={() => {
+                  setIsImportAssignModalOpen(false);
+                  setSelectedImportFile(null);
+                }} 
+                className="flex-1 btn-secondary justify-center py-2.5"
+              >
+                Bekor qilish
+              </button>
+              <button 
+                type="button" 
+                onClick={handleConfirmImport} 
+                disabled={importing || selectedImportOperatorIds.length === 0} 
+                className="flex-1 btn-primary justify-center py-2.5 bg-primary-600 hover:bg-primary-700"
+              >
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tasdiqlash va Yuklash"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Operator Assignment Modal */}
+      {isBulkAssignModalOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="card glass max-w-lg w-full p-6 space-y-6">
+            <div className="flex justify-between items-center border-b border-dark-800 pb-4">
+              <div className="flex items-center gap-2 text-primary-400">
+                <UserPlus className="w-5 h-5" />
+                <h3 className="text-lg font-bold text-white">Operatorga Biriktirish ({selectedIds.length} ta lid)</h3>
+              </div>
+              <button onClick={() => setIsBulkAssignModalOpen(false)} className="text-dark-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-dark-300 uppercase tracking-wider">
+                  Operatorlarni tanlang: ({selectedBulkOperatorIds.length}/{operators.length})
+                </label>
+                <div className="flex gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedBulkOperatorIds(operators.map(o => o.id))}
+                    className="text-xs text-primary-400 hover:underline"
+                  >
+                    Barchasi
+                  </button>
+                  <span className="text-dark-600">|</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedBulkOperatorIds([])}
+                    className="text-xs text-dark-400 hover:underline"
+                  >
+                    Tozalash
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                {operators.map(op => {
+                  const isChecked = selectedBulkOperatorIds.includes(op.id);
+                  return (
+                    <div 
+                      key={op.id}
+                      onClick={() => {
+                        if (isChecked) {
+                          setSelectedBulkOperatorIds(selectedBulkOperatorIds.filter(id => id !== op.id));
+                        } else {
+                          setSelectedBulkOperatorIds([...selectedBulkOperatorIds, op.id]);
+                        }
+                      }}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                        isChecked 
+                          ? 'bg-primary-500/10 border-primary-500/50 text-white' 
+                          : 'bg-dark-900/40 border-dark-800 text-dark-400 hover:border-dark-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isChecked ? (
+                          <CheckSquare className="w-4 h-4 text-primary-400 shrink-0" />
+                        ) : (
+                          <Square className="w-4 h-4 text-dark-600 shrink-0" />
+                        )}
+                        <span className="text-sm font-medium">{op.name}</span>
+                      </div>
+                      <span className="text-xs text-dark-400 font-mono">{op.email}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedBulkOperatorIds.length > 0 && (
+                <p className="text-xs text-emerald-400 bg-emerald-500/10 p-2.5 rounded border border-emerald-500/20">
+                  💡 Tanlangan {selectedIds.length} ta lid <b>{selectedBulkOperatorIds.length}</b> ta operator o'rtasida teng taqsimlanadi.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-4 flex gap-3 border-t border-dark-800">
+              <button 
+                type="button" 
+                onClick={() => setIsBulkAssignModalOpen(false)} 
+                className="flex-1 btn-secondary justify-center py-2.5"
+              >
+                Bekor qilish
+              </button>
+              <button 
+                type="button" 
+                onClick={handleConfirmBulkAssign} 
+                disabled={assigning || selectedBulkOperatorIds.length === 0} 
+                className="flex-1 btn-primary justify-center py-2.5"
+              >
+                {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : "Biriktirishni Tasdiqlash"}
+              </button>
+            </div>
           </div>
         </div>
       )}

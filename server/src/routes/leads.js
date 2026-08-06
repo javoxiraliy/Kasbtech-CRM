@@ -255,6 +255,50 @@ router.post('/bulk-delete', async (req, res) => {
   }
 });
 
+// POST /api/leads/bulk-assign - Bulk assign leads to operator(s) (admin only)
+router.post('/bulk-assign', async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const { ids, operatorId, operatorIds } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Lidlar tanlanmagan' });
+    }
+
+    if (operatorId) {
+      await prisma.lead.updateMany({
+        where: { id: { in: ids } },
+        data: { assignedToId: operatorId }
+      });
+      return res.json({ message: `${ids.length} ta lid operatorga biriktirildi` });
+    } else if (operatorIds && Array.isArray(operatorIds) && operatorIds.length > 0) {
+      const validOperators = await prisma.user.findMany({
+        where: { id: { in: operatorIds }, isActive: true },
+        select: { id: true }
+      });
+
+      if (validOperators.length === 0) {
+        return res.status(400).json({ error: 'Faol operatorlar topilmadi' });
+      }
+
+      for (let i = 0; i < ids.length; i++) {
+        const opId = validOperators[i % validOperators.length].id;
+        await prisma.lead.update({
+          where: { id: ids[i] },
+          data: { assignedToId: opId }
+        });
+      }
+      return res.json({ message: `${ids.length} ta lid ${validOperators.length} ta operatorga taqsimlandi` });
+    } else {
+      return res.status(400).json({ error: 'Operator tanlanmagan' });
+    }
+  } catch (error) {
+    console.error('Bulk assign error:', error);
+    res.status(500).json({ error: 'Lidlarni biriktirishda xatolik yuz berdi' });
+  }
+});
+
 // DELETE /api/leads/delete-all - Delete all leads (admin only)
 router.delete('/delete-all/confirmed', async (req, res) => {
   try {
@@ -427,10 +471,30 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
     });
     const slaMinutes = slaSetting ? parseInt(slaSetting.value) : 15;
 
-    const operators = await prisma.user.findMany({
-      where: { role: 'OPERATOR', isActive: true },
-      select: { id: true }
-    });
+    const { operatorIds } = req.body;
+    let targetOperatorIds = [];
+    if (operatorIds) {
+      try {
+        targetOperatorIds = typeof operatorIds === 'string' ? JSON.parse(operatorIds) : operatorIds;
+      } catch (e) {
+        if (typeof operatorIds === 'string') targetOperatorIds = operatorIds.split(',').map(s => s.trim());
+      }
+    }
+
+    let operators = [];
+    if (Array.isArray(targetOperatorIds) && targetOperatorIds.length > 0) {
+      operators = await prisma.user.findMany({
+        where: { id: { in: targetOperatorIds }, isActive: true },
+        select: { id: true }
+      });
+    }
+
+    if (operators.length === 0) {
+      operators = await prisma.user.findMany({
+        where: { role: 'OPERATOR', isActive: true },
+        select: { id: true }
+      });
+    }
     let operatorIndex = 0;
 
     const leads = [];

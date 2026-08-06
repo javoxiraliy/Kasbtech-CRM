@@ -68,7 +68,7 @@ function RoleBasedRedirect() {
     return <Navigate to="/student" replace />;
   }
   
-  if (user.role === 'TEACHER') {
+  if (user.role === 'TEACHER' || user.role === 'MENTOR') {
     return <Navigate to="/teacher" replace />;
   }
   
@@ -100,7 +100,7 @@ function App() {
             </Route>
 
             <Route path="/teacher" element={
-              <ProtectedRoute allowedRoles={['TEACHER']}>
+              <ProtectedRoute allowedRoles={['TEACHER', 'MENTOR', 'ADMIN']}>
                 <TeacherLayout />
               </ProtectedRoute>
             }>
