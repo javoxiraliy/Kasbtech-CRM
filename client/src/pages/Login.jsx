@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Key, Mail, Loader2, X, Eye, EyeOff } from 'lucide-react';
+import { Shield, Key, Mail, Loader2, X, Eye, EyeOff, UserCheck } from 'lucide-react';
 import api from '../lib/api';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -14,9 +14,85 @@ export default function Login() {
   const [deviceLimitError, setDeviceLimitError] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
   const [terminatingSessionId, setTerminatingSessionId] = useState(null);
-  const { login } = useAuth();
+  
+  // Google Auth Fallback Modal state
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleForm, setGoogleForm] = useState({ name: '', email: '' });
+
+  const { login, loginWithGoogle } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Load Google Identity Services SDK dynamically
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  const handleGoogleAuth = async (googlePayload) => {
+    setIsLoading(true);
+    try {
+      const user = await loginWithGoogle(googlePayload);
+      addNotification('success', `Google orqali kirdingiz: ${user.name}`);
+      if (user.role === 'ADMIN') navigate('/admin');
+      else if (user.role === 'TEACHER') navigate('/teacher');
+      else if (user.role === 'SMM') navigate('/smm');
+      else if (user.role === 'STUDENT') navigate('/student');
+      else navigate('/operator');
+    } catch (error) {
+      if (error.response?.data?.error === 'DEVICE_LIMIT_EXCEEDED') {
+        setDeviceLimitError(true);
+        setActiveSessions(error.response.data.sessions || []);
+        addNotification('warning', "Maksimal qurilmalar soniga yetdingiz");
+      } else {
+        addNotification('error', error.response?.data?.error || error.response?.data?.message || "Google orqali ro'yxatdan o'tishda xatolik");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const triggerGoogleSignIn = () => {
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "1029384756-example.apps.googleusercontent.com",
+        callback: (response) => {
+          if (response.credential) {
+            handleGoogleAuth({ credential: response.credential });
+          }
+        }
+      });
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          setShowGoogleModal(true);
+        }
+      });
+    } else {
+      setShowGoogleModal(true);
+    }
+  };
+
+  const handleGoogleModalSubmit = (e) => {
+    e.preventDefault();
+    if (!googleForm.email || !googleForm.name) {
+      addNotification('warning', "Email va ismingizni kiriting");
+      return;
+    }
+    setShowGoogleModal(false);
+    handleGoogleAuth({
+      email: googleForm.email,
+      name: googleForm.name
+    });
+  };
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -35,6 +111,8 @@ export default function Login() {
         navigate('/teacher');
       } else if (user.role === 'SMM') {
         navigate('/smm');
+      } else if (user.role === 'STUDENT') {
+        navigate('/student');
       } else {
         navigate('/operator');
       }
@@ -63,7 +141,6 @@ export default function Login() {
       setDeviceLimitError(false);
       setActiveSessions([]);
       
-      // Attempt login again automatically
       const user = await login(email, password);
       addNotification('success', 'Tizimga muvaffaqiyatli kirdingiz');
       if (user.role === 'ADMIN') {
@@ -72,6 +149,8 @@ export default function Login() {
         navigate('/teacher');
       } else if (user.role === 'SMM') {
         navigate('/smm');
+      } else if (user.role === 'STUDENT') {
+        navigate('/student');
       } else {
         navigate('/operator');
       }
@@ -97,14 +176,40 @@ export default function Login() {
             <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 to-purple-500/20" />
             <Shield className="w-8 h-8 text-primary-400 relative z-10" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Kasbtech CRM</h1>
-          <p className="text-dark-400">Tizimga kirish uchun ma'lumotlaringizni kiriting</p>
+          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Kasbtech Platformasi</h1>
+          <p className="text-dark-400">Tizimga kirish va talabalar ro'yxatdan o'tishi</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card glass relative overflow-hidden group">
+        <div className="card glass relative overflow-hidden group space-y-5">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-purple-500 transform origin-left transition-transform duration-300 scale-x-0 group-hover:scale-x-100" />
           
-          <div className="space-y-4 pt-2">
+          {/* Google Auth Button */}
+          <div>
+            <button
+              type="button"
+              onClick={triggerGoogleSignIn}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white hover:bg-gray-100 text-gray-800 font-bold text-sm transition-all duration-200 shadow-lg hover:shadow-xl active:scale-98 border border-gray-200"
+            >
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Google orqali ro'yxatdan o'tish / Kirish</span>
+            </button>
+            <p className="text-[11px] text-center text-primary-300 mt-2 font-medium">
+              Talabalar Google orqali bepul ro'yxatdan o'tib, bepul kurslarni tomosha qilishlari mumkin!
+            </p>
+          </div>
+
+          <div className="relative flex items-center justify-center my-2">
+            <div className="border-t border-dark-700 w-full" />
+            <span className="bg-dark-900 px-3 text-[11px] text-dark-400 uppercase font-extrabold relative z-10 tracking-widest">yoki email orqali</span>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="label">Email manzil</label>
               <div className="relative">
@@ -114,7 +219,7 @@ export default function Login() {
                 <input
                   type="email"
                   className="input pl-10"
-                  placeholder="admin@crm.uz"
+                  placeholder="student@kasbtech.uz"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -164,8 +269,8 @@ export default function Login() {
                 'Tizimga kirish'
               )}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
 
         <div className="mt-8 text-center text-sm text-dark-500">
           <p>Tizimga kirishda muammo bormi?</p>
@@ -226,6 +331,67 @@ export default function Login() {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Google Auth Quick Sign-Up Modal */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop animate-fade-in">
+          <div className="card glass w-full max-w-md overflow-hidden shadow-2xl relative p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                Google orqali ro'yxatdan o'tish
+              </h3>
+              <button onClick={() => setShowGoogleModal(false)} className="text-dark-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleGoogleModalSubmit} className="space-y-4">
+              <div>
+                <label className="label">F.I.SH. (Ism va Familiya)</label>
+                <input
+                  type="text"
+                  required
+                  className="input bg-dark-800"
+                  placeholder="Jasur Rahimov"
+                  value={googleForm.name}
+                  onChange={(e) => setGoogleForm({ ...googleForm, name: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="label">Google Email Manzilingiz</label>
+                <input
+                  type="email"
+                  required
+                  className="input bg-dark-800"
+                  placeholder="jasur@gmail.com"
+                  value={googleForm.email}
+                  onChange={(e) => setGoogleForm({ ...googleForm, email: e.target.value })}
+                />
+              </div>
+
+              <p className="text-xs text-dark-400">
+                Siz Student (Talaba) sifatida tizimdan ro'yxatdan o'tasiz va bepul kurslarni to'g'ridan to'g'ri bepul ko'ra olasiz.
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowGoogleModal(false)} className="flex-1 btn-secondary justify-center">
+                  Bekor qilish
+                </button>
+                <button type="submit" disabled={isLoading} className="flex-1 btn-primary justify-center">
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Ro'yxatdan o'tish"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

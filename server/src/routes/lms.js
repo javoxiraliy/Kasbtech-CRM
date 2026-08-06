@@ -52,23 +52,41 @@ router.get('/courses', authenticate, async (req, res) => {
     
     let courses;
     if (isStudent) {
-      // Students only see courses they are enrolled in
-      const enrollments = await prisma.enrollment.findMany({
-        where: { studentId: req.user.id },
+      // Students see all published courses with flags: isFree, isEnrolled, hasAccess, progress
+      const allPublishedCourses = await prisma.course.findMany({
+        where: { isPublished: true },
+        orderBy: { createdAt: 'desc' },
         include: {
-          course: {
-            include: {
-              _count: { select: { modules: true } }
-            }
-          }
+          _count: { select: { modules: true } },
+          teacher: { select: { id: true, name: true, email: true } }
         }
       });
-      courses = enrollments.map(e => ({
-        ...e.course,
-        progress: e.progress,
-        enrollmentId: e.id,
-        enrolledAt: e.createdAt
-      }));
+
+      const enrollments = await prisma.enrollment.findMany({
+        where: { studentId: req.user.id }
+      });
+
+      const enrollmentMap = {};
+      enrollments.forEach(e => {
+        enrollmentMap[e.courseId] = e;
+      });
+
+      courses = allPublishedCourses.map(course => {
+        const enrollment = enrollmentMap[course.id];
+        const isFree = parseFloat(course.price) === 0;
+        const isEnrolled = !!enrollment;
+        const hasAccess = isFree || isEnrolled;
+
+        return {
+          ...course,
+          isFree,
+          isEnrolled,
+          hasAccess,
+          progress: enrollment ? enrollment.progress : 0,
+          enrollmentId: enrollment ? enrollment.id : null,
+          enrolledAt: enrollment ? enrollment.createdAt : null
+        };
+      });
     } else {
       // Admins/Operators see all courses, Teachers/Mentors see only their assigned courses
       const whereClause = {};
@@ -359,6 +377,15 @@ router.get('/courses/:courseId/study', authenticate, async (req, res) => {
     const userId = req.user.id;
     const role = req.user.role;
 
+    const course = await prisma.course.findUnique({
+      where: { id: courseId }
+    });
+    if (!course) {
+      return res.status(404).json({ error: 'Kurs topilmadi' });
+    }
+
+    const isFree = parseFloat(course.price) === 0;
+
     // Check enrollment if user is a STUDENT
     let enrollment = null;
     if (role === 'STUDENT') {
@@ -366,7 +393,18 @@ router.get('/courses/:courseId/study', authenticate, async (req, res) => {
         where: { studentId_courseId: { studentId: userId, courseId } }
       });
       if (!enrollment) {
-        return res.status(403).json({ error: 'Ushbu kursga yozilmagansiz!' });
+        if (isFree) {
+          // Auto-enroll student in free course
+          enrollment = await prisma.enrollment.create({
+            data: {
+              studentId: userId,
+              courseId: courseId,
+              progress: 0
+            }
+          });
+        } else {
+          return res.status(403).json({ error: 'Ushbu pullik kursga ustoz, mentor yoki admin tomonidan dostup berilmagan.' });
+        }
       }
     }
 
@@ -529,12 +567,27 @@ router.get('/lessons/:lessonId', authenticate, async (req, res) => {
     }
 
     if (userRole === 'STUDENT') {
+      const course = await prisma.course.findUnique({
+        where: { id: lesson.module.courseId }
+      });
+      const isFree = course && parseFloat(course.price) === 0;
+
       // Double check enrollment
-      const enrollment = await prisma.enrollment.findUnique({
+      let enrollment = await prisma.enrollment.findUnique({
         where: { studentId_courseId: { studentId: userId, courseId: lesson.module.courseId } }
       });
       if (!enrollment) {
-        return res.status(403).json({ error: 'Ushbu kursga yozilmagansiz!' });
+        if (isFree) {
+          enrollment = await prisma.enrollment.create({
+            data: {
+              studentId: userId,
+              courseId: lesson.module.courseId,
+              progress: 0
+            }
+          });
+        } else {
+          return res.status(403).json({ error: 'Ushbu pullik kursga ustoz, mentor yoki admin tomonidan dostup berilmagan.' });
+        }
       }
 
       // Check lock rules (Need flat check for previous lessons)

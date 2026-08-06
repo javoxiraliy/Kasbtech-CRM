@@ -157,7 +157,7 @@ export default function StudentStudy() {
       setError('');
     } catch (err) {
       console.error(err);
-      setError('Kurs ma\'lumotlarini yuklashda xatolik yuz berdi.');
+      setError(err.response?.data?.error || 'Kurs ma\'lumotlarini yuklashda xatolik yuz berdi.');
     } finally {
       setLoading(false);
     }
@@ -361,6 +361,27 @@ export default function StudentStudy() {
         
         {loading ? (
           <div className="card text-center py-24 text-dark-400">Dars yuklanmoqda...</div>
+        ) : error ? (
+          <div className="card bg-dark-900 border-dark-800 p-8 text-center flex flex-col items-center justify-center py-24 space-y-4 shadow-xl">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+              <Lock className="w-8 h-8 text-red-400" />
+            </div>
+            
+            <div className="max-w-md">
+              <h3 className="font-extrabold text-white text-xl">Dostup Cheklangan</h3>
+              <p className="text-sm text-dark-300 mt-2 leading-relaxed">
+                {error}
+              </p>
+            </div>
+            
+            <button 
+              onClick={() => navigate('/student')}
+              className="btn-primary py-2 px-4 text-xs font-bold mt-4 flex items-center gap-1.5"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Kurslar katalogiga qaytish
+            </button>
+          </div>
         ) : selectedLesson && !selectedLesson.isLocked ? (
           // ==========================================
           // UNLOCKED LESSON WORKSPACE

@@ -34,6 +34,112 @@ const upload = multer({
 
 const router = express.Router();
 
+// POST /api/auth/google - Login/Register via Google
+router.post('/google', async (req, res) => {
+  try {
+    const { credential, email: bodyEmail, name: bodyName, picture: bodyPicture } = req.body;
+    let email, name, avatar;
+
+    if (credential) {
+      const parts = credential.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+        email = payload.email;
+        name = payload.name || payload.given_name || 'Google Foydalanuvchisi';
+        avatar = payload.picture;
+      }
+    } else if (bodyEmail) {
+      email = bodyEmail;
+      name = bodyName || 'Google Foydalanuvchisi';
+      avatar = bodyPicture;
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: 'Google email manzili olinmadi' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (!user) {
+      // Auto-register as STUDENT
+      const randomPassword = await bcrypt.hash(`google_${Date.now()}_${Math.random()}`, 10);
+      user = await prisma.user.create({
+        data: {
+          name: name || 'Google Foydalanuvchisi',
+          email: normalizedEmail,
+          password: randomPassword,
+          role: 'STUDENT',
+          avatar: avatar || null,
+          isActive: true
+        }
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({ error: 'Hisobingiz nofaol holatda. Ma\'muriyatga murojaat qiling.' });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await prisma.deviceSession.deleteMany({
+      where: { userId: user.id, lastActiveAt: { lt: sevenDaysAgo } }
+    }).catch(err => console.error('Stale session cleanup error:', err));
+
+    const activeSessions = await prisma.deviceSession.findMany({
+      where: { userId: user.id },
+      orderBy: { lastActiveAt: 'asc' }
+    });
+
+    if (user.role === 'STUDENT' && activeSessions.length >= 3) {
+      return res.status(403).json({
+        error: 'DEVICE_LIMIT_EXCEEDED',
+        message: 'Siz ruxsat etilgan maksimal qurilmalar soniga (3 ta faol qurilma) yetdingiz.',
+        sessions: activeSessions.map(s => ({
+          id: s.id,
+          deviceInfo: s.deviceInfo,
+          ipAddress: s.ipAddress,
+          lastActiveAt: s.lastActiveAt
+        }))
+      });
+    }
+
+    const deviceInfo = req.headers['user-agent'] || 'Google Auth Browser';
+    const ipAddress = req.ip || req.connection?.remoteAddress || '0.0.0.0';
+
+    await prisma.deviceSession.create({
+      data: {
+        userId: user.id,
+        token: token,
+        deviceInfo: deviceInfo,
+        ipAddress: ipAddress,
+      }
+    });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500).json({ error: 'Google orqali ro\'yxatdan o\'tishda xatolik yuz berdi' });
+  }
+});
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {

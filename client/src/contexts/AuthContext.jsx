@@ -25,6 +25,15 @@ export function AuthProvider({ children }) {
     return user;
   };
 
+  const loginWithGoogle = async (googlePayload) => {
+    const response = await api.post('/auth/google', googlePayload);
+    const { token, user } = response.data;
+    localStorage.setItem('crm_token', token);
+    localStorage.setItem('crm_user', JSON.stringify(user));
+    setUser(user);
+    return user;
+  };
+
   const logout = () => {
     localStorage.removeItem('crm_token');
     localStorage.removeItem('crm_user');
@@ -37,7 +46,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateProfile, loading }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, logout, updateProfile, loading }}>
       {children}
     </AuthContext.Provider>
   );
