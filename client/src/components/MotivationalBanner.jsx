@@ -15,7 +15,7 @@ export default function MotivationalBanner() {
           <div className="flex-1">
             <h4 className="text-sm md:text-base font-medium text-dark-100 leading-relaxed tracking-wide">
               <span className="inline-block px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 font-extrabold mr-1 hover:scale-105 transition-transform cursor-default">
-                Untutma!
+                Unutma!
               </span>{' '}
               <span className="inline-block px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold mx-1 hover:scale-105 transition-transform cursor-default">
                 Kayfiyating

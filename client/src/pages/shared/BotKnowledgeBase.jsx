@@ -218,67 +218,80 @@ export default function BotKnowledgeBase() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-dark-900/80 p-6 rounded-2xl border border-dark-800 glass shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 shrink-0">
-            <Brain className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              Bot Bilimlar Bazasi (Knowledge Base)
-            </h1>
-            <p className="text-xs md:text-sm text-dark-400 mt-1">
-              Mentor Kasbtech Bot talabalarning savollariga faqat va faqat ushbu kiritilgan ma'lumotlar bo'yicha javob beradi.
-            </p>
+      <div className="bg-dark-900/80 p-5 md:p-6 rounded-2xl border border-dark-800 glass shadow-xl space-y-5">
+        {/* Title & Info */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 shrink-0">
+              <Brain className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-white tracking-tight">
+                  Bot Bilimlar Bazasi (Knowledge Base)
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" /> AI Engine
+                </span>
+              </div>
+              <p className="text-xs md:text-sm text-dark-400 mt-1">
+                Mentor Kasbtech Bot talabalarning savollariga faqat va faqat ushbu kiritilgan ma'lumotlar bo'yicha javob beradi.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
-          <button
-            onClick={() => setIsDocModalOpen(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-sm shadow-lg shadow-amber-600/20 transition-all cursor-pointer"
-            title="Elektron kitob, PDF, Word, Excel yoki matnli qo'llanma yuklash va botga o'rgatish"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Hujjat / Kitob Yuklash</span>
-          </button>
+        {/* Responsive Toolbar Buttons */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-4 border-t border-dark-800/80">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full lg:w-auto">
+            <button
+              onClick={() => setIsDocModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-xs md:text-sm shadow-md shadow-amber-600/20 transition-all cursor-pointer truncate"
+              title="Elektron kitob, PDF, Word, Excel yoki matnli qo'llanma yuklash"
+            >
+              <Upload className="w-4 h-4 shrink-0" />
+              <span className="truncate">Hujjat / Kitob Yuklash</span>
+            </button>
 
-          <button
-            onClick={handleSyncCourses}
-            disabled={syncing}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-dark-800 hover:bg-dark-700 text-emerald-400 font-medium text-sm border border-emerald-500/30 transition-all cursor-pointer"
-            title="Platformadagi barcha kurs darslarini avtomatik bilimlar bazasiga sinxronlash"
-          >
-            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            <span>Darslarni Avto-Sinxronlash</span>
-          </button>
+            <button
+              onClick={handleSyncCourses}
+              disabled={syncing}
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-dark-800 hover:bg-dark-700 text-emerald-400 font-medium text-xs md:text-sm border border-emerald-500/30 transition-all cursor-pointer truncate"
+              title="Platformadagi barcha kurs darslarini avtomatik bilimlar bazasiga sinxronlash"
+            >
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <RefreshCw className="w-4 h-4 shrink-0" />}
+              <span className="truncate">Darslarni Sinxronlash</span>
+            </button>
 
-          <button
-            onClick={handleTrainBot}
-            disabled={training}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-purple-600/20 transition-all cursor-pointer"
-            title="Bilimlar bazasi va darslarni AI o'qitish dvigateliga yuklash hamda botni qayta o'qitish"
-          >
-            {training ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-300" />}
-            <span>Botni Qayta O'qitish (AI Train)</span>
-          </button>
+            <button
+              onClick={handleTrainBot}
+              disabled={training}
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs md:text-sm shadow-md shadow-purple-600/20 transition-all cursor-pointer truncate"
+              title="Bilimlar bazasi va darslarni AI o'qitish dvigateliga yuklash"
+            >
+              {training ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />}
+              <span className="truncate">Botni Qayta O'qitish</span>
+            </button>
+          </div>
 
-          <button
-            onClick={() => setIsClearAllModalOpen(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium text-sm border border-red-500/30 transition-all cursor-pointer"
-            title="Bilimlar bazasidagi barcha yozuvlarni to'liq tozalab tashlash"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Barchasini Tozalash</span>
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full lg:w-auto">
+            <button
+              onClick={() => setIsClearAllModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium text-xs md:text-sm border border-red-500/30 transition-all cursor-pointer truncate"
+              title="Bilimlar bazasidagi barcha yozuvlarni to'liq tozalash"
+            >
+              <Trash2 className="w-4 h-4 shrink-0" />
+              <span className="truncate">Barchasini Tozalash</span>
+            </button>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-medium text-sm shadow-lg shadow-primary-600/20 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Yangi Bilim Qo'shish</span>
-          </button>
+            <button
+              onClick={handleOpenAddModal}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-xs md:text-sm shadow-md shadow-primary-600/20 transition-all cursor-pointer truncate"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="truncate">Yangi Bilim Qo'shish</span>
+            </button>
+          </div>
         </div>
       </div>
 
