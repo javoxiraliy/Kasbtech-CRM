@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import Login from './pages/Login';
 import OperatorLayout from './layouts/OperatorLayout';
@@ -85,76 +86,78 @@ function App() {
     <Router>
       <AuthProvider>
         <NotificationProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route path="/" element={<RoleBasedRedirect />} />
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              
+              <Route path="/" element={<RoleBasedRedirect />} />
 
-            <Route path="/operator" element={
-              <ProtectedRoute allowedRoles={['OPERATOR']}>
-                <OperatorLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<OperatorKanban />} />
-              <Route path="calendar" element={<OperatorCalendar />} />
-              <Route path="reports" element={<Reports />} />
-            </Route>
+              <Route path="/operator" element={
+                <ProtectedRoute allowedRoles={['OPERATOR']}>
+                  <OperatorLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<OperatorKanban />} />
+                <Route path="calendar" element={<OperatorCalendar />} />
+                <Route path="reports" element={<Reports />} />
+              </Route>
 
-            <Route path="/teacher" element={
-              <ProtectedRoute allowedRoles={['TEACHER', 'MENTOR', 'ADMIN']}>
-                <TeacherLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<TeacherTasks />} />
-              <Route path="homeworks" element={<TeacherHomeworkReview />} />
-              <Route path="students" element={<StudentManager />} />
-              <Route path="courses" element={<AdminCourses />} />
-              <Route path="bot-knowledge" element={<BotKnowledgeBase />} />
-              <Route path="leaderboard" element={<Leaderboard />} />
-              <Route path="reports" element={<Reports />} />
-            </Route>
-            
-            <Route path="/smm" element={
-              <ProtectedRoute allowedRoles={['SMM']}>
-                <SMMLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<TeacherTasks />} />
-              <Route path="reports" element={<Reports />} />
-            </Route>
+              <Route path="/teacher" element={
+                <ProtectedRoute allowedRoles={['TEACHER', 'MENTOR', 'ADMIN']}>
+                  <TeacherLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<TeacherTasks />} />
+                <Route path="homeworks" element={<TeacherHomeworkReview />} />
+                <Route path="students" element={<StudentManager />} />
+                <Route path="courses" element={<AdminCourses />} />
+                <Route path="bot-knowledge" element={<BotKnowledgeBase />} />
+                <Route path="leaderboard" element={<Leaderboard />} />
+                <Route path="reports" element={<Reports />} />
+              </Route>
+              
+              <Route path="/smm" element={
+                <ProtectedRoute allowedRoles={['SMM']}>
+                  <SMMLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<TeacherTasks />} />
+                <Route path="reports" element={<Reports />} />
+              </Route>
 
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="database" element={<AdminDatabase />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="kpi" element={<AdminKPI />} />
-              <Route path="tasks" element={<AdminTasks />} />
-              <Route path="courses" element={<AdminCourses />} />
-              <Route path="students" element={<StudentManager />} />
-              <Route path="bot-knowledge" element={<BotKnowledgeBase />} />
-              <Route path="leaderboard" element={<Leaderboard />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="all-reports" element={<AdminReports />} />
-            </Route>
+              <Route path="/admin" element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="database" element={<AdminDatabase />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="kpi" element={<AdminKPI />} />
+                <Route path="tasks" element={<AdminTasks />} />
+                <Route path="courses" element={<AdminCourses />} />
+                <Route path="students" element={<StudentManager />} />
+                <Route path="bot-knowledge" element={<BotKnowledgeBase />} />
+                <Route path="leaderboard" element={<Leaderboard />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="all-reports" element={<AdminReports />} />
+              </Route>
 
-            <Route path="/student" element={
-              <ProtectedRoute allowedRoles={['STUDENT']}>
-                <StudentLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<StudentDashboard />} />
-              <Route path="mentor-bot" element={<StudentMentorBot />} />
-              <Route path="games" element={<StudentGames />} />
-              <Route path="courses/:courseId" element={<StudentStudy />} />
-              <Route path="leaderboard" element={<Leaderboard />} />
-            </Route>
+              <Route path="/student" element={
+                <ProtectedRoute allowedRoles={['STUDENT']}>
+                  <StudentLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<StudentDashboard />} />
+                <Route path="mentor-bot" element={<StudentMentorBot />} />
+                <Route path="games" element={<StudentGames />} />
+                <Route path="courses/:courseId" element={<StudentStudy />} />
+                <Route path="leaderboard" element={<Leaderboard />} />
+              </Route>
 
-          </Routes>
+            </Routes>
+          </ErrorBoundary>
         </NotificationProvider>
       </AuthProvider>
     </Router>

@@ -63,8 +63,12 @@ export default function Database() {
   const [newLead, setNewLead] = useState({
     name: '',
     phone: '',
-    courseInterest: '',
-    employmentStatus: '',
+    phone2: '',
+    courseInterest: 'COMPUTER_LITERACY',
+    employmentStatus: 'Ishsiz',
+    status: 'NEW',
+    assignedToId: '',
+    isGrantEligible: false,
     source: 'Admin (Manual)'
   });
   const [creating, setCreating] = useState(false);
@@ -87,27 +91,24 @@ export default function Database() {
   const [assigning, setAssigning] = useState(false);
 
   const fileInputRef = useRef(null);
-  const { addNotification } = useNotification();
+  const notificationCtx = useNotification();
+  const addNotification = notificationCtx?.addNotification || (() => {});
 
-  useEffect(() => {
-    fetchLeads();
-    fetchOperators();
-  }, []);
-
-  // Fetch leads automatically when dates change
   useEffect(() => {
     fetchLeads(searchTerm, startDate, endDate);
-  }, [startDate, endDate]);
+    fetchOperators();
+  }, []);
 
   const fetchOperators = async () => {
     try {
       const res = await api.get('/admin/users');
-      const ops = res.data.users.filter(u => u.role === 'OPERATOR');
+      const ops = Array.isArray(res.data?.users) ? res.data.users.filter(u => u && u.role === 'OPERATOR') : [];
       setOperators(ops);
       setSelectedImportOperatorIds(ops.map(o => o.id));
       setSelectedBulkOperatorIds(ops.map(o => o.id));
     } catch (error) {
       console.error('Fetch operators error:', error);
+      setOperators([]);
     }
   };
 
@@ -115,21 +116,24 @@ export default function Database() {
     setLoading(true);
     setCurrentPage(1);
     try {
-      let url = `/leads?search=${encodeURIComponent(search)}`;
+      let url = `/leads?search=${encodeURIComponent(search || '')}`;
       if (start) url += `&startDate=${start}`;
       if (end) url += `&endDate=${end}`;
       const res = await api.get(url);
-      setLeads(res.data.leads);
+      setLeads(Array.isArray(res.data?.leads) ? res.data.leads : []);
     } catch (error) {
+      console.error('Fetch leads error:', error);
       addNotification('error', "Lidlarni yuklashda xatolik");
+      setLeads([]);
     } finally {
       setLoading(false);
     }
   };
 
   const getDelayWarning = (lead) => {
+    if (!lead || !lead.status) return false;
     if (lead.status === 'SUCCESS' || lead.status === 'ARCHIVED') return false;
-    if (lead.comments && lead.comments.length > 0) {
+    if (lead.comments && Array.isArray(lead.comments) && lead.comments.length > 0 && lead.comments[0]?.createdAt) {
       const lastCommentDate = new Date(lead.comments[0].createdAt);
       const now = new Date();
       const diffTime = Math.abs(now - lastCommentDate);
@@ -175,7 +179,7 @@ export default function Database() {
   };
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     setSelectedImportFile(file);
     setSelectedImportOperatorIds(operators.map(o => o.id));
@@ -198,10 +202,10 @@ export default function Database() {
       const res = await api.post('/leads/import/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      addNotification('success', res.data.message);
+      addNotification('success', res.data?.message || "Import muvaffaqiyatli bajarildi");
       setIsImportAssignModalOpen(false);
       setSelectedImportFile(null);
-      fetchLeads();
+      fetchLeads(searchTerm, startDate, endDate);
     } catch (error) {
       const errorMsg = error.response?.data?.details || error.response?.data?.error || "Import qilishda xatolik yuz berdi";
       addNotification('error', errorMsg);
@@ -224,10 +228,10 @@ export default function Database() {
         ids: selectedIds,
         operatorIds: selectedBulkOperatorIds
       });
-      addNotification('success', res.data.message);
+      addNotification('success', res.data?.message || "Biriktirish bajarildi");
       setIsBulkAssignModalOpen(false);
       setSelectedIds([]);
-      fetchLeads();
+      fetchLeads(searchTerm, startDate, endDate);
     } catch (error) {
       addNotification('error', error.response?.data?.error || "Biriktirishda xatolik");
     } finally {
@@ -247,7 +251,7 @@ export default function Database() {
         try {
           await api.delete(`/leads/${id}`);
           addNotification('success', "Lid o'chirib tashlandi");
-          fetchLeads();
+          fetchLeads(searchTerm, startDate, endDate);
         } catch (error) {
           addNotification('error', "O'chirishda xatolik yuz berdi");
         }
@@ -257,12 +261,13 @@ export default function Database() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (!editingLead) return;
     setSubmitting(true);
     try {
       await api.patch(`/leads/${editingLead.id}`, editingLead);
       addNotification('success', "Lid ma'lumotlari yangilandi");
       setEditingLead(null);
-      fetchLeads();
+      fetchLeads(searchTerm, startDate, endDate);
     } catch (error) {
       addNotification('error', "Yangilashda xatolik yuz berdi");
     } finally {
@@ -286,7 +291,7 @@ export default function Database() {
         status: 'NEW', assignedToId: '', isGrantEligible: false,
         source: 'Admin (Manual)'
       });
-      fetchLeads();
+      fetchLeads(searchTerm, startDate, endDate);
     } catch (error) {
       addNotification('error', error.response?.data?.error || "Xatolik yuz berdi");
     } finally {
@@ -313,11 +318,13 @@ export default function Database() {
     'Ishsiz', 'Talaba', 'Maktab o\'quvchisi', 'Rasmiy band', 'Davlat ishida', 'Uy bekasi'
   ];
 
+  const safeLeads = Array.isArray(leads) ? leads : [];
+
   const toggleSelectAll = () => {
-    if (selectedIds.length === leads.length && leads.length > 0) {
+    if (selectedIds.length === safeLeads.length && safeLeads.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(leads.map(l => l.id));
+      setSelectedIds(safeLeads.map(l => l.id));
     }
   };
 
@@ -343,7 +350,7 @@ export default function Database() {
           await api.post('/leads/bulk-delete', { ids: selectedIds });
           addNotification('success', "Tanlangan lidlar o'chirildi");
           setSelectedIds([]);
-          fetchLeads();
+          fetchLeads(searchTerm, startDate, endDate);
         } catch (error) {
           addNotification('error', "Xatolik yuz berdi");
         } finally {
@@ -370,7 +377,7 @@ export default function Database() {
           await api.delete('/leads/delete-all/confirmed');
           addNotification('success', "Barcha lidlar o'chirildi");
           setSelectedIds([]);
-          fetchLeads();
+          fetchLeads(searchTerm, startDate, endDate);
         } catch (error) {
           addNotification('error', "Xatolik yuz berdi");
         } finally {
@@ -382,8 +389,8 @@ export default function Database() {
 
   const itemsPerPage = 50;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedLeads = leads.slice(startIndex, startIndex + itemsPerPage);
-  const totalPages = Math.ceil(leads.length / itemsPerPage);
+  const paginatedLeads = safeLeads.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(safeLeads.length / itemsPerPage) || 1;
 
   return (
     <div className="space-y-6">
@@ -512,7 +519,7 @@ export default function Database() {
                 </button>
               </>
             )}
-            <div>Saralangan: <span className="text-white">{leads.length}</span> ta</div>
+            <div>Saralangan: <span className="text-white">{safeLeads.length}</span> ta</div>
           </div>
         </div>
 
@@ -525,7 +532,7 @@ export default function Database() {
                   <input 
                     type="checkbox" 
                     className="w-4 h-4 rounded border-dark-700 bg-dark-800 text-primary-500 focus:ring-primary-500"
-                    checked={leads.length > 0 && selectedIds.length === leads.length}
+                    checked={safeLeads.length > 0 && selectedIds.length === safeLeads.length}
                     onChange={toggleSelectAll}
                   />
                 </th>
@@ -546,7 +553,7 @@ export default function Database() {
                     Yuklanmoqda...
                   </td>
                 </tr>
-              ) : leads.length === 0 ? (
+              ) : safeLeads.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="p-8 text-center text-dark-400 flex flex-col items-center">
                     <FileSpreadsheet className="w-12 h-12 text-dark-600 mb-3" />
@@ -566,7 +573,7 @@ export default function Database() {
                       onChange={() => toggleSelect(l.id)}
                     />
                   </td>
-                  <td className="px-4 py-3 text-dark-500 text-xs font-mono">{l.id.slice(-6)}</td>
+                  <td className="px-4 py-3 text-dark-500 text-xs font-mono">{l.id?.slice(-6) || '---'}</td>
                   <td className="px-4 py-3">
                     <p className="text-white font-medium flex items-center gap-2">
                       {l.name}
@@ -583,23 +590,23 @@ export default function Database() {
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
                       <span className="text-white font-medium">
-                        {COURSE_LABELS[l.courseInterest] || l.courseInterest}
+                        {COURSE_LABELS[l.courseInterest] || l.courseInterest || 'Boshqa'}
                       </span>
                       <span className="text-xs text-dark-400">
-                        {EMPLOYMENT_LABELS[l.employmentStatus] || l.employmentStatus} {l.isGrantEligible && '(Grant)'}
+                        {EMPLOYMENT_LABELS[l.employmentStatus] || l.employmentStatus || 'Ishsiz'} {l.isGrantEligible && '(Grant)'}
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`badge badge-${l.status.toLowerCase().replace('_', '-')}`}>
-                      {STATUS_LABELS[l.status] || l.status}
+                    <span className={`badge badge-${(l.status || 'new').toLowerCase().replace('_', '-')}`}>
+                      {STATUS_LABELS[l.status] || l.status || 'Yangi'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-dark-300">
                     {l.assignedTo?.name || <span className="text-dark-500 italic">Biriktirilmagan</span>}
                   </td>
                   <td className="px-4 py-3 text-dark-400 text-xs">
-                    {new Date(l.createdAt).toLocaleString('uz-UZ', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                    {l.createdAt ? new Date(l.createdAt).toLocaleString('uz-UZ', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -632,8 +639,8 @@ export default function Database() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between p-4 border-t border-dark-800 bg-dark-900/30">
             <div className="text-xs text-dark-400">
-              Jami <span className="font-semibold text-white">{leads.length}</span> tadan 
-              <span className="font-semibold text-white"> {startIndex + 1}-{Math.min(startIndex + itemsPerPage, leads.length)}</span> ko'rsatilmoqda
+              Jami <span className="font-semibold text-white">{safeLeads.length}</span> tadan 
+              <span className="font-semibold text-white"> {startIndex + 1}-{Math.min(startIndex + itemsPerPage, safeLeads.length)}</span> ko'rsatilmoqda
             </div>
             <div className="flex gap-1">
               <button
@@ -698,7 +705,7 @@ export default function Database() {
                     type="text"
                     required
                     className="input h-10 text-sm"
-                    value={editingLead.name}
+                    value={editingLead.name || ''}
                     onChange={e => setEditingLead({...editingLead, name: e.target.value})}
                   />
                 </div>
@@ -708,7 +715,7 @@ export default function Database() {
                     type="text"
                     required
                     className="input h-10 text-sm"
-                    value={editingLead.phone}
+                    value={editingLead.phone || ''}
                     onChange={e => setEditingLead({...editingLead, phone: e.target.value})}
                   />
                 </div>
@@ -725,7 +732,7 @@ export default function Database() {
                   <label className="text-xs text-dark-400">Kurs</label>
                   <select
                     className="input h-10 text-sm"
-                    value={editingLead.courseInterest}
+                    value={editingLead.courseInterest || 'COMPUTER_LITERACY'}
                     onChange={e => setEditingLead({...editingLead, courseInterest: e.target.value})}
                   >
                     {COURSE_OPTIONS.map(opt => (
@@ -738,7 +745,7 @@ export default function Database() {
                   <label className="text-xs text-dark-400">Bandlik</label>
                   <select
                     className="input h-10 text-sm"
-                    value={editingLead.employmentStatus}
+                    value={editingLead.employmentStatus || 'Ishsiz'}
                     onChange={e => setEditingLead({...editingLead, employmentStatus: e.target.value})}
                   >
                     <option value="UNEMPLOYED">Ishsiz</option>
@@ -754,7 +761,7 @@ export default function Database() {
                   <label className="text-xs text-dark-400">Holat</label>
                   <select
                     className="input h-10 text-sm"
-                    value={editingLead.status}
+                    value={editingLead.status || 'NEW'}
                     onChange={e => setEditingLead({...editingLead, status: e.target.value})}
                   >
                     <option value="NEW">Yangi</option>
@@ -782,7 +789,7 @@ export default function Database() {
                     type="checkbox"
                     id="grant"
                     className="w-4 h-4 rounded border-dark-700 bg-dark-800 text-primary-500 focus:ring-primary-500"
-                    checked={editingLead.isGrantEligible}
+                    checked={!!editingLead.isGrantEligible}
                     onChange={e => setEditingLead({...editingLead, isGrantEligible: e.target.checked})}
                   />
                   <label htmlFor="grant" className="text-sm text-dark-200">Grant uchun da'vogar</label>
@@ -816,6 +823,7 @@ export default function Database() {
           </div>
         </div>
       )}
+
       {/* Add Lead Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop animate-fade-in">
