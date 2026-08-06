@@ -1824,13 +1824,22 @@ router.post('/ai-mentor/chat', authenticate, async (req, res) => {
 
     const combinedContextText = `=== BILIMLAR BAZASI ===\n${kbText}\n\n=== KURS DARSLARI VA O'QUV MATERIALLARI ===\n${lessonText}`;
 
-    // System instruction prompt forcing strict compliance with Knowledge Base and Expert tone
-    const systemPrompt = `Siz "Mentor Kasbtech Bot" – Kasbtech Akademiyasining ta'lim, marketing va texnologiyalar bo'yicha yetuk, tajribali va intellektual AI mentorisiz.
+    // System instruction prompt forcing interactive clarification, human-like persona, and Knowledge Base retrieval
+    const systemPrompt = `Siz "Mentor Kasbtech Bot" – Kasbtech Akademiyasining talabalar uchun eng samimiy, tajribali, yetuk va insoniy (human-like) AI mentorisiz.
+
 SIZ QUYIDAGI QAT'IY QOIDALARGA AMAL QILISHINGIZ SHART:
-1. Quyida "=== KASBTECH BILIMLAR BAZASI VA DARSLAR ===" sarlavhasi ostida keltirilgan ma'lumotlarni to'liq tahlil qilib, foydalanuvchi/talabaning savoliga xuddi soha mutaxassisiday chuqur, aniq, tushunarli, chiroyli va muloyim javob bering.
-2. Bilimlar bazasidagi va darslardagi ma'lumotlarga tayanib, javobni mantiqiy sarlavhalar, muhim nuqtalar va misollar bilan tartibli shakllantiring.
-3. Agar savol kasbcoin, guruh qoidalari, darslar, uy vazifasi topshirish haqida bo'lsa, akademiyaning belgilangan tartibini aniq tushuntiring.
-4. Javobingizni har doim professional o'zbek tilida, mutaxassis darajasida va chiroyli formatlangan (Markdown formatting) ko'rinishda taqdim eting.
+
+1. **MULOQOT VA INSONIY TIL (Human-Like Persona)**:
+   - Talaba bilan har doim robotingiz sevilmaydigan, samimiy, issiq va jonli senior ustoz kabi muloqot qiling ("inson tilida javob bering").
+   - Quruq shablon yoki quruq rasmiyatchilik ishlatmang. Talabaga dalda bering va tushunarli tilda tushuntiring.
+
+2. **SAVOLNI ANIQLASHTIRIB OLISH (Interactive Clarification)**:
+   - Agar talaba umumiy, keng yoki noaniq savol bersa (masalan: "target reklama", "smm", "dasturlash", "uy vazifasi", "kasbcoin"), BIRINCHI NAVBATDA talabadan savolini aniqlashtirib oling:
+     "Assalomu alaykum! Ushbu mavzuga qiziqqaningizdan xursandman! 😊 Sizga eng aniq va to'g'ri yordam berishim uchun iltimos savolingizni ozgina aniqlashtirib bersangiz: Aynan qaysi qismi yoki qanday amaliy holat bo'yicha ma'lumot kerak?"
+   - Agar talaba savolini aniqlashtirib bergan bo'lsa (yoki suhbat tarixida javob aniq bo'lsa), darhol bilimlar bazasidan chuqur o'rganib, to'g'ri va tushunarli javob taqdim eting.
+
+3. **BILIMLAR BAZASI VA DARSLARNI CHUQUR O'RGANISH**:
+   - Quyida "=== KASBTECH BILIMLAR BAZASI VA DARSLAR ===" bo'limida kiritilgan barcha bilim va dars materiallarini to'liq tahlil qiling va ma'lumotlar bo'yicha to'g'ri va amaliy javob bering.
 
 === KASBTECH BILIMLAR BAZASI VA DARSLAR ===
 ${combinedContextText}
@@ -1851,15 +1860,38 @@ ${combinedContextText}
         'gemini-2.5-flash-lite',
         'gemini-3.6-flash'
       ];
-      const contents = [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nFoydalanuvchi savoli: ${message}` }] }];
+
+      // Build chat history context for Gemini API
+      const geminiContents = [];
+      if (Array.isArray(history) && history.length > 0) {
+        history.slice(-6).forEach(h => {
+          if (h.text && h.text.trim()) {
+            geminiContents.push({
+              role: h.sender === 'user' ? 'user' : 'model',
+              parts: [{ text: h.text }]
+            });
+          }
+        });
+      }
+      geminiContents.push({
+        role: 'user',
+        parts: [{ text: message }]
+      });
+
+      const requestPayload = {
+        system_instruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents: geminiContents
+      };
 
       for (const modelName of candidateModels) {
         try {
           const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey.trim()}`;
           const response = await axios.post(
             geminiUrl,
-            { contents },
-            { headers: { 'Content-Type': 'application/json' }, timeout: 12000 }
+            requestPayload,
+            { headers: { 'Content-Type': 'application/json' }, timeout: 15000 }
           );
           const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (text && text.trim().length > 5) {
