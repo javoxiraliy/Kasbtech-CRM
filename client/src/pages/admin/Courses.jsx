@@ -10,7 +10,12 @@ import {
   FileQuestion,
   Clock,
   Unlock,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUp,
+  ChevronsDown,
+  FileText
 } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -39,6 +44,34 @@ export default function Courses() {
   const [moduleForm, setModuleForm] = useState({ id: null, title: '', order: '' });
   const [lessonForm, setLessonForm] = useState({ id: null, moduleId: null, title: '', description: '', videoUrl: '', duration: '', order: '', dripDays: '' });
   
+  // Accordion / Collapsible states
+  const [collapsedModules, setCollapsedModules] = useState({});
+  const [expandedLessons, setExpandedLessons] = useState({});
+
+  const toggleModuleCollapse = (modId) => {
+    setCollapsedModules(prev => ({
+      ...prev,
+      [modId]: !prev[modId]
+    }));
+  };
+
+  const collapseAllModules = () => {
+    const map = {};
+    selectedCourse?.modules?.forEach(m => { map[m.id] = true; });
+    setCollapsedModules(map);
+  };
+
+  const expandAllModules = () => {
+    setCollapsedModules({});
+  };
+
+  const toggleLessonExpand = (lessonId) => {
+    setExpandedLessons(prev => ({
+      ...prev,
+      [lessonId]: !prev[lessonId]
+    }));
+  };
+
   // Quiz states
   const [quizLesson, setQuizLesson] = useState(null);
   const [quizQuestions, setQuizQuestions] = useState([]);
@@ -558,137 +591,209 @@ export default function Courses() {
               </div>
             </div>
 
-            {isTeacher && (
-              <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              <button 
+                onClick={collapseAllModules}
+                className="btn-secondary py-1.5 px-2.5 text-xs text-dark-300 hover:text-white"
+                title="Barcha modullarni yig'ish"
+              >
+                <ChevronsUp className="w-3.5 h-3.5" />
+                Barchasini Yig'ish
+              </button>
+              <button 
+                onClick={expandAllModules}
+                className="btn-secondary py-1.5 px-2.5 text-xs text-dark-300 hover:text-white"
+                title="Barcha modullarni ochish"
+              >
+                <ChevronsDown className="w-3.5 h-3.5" />
+                Barchasini Ochish
+              </button>
+
+              {isTeacher && (
                 <button 
                   onClick={() => {
                     setModuleForm({ id: null, title: '', order: selectedCourse.modules.length + 1 });
                     setIsModuleModalOpen(true);
                   }} 
-                  className="btn-secondary py-2 px-3 text-xs w-full sm:w-auto"
+                  className="btn-primary py-1.5 px-3 text-xs"
                 >
                   <FolderPlus className="w-4 h-4" />
                   Yangi Modul Qo'shish
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Module & Lessons List */}
-          <div className="space-y-6">
-            {selectedCourse.modules.map((mod) => (
-              <div key={mod.id} className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-lg">
-                
-                {/* Module header */}
-                <div className="bg-dark-800/50 border-b border-dark-700 px-5 py-4 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 rounded-lg bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-xs font-bold text-primary-400">
-                      {mod.order}
-                    </span>
-                    <h3 className="font-bold text-white text-md">{mod.title}</h3>
-                  </div>
+          <div className="space-y-4">
+            {selectedCourse.modules.map((mod) => {
+              const isModuleCollapsed = !!collapsedModules[mod.id];
+              return (
+                <div key={mod.id} className="bg-dark-900 border border-dark-700/80 rounded-xl overflow-hidden shadow-lg transition-all">
+                  
+                  {/* Module header */}
+                  <div 
+                    onClick={() => toggleModuleCollapse(mod.id)}
+                    className="bg-dark-800/70 hover:bg-dark-800 border-b border-dark-700/60 px-5 py-3.5 flex justify-between items-center cursor-pointer select-none transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button 
+                        type="button"
+                        className="p-1 rounded-md text-dark-400 hover:text-white hover:bg-dark-700 transition-colors"
+                      >
+                        {isModuleCollapsed ? <ChevronDown className="w-5 h-5 text-primary-400" /> : <ChevronUp className="w-5 h-5 text-primary-400" />}
+                      </button>
 
-                  {isTeacher && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => {
-                          setLessonForm({ id: null, moduleId: mod.id, title: '', description: '', videoUrl: '', duration: '', order: mod.lessons.length + 1, dripDays: '' });
-                          setIsLessonModalOpen(true);
-                        }}
-                        className="btn-primary py-1 px-2.5 text-xs"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Dars Qo'shish
-                      </button>
-                      
-                      <button 
-                        onClick={() => {
-                          setModuleForm({ id: mod.id, title: mod.title, order: mod.order });
-                          setIsModuleModalOpen(true);
-                        }}
-                        className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      
-                      <button 
-                        onClick={() => handleDeleteModule(mod.id)}
-                        className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <span className="w-7 h-7 rounded-lg bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-xs font-bold text-primary-400">
+                        {mod.order}
+                      </span>
+                      <h3 className="font-bold text-white text-base">{mod.title}</h3>
+                      <span className="text-[11px] font-medium text-dark-400 bg-dark-900/80 px-2.5 py-0.5 rounded-full border border-dark-700">
+                        {mod.lessons.length} ta dars
+                      </span>
                     </div>
-                  )}
-                </div>
 
-                {/* Lessons inside Module */}
-                <div className="divide-y divide-dark-800">
-                  {mod.lessons.map((lesson) => (
-                    <div key={lesson.id} className="p-4 sm:px-6 hover:bg-dark-800/20 flex flex-col sm:flex-row justify-between sm:items-center gap-4 transition-colors">
-                      <div className="flex items-start gap-3">
-                        <span className="w-6 h-6 rounded-md bg-dark-700 border border-dark-600 flex items-center justify-center text-xs text-dark-300 mt-1">
-                          {lesson.order}
-                        </span>
-                        <div>
-                          <h4 className="font-semibold text-white text-sm flex items-center gap-2">
-                            <Video className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                            {lesson.title}
-                          </h4>
-                          <p className="text-xs text-dark-400 mt-1">{lesson.description || 'Ta\'rif yo\'q'}</p>
-                          
-                          <div className="flex items-center gap-3 mt-2 flex-wrap">
-                            <span className="text-[11px] text-dark-400 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-dark-500" />
-                              {Math.round(lesson.duration / 60)} daqiqa
-                            </span>
-                            <span className="text-[11px] text-dark-400 flex items-center gap-1">
-                              <Unlock className="w-3 h-3 text-dark-500" />
-                              Drip: {lesson.dripDays} kun
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       {isTeacher && (
-                        <div className="flex gap-2 self-end sm:self-center">
-                          <button 
-                            onClick={() => openQuizModal(lesson)}
-                            className="btn-secondary py-1.5 px-2.5 text-xs text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10"
-                          >
-                            <FileQuestion className="w-3.5 h-3.5" />
-                            {lesson.quizPassed !== undefined ? 'Test Sozlash' : 'Test Sozlash'}
-                          </button>
-
+                        <>
                           <button 
                             onClick={() => {
-                              setLessonForm({ id: lesson.id, moduleId: mod.id, title: lesson.title, description: lesson.description || '', videoUrl: lesson.videoUrl, duration: lesson.duration, order: lesson.order, dripDays: lesson.dripDays });
+                              setLessonForm({ id: null, moduleId: mod.id, title: '', description: '', videoUrl: '', duration: '', order: mod.lessons.length + 1, dripDays: '' });
                               setIsLessonModalOpen(true);
                             }}
-                            className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors border border-dark-700"
+                            className="btn-primary py-1 px-2.5 text-xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Dars Qo'shish
+                          </button>
+                          
+                          <button 
+                            onClick={() => {
+                              setModuleForm({ id: mod.id, title: mod.title, order: mod.order });
+                              setIsModuleModalOpen(true);
+                            }}
+                            className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           
                           <button 
-                            onClick={() => handleDeleteLesson(lesson.id)}
-                            className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors border border-dark-700"
+                            onClick={() => handleDeleteModule(mod.id)}
+                            className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Lessons inside Module */}
+                  {!isModuleCollapsed && (
+                    <div className="divide-y divide-dark-800/60 bg-dark-950/40">
+                      {mod.lessons.map((lesson) => {
+                        const isDescExpanded = !!expandedLessons[lesson.id];
+                        const hasDesc = lesson.description && lesson.description.trim().length > 0;
+                        
+                        return (
+                          <div key={lesson.id} className="p-4 sm:px-6 hover:bg-dark-800/30 transition-colors">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <span className="w-6 h-6 rounded-md bg-dark-800 border border-dark-700 flex items-center justify-center text-xs font-semibold text-dark-300 shrink-0">
+                                  {lesson.order}
+                                </span>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-semibold text-white text-sm flex items-center gap-2">
+                                      <Video className="w-4 h-4 text-primary-400 shrink-0" />
+                                      {lesson.title}
+                                    </h4>
+                                    
+                                    {hasDesc && (
+                                      <button 
+                                        type="button"
+                                        onClick={() => toggleLessonExpand(lesson.id)}
+                                        className="inline-flex items-center gap-1 text-[11px] font-medium text-primary-400 hover:text-primary-300 bg-primary-500/10 hover:bg-primary-500/20 px-2 py-0.5 rounded border border-primary-500/20 transition-colors"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        {isDescExpanded ? 'Ta\'rifni yopish' : 'Ta\'rifni ko\'rish'}
+                                        {isDescExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-4 mt-1.5 text-[11px] text-dark-400">
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3 text-dark-500" />
+                                      {Math.round((lesson.duration || 0) / 60)} daqiqa
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Unlock className="w-3 h-3 text-dark-500" />
+                                      Drip: {lesson.dripDays || 0} kun
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                {isTeacher && (
+                                  <>
+                                    <button 
+                                      onClick={() => openQuizModal(lesson)}
+                                      className="btn-secondary py-1 px-2.5 text-xs text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10"
+                                    >
+                                      <FileQuestion className="w-3.5 h-3.5" />
+                                      Test Sozlash
+                                    </button>
+
+                                    <button 
+                                      onClick={() => {
+                                        setLessonForm({ id: lesson.id, moduleId: mod.id, title: lesson.title, description: lesson.description || '', videoUrl: lesson.videoUrl, duration: lesson.duration, order: lesson.order, dripDays: lesson.dripDays });
+                                        setIsLessonModalOpen(true);
+                                      }}
+                                      className="p-1.5 text-dark-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors border border-dark-700"
+                                      title="Darsni tahrirlash"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    
+                                    <button 
+                                      onClick={() => handleDeleteLesson(lesson.id)}
+                                      className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors border border-dark-700"
+                                      title="Darsni o'chirish"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Collapsible Lesson Description Box */}
+                            {hasDesc && isDescExpanded && (
+                              <div className="mt-3 p-3.5 rounded-lg bg-dark-900 border border-dark-800 text-xs text-dark-300 whitespace-pre-wrap leading-relaxed animate-fade-in">
+                                <div className="text-[11px] font-bold text-dark-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                  <FileText className="w-3.5 h-3.5 text-primary-400" /> Dars Ta'rifi:
+                                </div>
+                                {lesson.description}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {mod.lessons.length === 0 && (
+                        <div className="p-6 text-center text-xs text-dark-500">
+                          Ushbu modulda darslar mavjud emas. Yangi dars qo'shish uchun tugmani bosing.
                         </div>
                       )}
                     </div>
-                  ))}
-
-                  {mod.lessons.length === 0 && (
-                    <div className="p-6 text-center text-xs text-dark-500">
-                      Ushbu modulda darslar mavjud emas. Yangi dars qo'shish uchun tugmani bosing.
-                    </div>
                   )}
-                </div>
 
-              </div>
-            ))}
+                </div>
+              );
+            })}
 
             {selectedCourse.modules.length === 0 && (
               <div className="text-center py-12 text-dark-400 border border-dashed border-dark-700 rounded-xl">
