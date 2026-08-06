@@ -1843,12 +1843,16 @@ ${combinedContextText}
     if (!aiReply) {
       console.log('Using Smart Intent Classifier & Summarizer Engine...');
       
-      const queryClean = message.toLowerCase().trim();
-
-      // 0. Intent: Curriculum / Course Inquiry or Follow-up Context Query ("o'rgatilinadimi", "kursda bormi", "bu bo'yicha ham")
-      const isCurriculumQuery = /o'rgatiladi|o'rgatilinadi|o'rgatami|dasturi|mavzulari|kursdami|kurda|bo'yicha ham|darsdami|nimalar bor|o'rganamiz/i.test(queryClean);
-      
-      if (isCurriculumQuery) {
+      const queryClean = message.toLowerCase().trim();      // 0.1 Intent: KasbCoin & Reyting ("kasbcoin", "reyting", "tanga", "ball")
+      if (/kasbcoin|reyting|tanga|ball/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **KasbCoin va Reyting Tizimi Haqida Ma'lumot:**\n\n1. **KasbCoin nima?**: KasbCoin — bu Kasbtech Akademiyasida faollik va yaxshi o'zlashtirish uchun talabalarga beriladigan rag'batlantiruvchi ichki valyuta (tanga) hisoblanadi.\n2. **KasbCoin qanday ishlanadi?**:\n   - Har bir topshirilgan va ustoz tomonidan tasdiqlangan uy vazifasi uchun KasbCoin taqdim etiladi.\n   - O'z vaqtida va a'lo bahoga bajarilgan topshiriqlar uchun qo'shimcha bonus coinlar beriladi.\n3. **Reyting va Sovrinlar**:\n   - Ishlangan KasbCoinlar hisobiga umumiy talabalar va guruhlar o'rtasida reyting (Leaderboard) shakllanadi.\n   - Eng yuqori reytingdagi talabalar akademiyaning maxsus sovg'alari, chegirmalari va sertifikatlari bilan taqdirlanadi!`;
+      }
+      // 0.2 Intent: Guruh Qoidalari ("guruh qoidalari", "qoida")
+      else if (/guruh qoida|qoidalari|intizom/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Guruh Qoidalari va Intizom:**\n\n1. **Hurmat va Mulozamat**: Guruhda ustozlar va talabalarga nisbatan o'zaro hurmat saqlanishi shart.\n2. **Mavzuga oid muloqot**: Faqat darslar va marketing/IT sohasiga oid savol-javoblar olib boriladi.\n3. **Reklama taqiqi**: Begona havolalar (linklar) va spam yuborish qat'iyan man etiladi.`;
+      }
+      // 0.3 Intent: Curriculum / Course Inquiry or Follow-up Context Query ("o'rgatilinadimi", "kursda bormi", "bu bo'yicha ham")
+      else if (/o'rgatiladi|o'rgatilinadi|o'rgatami|dasturi|mavzulari|kursdami|kurda|bo'yicha ham|darsdami|nimalar bor|o'rganamiz/i.test(queryClean)) {
         let previousTopic = '';
         if (Array.isArray(history) && history.length > 0) {
           const lastUserMsg = [...history].reverse().find(m => m.sender === 'user' && m.text !== message);
@@ -1862,10 +1866,9 @@ ${combinedContextText}
         } else {
           aiReply = `🤖 **Mentor Kasbtech Bot**\n\nHa, albatta! Kasbtech Akademiyasining ushbu kursida quyidagi barcha zamonaviy va talabgir yo'nalishlar to'liq va amaliy tarzda o'rgatiladi:\n\n1. **Marketing Poydevori va Biznes Tahlil**: Maqsadli auditoriya (Target Audience) va mijoz portretini tuzish.\n2. **Digital Marketing va Sotuv Voronkalari**: Mijozlarni jalb qilish va sotuv zanjirini qurish.\n3. **Targeting (Instagram / Facebook Reklama)**: Reklama kabinetini sozlash, kunlik byudjet va auditoriyalarni to'g'ri tanlash.\n4. **SMM va Short Video Content**: Reels, TikTok va Telegram kanallari uchun sotuvchi kontent va ssenariylar.\n5. **AI va Sun'iy Intellekt Vositalari**: ChatGPT, Midjourney va avtomatlashtirish yordamida tezkor ishlash.\n6. **Frilans va Mijozlar Bilan Ishlash**: Shaxsiy brend va xizmatlarni sotish sirlari.`;
         }
+      }
       // 0.5 Intent: How It Works & Benefits Follow-Up Queries ("qanday ishlaydi", "foydasi nima", "afzalligi nima", "ishlash prinsipi")
-      const isHowItWorksQuery = /qanday ishlaydi|ishlaydii|ishlash prinsipi|qanday foyda|foydasi|afzalligi|nima uchun kerak|foydasi nima/i.test(queryClean);
-      
-      if (isHowItWorksQuery) {
+      else if (/qanday ishlaydi|ishlaydii|ishlash prinsipi|qanday foyda|foydasi|afzalligi|nima uchun kerak|foydasi nima/i.test(queryClean)) {
         let prevText = '';
         if (Array.isArray(history) && history.length > 0) {
           const lastUser = [...history].reverse().find(m => m.sender === 'user' && m.text !== message);
@@ -1955,7 +1958,7 @@ ${combinedContextText}
       } else {
         // High-Precision Knowledge Base Score Matching (Requires score >= 6 to prevent single-word false matches)
         const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
-        const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar', 'men']);
+        const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar', 'men', 'ma\'lumot', 'bering', 'tizimi', 'bo\'yicha']);
         const keyWords = rawWords.filter(w => !stopWords.has(w));
 
         function calcScore(text) {
