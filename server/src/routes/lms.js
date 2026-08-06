@@ -1883,65 +1883,62 @@ ${combinedContextText}
         .replace(/\btopshrish\b|\btopshrik\b|\bvazifalar\b|\btopshirish\b/gi, 'topshirish')
         .replace(/\bo'rgatilinadimi\b|\bo'rganamiz\b|\bkursdami\b/gi, 'o\'rgatiladi');
 
-      // Check Knowledge Base entries from database
-      const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
-      const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar', 'men', 'ma\'lumot', 'bering', 'tizimi', 'bo\'yicha']);
-      const keyWords = rawWords.filter(w => !stopWords.has(w));
-
-      function calcScore(text) {
-        if (!text) return 0;
-        const lower = text.toLowerCase();
-        let s = 0;
-        if (lower.includes(queryClean)) s += 10;
-        keyWords.forEach(kw => {
-          if (lower.includes(kw)) s += 3;
-        });
-        return s;
+      // 1. Built-in Core Student FAQs (Sertifikat, KasbCoin, Guruh Qoidalari, Homework, Progression)
+      if (/sertifikat|diplom/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **Kasbtech Akademiyasi Sertifikati:**\n\nHa, albatta! Kasbtech Akademiyasining kursini to'liq tamomlab, barcha amaliy uy vazifalarini hamda yakuniy imtihon/loyihani muvaffaqiyatli topshirgan har bir talabaga rasmiy **Kasbtech Akademiyasi Sertifikati** taqdim etiladi! 🎓✨\n\n- **A'lo natijalar uchun**: "Distinction" (A'lo darajali) maxsus sertifikat;\n- **Sertifikat tekshiruvi**: Har bir sertifikat noyob serial raqam va QR-kodga ega bo'lib, ish beruvchi kompaniyalar uchun talabaning bilim darajasini tasdiqlaydi.`;
       }
-
-      const scoredKB = kbItems.map(item => ({
-        title: item.topic,
-        question: item.question,
-        content: item.content,
-        score: calcScore(`${item.topic} ${item.question || ''} ${item.content}`)
-      }));
-
-      const scoredLessons = lessons.map(l => ({
-        title: `Dars: ${l.title}`,
-        question: null,
-        content: l.description || `${l.title} darsi bo'yicha o'quv materiali.`,
-        score: calcScore(`${l.title} ${l.description || ''} ${l.module?.title || ''}`)
-      }));
-
-      const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
-      const bestMatch = allMatches[0];
-
-      if (bestMatch && bestMatch.score >= 2) {
-        let contentText = bestMatch.content.trim();
-        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **${bestMatch.title.replace(/^Dars:\s*/i, '')}**\n\n${contentText}\n\n💡 *Kasbtech Akademiyasi Bilimlar Bazasi mutaxassislari tomonidan taqdim etilgan.*`;
-      } 
-      // Greetings
-      else if (/^(savolim|salom|assalomu|yordam|savol|hi|hello)/i.test(queryClean) || /savol(im)?\s*bor/i.test(queryClean)) {
-        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\nAssalomu alaykum! Albatta, bemalol savolingizni yo'llashingiz mumkin! 🎓✨\n\nKasbtech Akademiyasi bo'yicha kurs darslari, uy vazifalarini topshirish, marketing va IT yo'nalishlari yoki boshqa savollaringiz bo'lsa, marhamat, batafsil yozing!`;
-      }
-      // KasbCoin
       else if (/kasbcoin|reyting|tanga|ball|leaderboard|coin/i.test(queryClean)) {
         aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **KasbCoin va Reyting Tizimi Haqida Ma'lumot:**\n\n1. **KasbCoin nima?**: KasbCoin — bu Kasbtech Akademiyasida faollik va yaxshi o'zlashtirish uchun talabalarga beriladigan rag'batlantiruvchi ichki valyuta (tanga) hisoblanadi.\n2. **KasbCoin qanday ishlanadi?**:\n   - Har bir topshirilgan va ustoz tomonidan tasdiqlangan uy vazifasi uchun KasbCoin taqdim etiladi.\n   - O'z vaqtida va a'lo bahoga bajarilgan topshiriqlar uchun qo'shimcha bonus coinlar beriladi.\n3. **Reyting va Sovrinlar**:\n   - Ishlangan KasbCoinlar hisobiga umumiy talabalar va guruhlar o'rtasida reyting (Leaderboard) shakllanadi.\n   - Eng yuqori reytingdagi talabalar akademiyaning maxsus sovg'alari, chegirmalari va sertifikatlari bilan taqdirlanadi!`;
       }
-      // Guruh Qoidalari
       else if (/guruh|intizom|odob|qoidalari|talablar/i.test(queryClean)) {
         aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **Kasbtech Akademiyasi Guruh Qoidalari va Talablari:**\n\n1. **O'zaro Hurmat va Odob**: Guruhda ustozlar, mentorlar va boshqa talabalarga nisbatan o'zaro hurmat saqlanishi hamda muloyim muloqot qilinishi shart.\n2. **Faqat Mavzuga Oid Muloqot**: Guruhda faqat darslar, amaliy topshiriqlar va marketing/IT sohasiga oid professional savol-javoblar olib boriladi.\n3. **Reklama va Spam Taqiqi**: Begona havolalar (linklar), ruxsatsiz reklama, tijorat takliflari hamda spam yuborish qat'iyan man etiladi.\n4. **Vazifalarni O'z Vaqtida Topshirish**: Berilgan amaliy topshiriq va uy vazifalarini belgilangan muhlatda topshirish talab etiladi.\n5. **Tartib-Intizom**: Guruh intizomini buzish yoki nojo'ya murojaatlar qilish taqiqlanadi.`;
       }
-      // Homework
       else if (/vazifa|topshiriq|yuklash|topshirish|tekshirish|baholash/i.test(queryClean)) {
         aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **Uy vazifasini topshirish tartibi:**\n\n1. Dars sahifasiga kirib, dars pastidagi **'Uy vazifasi'** bo'limini ochasiz.\n2. Bajarilgan amaliy topshiriq faylingizni (rasm, PDF, arxiv yoki hujjat) yuklaysiz va izohingizni qoldirasiz.\n3. **'Vazifani topshirish'** tugmasini bosing.\n4. Ustozingiz vazifangizni tekshirib, 'Tasdiqlandi' (APPROVED) holatiga o'tkazgach, keyingi dars avtomatik ochiladi.`;
       }
-      // Progression / Rules
-      else if (/tartib|o'zlashtirish|ochiladi|keyingi|bosqich/i.test(queryClean)) {
-        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **Darslarni o'zlashtirish va tartib qoidalari:**\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriqni bajarib platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz topshiriqni tekshirib tasdiqlagach, keyingi dars qulfdan ochiladi.`;
+      else if (/^(savolim|salom|assalomu|yordam|savol|hi|hello)/i.test(queryClean) || /savol(im)?\s*bor/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\nAssalomu alaykum! Albatta, bemalol savolingizni yo'llashingiz mumkin! 🎓✨\n\nKasbtech Akademiyasi bo'yicha kurs darslari, uy vazifalarini topshirish, marketing va IT yo'nalishlari yoki boshqa savollaringiz bo'lsa, marhamat, batafsil yozing!`;
       }
       else {
-        aiReply = `Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.`;
+        // 2. High-Precision Knowledge Base Score Matching (User uploaded entries & Lessons)
+        const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
+        const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar', 'men', 'menga', 'sizga', 'yo\'q', 'ha', 'to\'liq', 'kurs', 'kursni', 'tamomlasam', 'beriladimi', 'ma\'lumot', 'bering', 'tizimi', 'bo\'yicha']);
+        const keyWords = rawWords.filter(w => !stopWords.has(w));
+
+        function calcScore(text) {
+          if (!text) return 0;
+          const lower = text.toLowerCase();
+          let s = 0;
+          if (lower.includes(queryClean)) s += 10;
+          keyWords.forEach(kw => {
+            if (lower.includes(kw)) s += 3;
+          });
+          return s;
+        }
+
+        const scoredKB = kbItems.map(item => ({
+          title: item.topic,
+          question: item.question,
+          content: item.content,
+          score: calcScore(`${item.topic} ${item.question || ''} ${item.content}`)
+        })).filter(x => x.score >= 3);
+
+        const scoredLessons = lessons.map(l => ({
+          title: `Dars: ${l.title}`,
+          question: null,
+          content: l.description || `${l.title} darsi bo'yicha o'quv materiali.`,
+          score: calcScore(`${l.title} ${l.description || ''} ${l.module?.title || ''}`)
+        })).filter(x => x.score >= 6);
+
+        const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
+        const bestMatch = allMatches[0];
+
+        if (bestMatch) {
+          let contentText = bestMatch.content.trim();
+          aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **${bestMatch.title.replace(/^Dars:\s*/i, '')}**\n\n${contentText}\n\n💡 *Kasbtech Akademiyasi Bilimlar Bazasi mutaxassislari tomonidan taqdim etilgan.*`;
+        } else {
+          aiReply = `Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.`;
+        }
       }
     }
 
