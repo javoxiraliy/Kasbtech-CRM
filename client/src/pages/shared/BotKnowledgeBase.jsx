@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Plus, Search, Edit2, Trash2, BookOpen, User, X, Check, Loader2, Sparkles, HelpCircle, FileText, RefreshCw } from 'lucide-react';
+import { Brain, Plus, Search, Edit2, Trash2, BookOpen, User, X, Check, Loader2, Sparkles, HelpCircle, FileText, RefreshCw, Upload, FileSpreadsheet, File } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,7 +14,14 @@ export default function BotKnowledgeBase() {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [syncing, setSyncing] = useState(false);
 
-  // Modal states
+  // Document Upload modal state
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [docFile, setDocFile] = useState(null);
+  const [docTopic, setDocTopic] = useState('');
+  const [docCourseId, setDocCourseId] = useState('');
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  // Add/Edit Knowledge modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
@@ -68,6 +75,38 @@ export default function BotKnowledgeBase() {
       showNotification('Darslarni sinxronlashda xatolik', 'error');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleDocUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!docFile) {
+      showNotification('Iltimos, yuklash uchun fayl tanlang', 'error');
+      return;
+    }
+
+    setUploadingDoc(true);
+    try {
+      const data = new FormData();
+      data.append('file', docFile);
+      if (docTopic.trim()) data.append('topic', docTopic.trim());
+      if (docCourseId) data.append('courseId', docCourseId);
+
+      const res = await api.post('/lms/bot-knowledge/upload-doc', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      showNotification(res.data.message || 'Hujjat muvaffaqiyatli saqlandi', 'success');
+      setIsDocModalOpen(false);
+      setDocFile(null);
+      setDocTopic('');
+      setDocCourseId('');
+      fetchItems();
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      showNotification(err.response?.data?.error || 'Hujjatni yuklashda xatolik yuz berdi', 'error');
+    } finally {
+      setUploadingDoc(false);
     }
   };
 
@@ -163,6 +202,15 @@ export default function BotKnowledgeBase() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
+          <button
+            onClick={() => setIsDocModalOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-sm shadow-lg shadow-amber-600/20 transition-all cursor-pointer"
+            title="Elektron kitob, PDF, Word, Excel yoki matnli qo'llanma yuklash va botga o'rgatish"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Hujjat / Kitob Yuklash</span>
+          </button>
+
           <button
             onClick={handleSyncCourses}
             disabled={syncing}
@@ -431,6 +479,104 @@ export default function BotKnowledgeBase() {
                 Ha, O'chirish
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document / Book Upload Modal */}
+      {isDocModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-dark-900 border border-dark-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl glass space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-dark-800">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Upload className="w-5 h-5 text-amber-400" />
+                Hujjat yoki Elektron Kitob Yuklash
+              </h3>
+              <button
+                onClick={() => { setIsDocModalOpen(false); setDocFile(null); }}
+                className="text-dark-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleDocUploadSubmit} className="space-y-4">
+              <p className="text-xs text-dark-400">
+                PDF, Word (.docx, .doc), Excel (.xlsx, .xls), Text (.txt, .md) fayllaridagi kitob va qo'llanmalarni yuklang. Bot fayl matnini avtomatik tahlil qilib, bilimlar bazasiga saqlaydi.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                  Fayl Tanlang (PDF, Word, Excel, TXT) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="file"
+                  required
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.csv"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setDocFile(file);
+                      if (!docTopic) setDocTopic(file.name.replace(/\.[^/.]+$/, ""));
+                    }
+                  }}
+                  className="w-full bg-dark-800 border border-dark-700 rounded-xl p-3 text-sm text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 cursor-pointer"
+                />
+                {docFile && (
+                  <div className="mt-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs text-amber-300">
+                    <span className="font-medium truncate max-w-[300px]">{docFile.name}</span>
+                    <span className="opacity-80">{(docFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                  Hujjat/Mavzu Nomi (Ixtiyoriy)
+                </label>
+                <input
+                  type="text"
+                  value={docTopic}
+                  onChange={(e) => setDocTopic(e.target.value)}
+                  placeholder="Masalan: Python Dasturlash Bo'yicha Qo'llanma 2026"
+                  className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                  Tegishli Fan / Kurs (Ixtiyoriy)
+                </label>
+                <select
+                  value={docCourseId}
+                  onChange={(e) => setDocCourseId(e.target.value)}
+                  className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="">Barcha fanlar uchun umumiy</option>
+                  {courses.map(c => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsDocModalOpen(false); setDocFile(null); }}
+                  className="px-4 py-2.5 text-sm font-medium text-dark-300 hover:text-white bg-dark-800 hover:bg-dark-700 rounded-xl transition-colors"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingDoc}
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 rounded-xl shadow-lg shadow-amber-600/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {uploadingDoc && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>O'qish va Botga O'rgatish</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

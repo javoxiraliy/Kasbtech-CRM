@@ -6,6 +6,15 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
+const XLSX = require('xlsx');
+
+const uploadDocMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB max file size
+});
+
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -1508,6 +1517,118 @@ router.delete('/bot-knowledge/:id', authenticate, requireMentorOrAdmin, async (r
   } catch (error) {
     console.error('Delete bot knowledge error:', error);
     res.status(500).json({ error: 'Bilimlar bazasi yozuvini o\'chirishda xatolik' });
+  }
+});
+
+// POST /api/lms/bot-knowledge/upload-doc - Upload PDF, Word, Excel, TXT books/manuals and extract into Bot Knowledge Base
+router.post('/bot-knowledge/upload-doc', authenticate, requireMentorOrAdmin, uploadDocMemory.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Fayl yuklanmadi' });
+    }
+
+    const { courseId, topic } = req.body;
+    const fileBuffer = req.file.buffer;
+    const originalName = req.file.originalname || 'Hujjat';
+    const mimeType = req.file.mimetype || '';
+    const ext = originalName.split('.').pop().toLowerCase();
+
+    let extractedText = '';
+
+    // Extract text based on file extension / mime type
+    if (ext === 'pdf' || mimeType === 'application/pdf') {
+      const pdfData = await pdfParse(fileBuffer);
+      extractedText = pdfData.text || '';
+    } else if (ext === 'docx' || ext === 'doc' || mimeType.includes('word')) {
+      const result = await mammoth.extractRawText({ buffer: fileBuffer });
+      extractedText = result.value || '';
+    } else if (ext === 'xlsx' || ext === 'xls' || mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      const sheetTexts = [];
+      workbook.SheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        const csv = XLSX.utils.sheet_to_csv(sheet);
+        if (csv && csv.trim()) {
+          sheetTexts.push(`--- Varaq: ${sheetName} ---\n${csv}`);
+        }
+      });
+      extractedText = sheetTexts.join('\n\n');
+    } else {
+      // Plain text, markdown, CSV, JSON
+      extractedText = fileBuffer.toString('utf-8');
+    }
+
+    extractedText = extractedText.replace(/\r\n/g, '\n').trim();
+
+    if (!extractedText) {
+      return res.status(400).json({ error: 'Fayldan matnli ma\'lumot ajratib bo\'lmadi yoki fayl mazmuni bo\'sh' });
+    }
+
+    const baseTopic = topic && topic.trim() ? topic.trim() : `Hujjat: ${originalName}`;
+    const wordCount = extractedText.split(/\s+/).length;
+
+    // Chunking text if it's longer than 2,000 characters
+    const CHUNK_SIZE = 2000;
+    let createdCount = 0;
+
+    if (extractedText.length <= CHUNK_SIZE) {
+      await prisma.botKnowledge.create({
+        data: {
+          topic: baseTopic,
+          question: `${originalName} kitobi/qo'llanmasi bo'yicha ma'lumotlar`,
+          content: extractedText,
+          courseId: courseId || null,
+          createdById: req.user.id
+        }
+      });
+      createdCount = 1;
+    } else {
+      const paragraphs = extractedText.split(/\n\s*\n/);
+      let currentChunk = '';
+      let chunkIdx = 1;
+
+      for (const para of paragraphs) {
+        if ((currentChunk + '\n\n' + para).length > CHUNK_SIZE && currentChunk.trim()) {
+          await prisma.botKnowledge.create({
+            data: {
+              topic: `${baseTopic} (${chunkIdx}-qism)`,
+              question: `${originalName} kitobi/qo'llanmasi (${chunkIdx}-qism)`,
+              content: currentChunk.trim(),
+              courseId: courseId || null,
+              createdById: req.user.id
+            }
+          });
+          createdCount++;
+          chunkIdx++;
+          currentChunk = para;
+        } else {
+          currentChunk += (currentChunk ? '\n\n' : '') + para;
+        }
+      }
+
+      if (currentChunk.trim()) {
+        await prisma.botKnowledge.create({
+          data: {
+            topic: `${baseTopic} (${chunkIdx}-qism)`,
+            question: `${originalName} kitobi/qo'llanmasi (${chunkIdx}-qism)`,
+            content: currentChunk.trim(),
+            courseId: courseId || null,
+            createdById: req.user.id
+          }
+        });
+        createdCount++;
+      }
+    }
+
+    res.json({
+      message: `"${originalName}" faylidan ${wordCount} so'z ajratib olindi va ${createdCount} ta bilim yozuvi sifatida AI botga muvaffaqiyatli saqlandi!`,
+      createdCount,
+      wordCount
+    });
+
+  } catch (error) {
+    console.error('Upload document to bot knowledge error:', error);
+    res.status(500).json({ error: 'Hujjatni o\'qish yoki saqlashda xatolik yuz berdi: ' + error.message });
   }
 });
 
