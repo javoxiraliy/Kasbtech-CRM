@@ -1862,6 +1862,26 @@ ${combinedContextText}
         } else {
           aiReply = `🤖 **Mentor Kasbtech Bot**\n\nHa, albatta! Kasbtech Akademiyasining ushbu kursida quyidagi barcha zamonaviy va talabgir yo'nalishlar to'liq va amaliy tarzda o'rgatiladi:\n\n1. **Marketing Poydevori va Biznes Tahlil**: Maqsadli auditoriya (Target Audience) va mijoz portretini tuzish.\n2. **Digital Marketing va Sotuv Voronkalari**: Mijozlarni jalb qilish va sotuv zanjirini qurish.\n3. **Targeting (Instagram / Facebook Reklama)**: Reklama kabinetini sozlash, kunlik byudjet va auditoriyalarni to'g'ri tanlash.\n4. **SMM va Short Video Content**: Reels, TikTok va Telegram kanallari uchun sotuvchi kontent va ssenariylar.\n5. **AI va Sun'iy Intellekt Vositalari**: ChatGPT, Midjourney va avtomatlashtirish yordamida tezkor ishlash.\n6. **Frilans va Mijozlar Bilan Ishlash**: Shaxsiy brend va xizmatlarni sotish sirlari.`;
         }
+      // 0.5 Intent: How It Works & Benefits Follow-Up Queries ("qanday ishlaydi", "foydasi nima", "afzalligi nima", "ishlash prinsipi")
+      const isHowItWorksQuery = /qanday ishlaydi|ishlaydii|ishlash prinsipi|qanday foyda|foydasi|afzalligi|nima uchun kerak|foydasi nima/i.test(queryClean);
+      
+      if (isHowItWorksQuery) {
+        let prevText = '';
+        if (Array.isArray(history) && history.length > 0) {
+          const lastUser = [...history].reverse().find(m => m.sender === 'user' && m.text !== message);
+          const lastBot = [...history].reverse().find(m => m.sender === 'bot');
+          prevText = `${lastUser?.text || ''} ${lastBot?.text || ''}`.toLowerCase();
+        }
+
+        if (/target/i.test(prevText) || /target/i.test(queryClean)) {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Targeting (Target Reklama) — Ishlash prinsipi va Foydalari**\n\n⚙️ **Qanday ishlaydi?**\nMeta (Instagram / Facebook) reklama kabineti orqali reklamangizni faqat siz tanlagan aniq yosh (masalan: 18-35 yosh), shahar/hudud va qiziqishlarga (masalan: biznes, kiyim-kechak, ta'lim) ega foydalanuvchilar tasmasi va Storisiga ko'rsatadi.\n\n💡 **Bizga qanday foyda beradi?**\n- **Reklama byudjetini tejaydi**: Reklama tasodifiy odamlarga emas, faqat mahsulotingizga qiziqadigan mijozlarga ko'rsatiladi.\n- **Tezkor mijozlar oqimi**: Reklama yoqilishi bilanoq Direct va Telegram'ga tayyor mijozlar murojaat qila boshlaydi.\n- **Aniq tahlil va nazorat**: Reklamani necha kishi ko'rgani, nechtasi bosgani va 1 ta mijoz qanchaga tushganini 100% aniq ko'rib turasiz.`;
+        } else if (/smm/i.test(prevText) || /smm/i.test(queryClean)) {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **SMM — Ishlash prinsipi va Foydalari**\n\n⚙️ **Qanday ishlaydi?**\nInstagram, Telegram va TikTok sahifalaringizda auditoriya e'tiborini tortuvchi vizual kontent, sotuvchi ssenariylar va Storislar berib borish orqali ishlaydi.\n\n💡 **Bizga qanday foyda beradi?**\n- **Brend ishonchini oshiradi**: Sahifangiz jonli va professional ko'rinishga kiradi.\n- **Doimiy sodiq mijozlar**: Auditoriya bilan muloqot o'rnatilib, qayta sotuvlar soni ortadi.`;
+        } else if (/seo/i.test(prevText) || /seo/i.test(queryClean)) {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **SEO — Ishlash prinsipi va Foydalari**\n\n⚙️ **Qanday ishlaydi?**\nVeb-saytingizni Google qidiruv algoritmlariga moslab optimallashtirish va foydali kontentlar joylash orqali ishlaydi.\n\n💡 **Bizga qanday foyda beradi?**\n- **Bepul (organik) mijozlar**: Google qidiruvida TOP-10 talikka chiqib, reklamaga pul sarflamay doimiy mijoz olasiz.`;
+        } else {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Ushbu yo'nalishning ishlash prinsipi va foydalari:**\n\n⚙️ **Qanday ishlaydi?**\nJarayonlarni avtomatlashtirish, aniq maqsadli auditoriyani qamrab olish va sotuv zanjirini to'g'ri qurish orqali ishlaydi.\n\n💡 **Bizga qanday foyda beradi?**\n- Reklama va marketing xarajatlarini tejaydi.\n- Mijozlar oqimini va biznes daromadini bir necha baravarga oshiradi.`;
+        }
       }
       // 1. Intent: Career / Job / Income after course completion
       else if (/ish|daromad|kasb|frilanser|tugatib|so'ng|pul|agentlik|daromadga/i.test(queryClean)) {
