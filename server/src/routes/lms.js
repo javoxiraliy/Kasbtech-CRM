@@ -2014,7 +2014,7 @@ ${combinedContextText}
       const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
       const bestMatch = allMatches[0];
 
-      if (bestMatch && bestMatch.score >= 6) {
+      if (bestMatch && bestMatch.score >= 3) {
         let rawText = bestMatch.content.trim();
         let cleanText = rawText
           .replace(/📌|Dars:|Mavzu:|kitob-\d+|\(\d+-qism\)/gi, '')
@@ -2026,7 +2026,17 @@ ${combinedContextText}
 
         aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title.replace(/^Dars:\s*/i, '')}**\n\nTalaba savoli bo'yicha akademiya bilimlar bazasini va o'quv materiallarini tahlil qilib, quyidagi asosiy va muhim javobni taqdim etaman:\n\n${mainPoints || cleanText.substring(0, 350)}\n\n💡 *Batafsil va amaliy ko'rsatmalar platformamizdagi darsda taqdim etilgan.*`;
       } else {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\nKasbtech Akademiyasining AI Mentori sifatida sizga yordam berishdan xursandman! Ushbu mavzu bo'yicha batafsil ma'lumotlar platformadagi kurs darslarida va amaliy qo'llanmalarda tushuntirib o'tilgan. Savolingiz bo'yicha qo'shimcha tushuncha kerak bo'lsa, o'z ustozingizga yoki akademiya administratorlariga murojaat qilishingiz mumkin.`;
+        // Natural Language Knowledge AI Synthesizer for Fallback Handling
+        if (/kasbcoin|reyting|tanga|ball|leaderboard|coin/i.test(queryClean)) {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **KasbCoin va Reyting Tizimi Haqida Ma'lumot:**\n\n1. **KasbCoin nima?**: KasbCoin — bu Kasbtech Akademiyasida faollik va yaxshi o'zlashtirish uchun talabalarga beriladigan rag'batlantiruvchi ichki valyuta (tanga) hisoblanadi.\n2. **KasbCoin qanday ishlanadi?**:\n   - Har bir topshirilgan va ustoz tomonidan tasdiqlangan uy vazifasi uchun KasbCoin taqdim etiladi.\n   - O'z vaqtida va a'lo bahoga bajarilgan topshiriqlar uchun qo'shimcha bonus coinlar beriladi.\n3. **Reyting va Sovrinlar**:\n   - Ishlangan KasbCoinlar hisobiga umumiy talabalar va guruhlar o'rtasida reyting (Leaderboard) shakllanadi.\n   - Eng yuqori reytingdagi talabalar akademiyaning maxsus sovg'alari, chegirmalari va sertifikatlari bilan taqdirlanadi!`;
+        } else if (/vazifa|topshiriq|yuklash|topshirish|tekshirish|baholash/i.test(queryClean)) {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Uy vazifasini topshirish tartibi:**\n\n1. Dars sahifasiga kirib, dars pastidagi **'Uy vazifasi'** bo'limini ochasiz.\n2. Bajarilgan amaliy topshiriq faylingizni (rasm, PDF, arxiv yoki hujjat) yuklaysiz va izohingizni qoldirasiz.\n3. **'Vazifani topshirish'** tugmasini bosing.\n4. Ustozingiz vazifangizni tekshirib, 'Tasdiqlandi' (APPROVED) holatiga o'tkazgach, keyingi dars avtomatik ochiladi.`;
+        } else if (/tartib|o'zlashtirish|ochiladi|keyingi|bosqich|dars/i.test(queryClean)) {
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Darslarni o'zlashtirish va tartib qoidalari:**\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriqni bajarib platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz topshiriqni tekshirib tasdiqlagach, keyingi dars qulfdan ochiladi.`;
+        } else {
+          const cleanMsg = message.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').trim();
+          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Kasbtech Akademiyasi AI Mentor Javobi:**\n\nSizning **"${cleanMsg}"** savolingiz bo'yicha akademiyamiz o'quv dasturi va amaliy tavsiyalarini taqdim etaman:\n\n• Ushbu mavzu bo'yicha barcha nazariy va amaliy ma'lumotlar platformamizdagi o'quv darslarida hamda bilimlar bazasida to'liq tushuntirib o'tilgan.\n• Amaliy topshiriqlarni o'z vaqtida bajarish orqali KasbCoin ishlashingiz va sohadagi bilimlaringizni rivojlantirishingiz mumkin.\n\n💡 *Qo'shimcha savollaringiz bo'lsa, marhamat, yozib qoldiring!*`;
+        }
       }
     }
 
