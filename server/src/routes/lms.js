@@ -1780,15 +1780,14 @@ router.post('/ai-mentor/chat', authenticate, async (req, res) => {
     // Auto-seed default academy guides if missing
     await seedDefaultKnowledge();
 
-    // Fetch Knowledge Base entries
+    // Fetch ALL Knowledge Base entries (no cap to ensure uploaded books & core FAQs are all searched)
     const where = {};
     if (courseId) {
       where.OR = [{ courseId: courseId }, { courseId: null }];
     }
     const kbItems = await prisma.botKnowledge.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
-      take: 100
+      orderBy: { createdAt: 'desc' }
     });
 
     // Fetch all course lessons to complement Knowledge Base
@@ -1805,8 +1804,7 @@ router.post('/ai-mentor/chat', authenticate, async (req, res) => {
             course: { select: { title: true } }
           }
         }
-      },
-      take: 100
+      }
     });
 
     // Build context text from Knowledge Base and Lessons
@@ -1832,10 +1830,7 @@ SIZ QUYIDAGI QAT'IY QOIDALARGA AMAL QILISHINGIZ SHART:
 ${combinedContextText}
 =================================`;
 
-    // Retrieve Gemini API Key from database settings or process.env
-    const settingKey = await prisma.setting.findUnique({ where: { key: 'GEMINI_API_KEY' } });
-    const apiKey = settingKey?.value || process.env.GEMINI_API_KEY;    let aiReply = '';
-
+    let aiReply = '';
     const queryClean = message.toLowerCase().trim();
 
     // 0. Intent: Greeting / Casual Question ("savolim bor", "salom", "assalomu alaykum")
