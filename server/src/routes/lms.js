@@ -1498,6 +1498,17 @@ router.put('/bot-knowledge/:id', authenticate, requireMentorOrAdmin, async (req,
   }
 });
 
+// DELETE /api/lms/bot-knowledge/clear-all - Delete all knowledge base items (Admin, Teacher, Mentor)
+router.delete('/bot-knowledge/clear-all', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const result = await prisma.botKnowledge.deleteMany({});
+    res.json({ message: `Bilimlar bazasidagi barcha (${result.count} ta) yozuvlar tozalab tashlandi`, count: result.count });
+  } catch (error) {
+    console.error('Clear all bot knowledge error:', error);
+    res.status(500).json({ error: 'Bilimlar bazasini tozalashda xatolik yuz berdi' });
+  }
+});
+
 // DELETE /api/lms/bot-knowledge/:id - Delete knowledge base item
 router.delete('/bot-knowledge/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
@@ -1750,10 +1761,8 @@ async function seedDefaultKnowledge() {
 }
 
 // POST /api/lms/bot-knowledge/train - Re-train and optimize AI Bot memory on all knowledge base & course items
-router.post('/bot-knowledge/train', authenticate, authorize('ADMIN', 'TEACHER'), async (req, res) => {
+router.post('/bot-knowledge/train', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
-    await seedDefaultKnowledge();
-
     const kbCount = await prisma.botKnowledge.count();
     const lessonCount = await prisma.lesson.count();
     const totalItems = kbCount + lessonCount;
@@ -1776,9 +1785,6 @@ router.post('/ai-mentor/chat', authenticate, async (req, res) => {
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Savol matni kiritilishi shart' });
     }
-
-    // Auto-seed default academy guides if missing
-    await seedDefaultKnowledge();
 
     // Fetch ALL Knowledge Base entries (no cap to ensure uploaded books & core FAQs are all searched)
     const where = {};
@@ -1818,172 +1824,66 @@ router.post('/ai-mentor/chat', authenticate, async (req, res) => {
 
     const combinedContextText = `=== BILIMLAR BAZASI ===\n${kbText}\n\n=== KURS DARSLARI VA O'QUV MATERIALLARI ===\n${lessonText}`;
 
-    // System instruction prompt forcing strict compliance with Knowledge Base
-    const systemPrompt = `Siz "Mentor Kasbtech Bot" – Kasbtech Akademiyasining talabalar uchun yordamchi AI mentorisiz.
+    // System instruction prompt forcing strict compliance with Knowledge Base and Expert tone
+    const systemPrompt = `Siz "Mentor Kasbtech Bot" – Kasbtech Akademiyasining ta'lim, marketing va texnologiyalar bo'yicha yetuk, tajribali va intellektual AI mentorisiz.
 SIZ QUYIDAGI QAT'IY QOIDALARGA AMAL QILISHINGIZ SHART:
-1. Quyida "=== KASBTECH BILIMLAR BAZASI VA DARSLAR ===" sarlavhasi ostida keltirilgan barcha ma'lumotlarni to'liq o'qib chiqib va tahlil qilib, foydalanuvchi/talabaning savoliga aniq, tushunarli, chiroyli va muloyim javob bering.
-2. Agar talabaning savoliga tegishli javob yoki ma'lumot ushbu Bilimlar bazasida va Darslarda MAVJUD BO'LMASA, HECH QACHON o'zingizdan tashqi ma'lumot yoki o'ylab topilgan javob bermang!
-3. Bilimlar bazasida javob topilmagan taqdirda, ANQ ushbu ko'rinishda javob bering: "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling."
-4. Javobingizni o'zbek tilida, muloyim, aniq va chiroyli formatlangan ko'rinishda bering.
+1. Quyida "=== KASBTECH BILIMLAR BAZASI VA DARSLAR ===" sarlavhasi ostida keltirilgan ma'lumotlarni to'liq tahlil qilib, foydalanuvchi/talabaning savoliga xuddi soha mutaxassisiday chuqur, aniq, tushunarli, chiroyli va muloyim javob bering.
+2. Bilimlar bazasidagi va darslardagi ma'lumotlarga tayanib, javobni mantiqiy sarlavhalar, muhim nuqtalar va misollar bilan tartibli shakllantiring.
+3. Agar savol kasbcoin, guruh qoidalari, darslar, uy vazifasi topshirish haqida bo'lsa, akademiyaning belgilangan tartibini aniq tushuntiring.
+4. Javobingizni har doim professional o'zbek tilida, mutaxassis darajasida va chiroyli formatlangan (Markdown formatting) ko'rinishda taqdim eting.
 
 === KASBTECH BILIMLAR BAZASI VA DARSLAR ===
 ${combinedContextText}
 =================================`;
 
     let aiReply = '';
-    const queryClean = message.toLowerCase().trim();
 
-    // 0. Intent: Greeting / Casual Question ("savolim bor", "salom", "assalomu alaykum")
-    if (/^(savolim|salom|assalomu|yordam|savol|hi|hello)/i.test(queryClean) || /savol(im)?\s*bor/i.test(queryClean)) {
-      aiReply = `🤖 **Mentor Kasbtech Bot**\n\nAssalomu alaykum! Albatta, bemalol savolingizni yo'llashingiz mumkin! 🤝\n\nKasbtech Akademiyasi bo'yicha kurs darslari, uy vazifalarini topshirish, marketing va IT yo'nalishlari yoki boshqa savollaringiz bo'lsa, marhamat, batafsil yozing!`;
-    }
-    // 0.1 Intent: KasbCoin & Reyting ("kasbcoin", "reyting", "tanga", "ball")
-    else if (/kasbcoin|reyting|tanga|ball|leaderboard|coin/i.test(queryClean)) {
-      aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **KasbCoin va Reyting Tizimi Haqida Ma'lumot:**\n\n1. **KasbCoin nima?**: KasbCoin — bu Kasbtech Akademiyasida faollik va yaxshi o'zlashtirish uchun talabalarga beriladigan rag'batlantiruvchi ichki valyuta (tanga) hisoblanadi.\n2. **KasbCoin qanday ishlanadi?**:\n   - Har bir topshirilgan va ustoz tomonidan tasdiqlangan uy vazifasi uchun KasbCoin taqdim etiladi.\n   - O'z vaqtida va a'lo bahoga bajarilgan topshiriqlar uchun qo'shimcha bonus coinlar beriladi.\n3. **Reyting va Sovrinlar**:\n   - Ishlangan KasbCoinlar hisobiga umumiy talabalar va guruhlar o'rtasida reyting (Leaderboard) shakllanadi.\n   - Eng yuqori reytingdagi talabalar akademiyaning maxsus sovg'alari, chegirmalari va sertifikatlari bilan taqdirlanadi!`;
-    }
-    // 0.2 Intent: Guruh Qoidalari va Talablar
-    else if (/guruh|intizom|odob/i.test(queryClean) || /qoidalari|talablar/i.test(queryClean)) {
-      aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Kasbtech Akademiyasi Guruh Qoidalari va Talablari:**\n\n1. **O'zaro Hurmat va Odob**: Guruhda ustozlar, mentorlar va boshqa talabalarga nisbatan o'zaro hurmat saqlanishi hamda muloyim muloqot qilinishi shart.\n2. **Faqat Mavzuga Oid Muloqot**: Guruhda faqat darslar, amaliy topshiriqlar va marketing/IT sohasiga oid professional savol-javoblar olib boriladi.\n3. **Reklama va Spam Taqiqi**: Begona havolalar (linklar), ruxsatsiz reklama, tijorat takliflari hamda spam yuborish qat'iyan man etiladi.\n4. **Vazifalarni O'z Vaqtida Topshirish**: Berilgan amaliy topshiriq va uy vazifalarini belgilangan muhlatda topshirish talab etiladi.\n5. **Tartib-Intizom**: Guruh intizomini buzish yoki nojo'ya murojaatlar qilish taqiqlanadi.`;
-    }
-    // 0.3 Intent: Curriculum / Course Inquiry or Follow-up Context Query ("o'rgatilinadimi", "kursda bormi", "bu bo'yicha ham")
-    else if (/o'rgatiladi|o'rgatilinadi|o'rgatami|dasturi|mavzulari|kursdami|kurda|bo'yicha ham|darsdami|nimalar bor|o'rganamiz/i.test(queryClean)) {
-      let previousTopic = '';
-      if (Array.isArray(history) && history.length > 0) {
-        const lastUserMsg = [...history].reverse().find(m => m.sender === 'user' && m.text !== message);
-        if (lastUserMsg) {
-          previousTopic = lastUserMsg.text.replace(/nima|qanday|haqida|nma|\?/gi, '').trim();
-        }
-      }
+    // 1. PRIORITY 1: Try Real Gemini AI Model API if GEMINI_API_KEY is configured
+    const settingKey = await prisma.setting.findUnique({ where: { key: 'GEMINI_API_KEY' } });
+    const apiKey = settingKey?.value || process.env.GEMINI_API_KEY;
 
-      if (previousTopic) {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\nHa, albatta! Kasbtech Akademiyasining ushbu kursida **"${previousTopic}"** bo'yicha barcha nazariy bilimlardan tortib, amaliy mashg'ulotlar, sozlamalar va real loyihalarda qo'llash sirlari to'liq o'rgatiladi! 🎓✨`;
-      } else {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\nHa, albatta! Kasbtech Akademiyasining ushbu kursida quyidagi barcha zamonaviy va talabgir yo'nalishlar to'liq va amaliy tarzda o'rgatiladi:\n\n1. **Marketing Poydevori va Biznes Tahlil**: Maqsadli auditoriya (Target Audience) va mijoz portretini tuzish.\n2. **Digital Marketing va Sotuv Voronkalari**: Mijozlarni jalb qilish va sotuv zanjirini qurish.\n3. **Targeting (Instagram / Facebook Reklama)**: Reklama kabinetini sozlash, kunlik byudjet va auditoriyalarni to'g'ri tanlash.\n4. **SMM va Short Video Content**: Reels, TikTok va Telegram kanallari uchun sotuvchi kontent va ssenariylar.\n5. **AI va Sun'iy Intellekt Vositalari**: ChatGPT, Midjourney va avtomatlashtirish yordamida tezkor ishlash.\n6. **Frilans va Mijozlar Bilan Ishlash**: Shaxsiy brend va xizmatlarni sotish sirlari.`;
-      }
-    }
-    // 0.5 Intent: How It Works & Benefits Follow-Up Queries ("qanday ishlaydi", "foydasi nima", "afzalligi nima", "ishlash prinsipi")
-    else if (/qanday ishlaydi|ishlaydii|ishlash prinsipi|qanday foyda|foydasi|afzalligi|nima uchun kerak|foydasi nima/i.test(queryClean)) {
-      let prevText = '';
-      if (Array.isArray(history) && history.length > 0) {
-        const lastUser = [...history].reverse().find(m => m.sender === 'user' && m.text !== message);
-        const lastBot = [...history].reverse().find(m => m.sender === 'bot');
-        prevText = `${lastUser?.text || ''} ${lastBot?.text || ''}`.toLowerCase();
-      }
-
-      if (/target/i.test(prevText) || /target/i.test(queryClean)) {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Targeting (Target Reklama) — Ishlash prinsipi va Foydalari**\n\n⚙️ **Qanday ishlaydi?**\nMeta (Instagram / Facebook) reklama kabineti orqali reklamangizni faqat siz tanlagan aniq yosh (masalan: 18-35 yosh), shahar/hudud va qiziqishlarga (masalan: biznes, kiyim-kechak, ta'lim) ega foydalanuvchilar tasmasi va Storisiga ko'rsatadi.\n\n💡 **Bizga qanday foyda beradi?**\n- **Reklama byudjetini tejaydi**: Reklama tasodifiy odamlarga emas, faqat mahsulotingizga qiziqadigan mijozlarga ko'rsatiladi.\n- **Tezkor mijozlar oqimi**: Reklama yoqilishi bilanoq Direct va Telegram'ga tayyor mijozlar murojaat qila boshlaydi.\n- **Aniq tahlil va nazorat**: Reklamani necha kishi ko'rgani, nechtasi bosgani va 1 ta mijoz qanchaga tushganini 100% aniq ko'rib turasiz.`;
-      } else if (/smm/i.test(prevText) || /smm/i.test(queryClean)) {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **SMM — Ishlash prinsipi va Foydalari**\n\n⚙️ **Qanday ishlaydi?**\nInstagram, Telegram va TikTok sahifalaringizda auditoriya e'tiborini tortuvchi vizual kontent, sotuvchi ssenariylar va Storislar berib borish orqali ishlaydi.\n\n💡 **Bizga qanday foyda beradi?**\n- **Brend ishonchini oshiradi**: Sahifangiz jonli va professional ko'rinishga kiradi.\n- **Doimiy sodiq mijozlar**: Auditoriya bilan muloqot o'rnatilib, qayta sotuvlar soni ortadi.`;
-      } else if (/seo/i.test(prevText) || /seo/i.test(queryClean)) {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **SEO — Ishlash prinsipi va Foydalari**\n\n⚙️ **Qanday ishlaydi?**\nVeb-saytingizni Google qidiruv algoritmlariga moslab optimallashtirish va foydali kontentlar joylash orqali ishlaydi.\n\n💡 **Bizga qanday foyda beradi?**\n- **Bepul (organik) mijozlar**: Google qidiruvida TOP-10 talikka chiqib, reklamaga pul sarflamay doimiy mijoz olasiz.`;
-      } else {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Ushbu yo'nalishning ishlash prinsipi va foydalari:**\n\n⚙️ **Qanday ishlaydi?**\nJarayonlarni avtomatlashtirish, aniq maqsadli auditoriyani qamrab olish va sotuv zanjirini to'g'ri qurish orqali ishlaydi.\n\n💡 **Bizga qanday foyda beradi?**\n- Reklama va marketing xarajatlarini tejaydi.\n- Mijozlar oqimini va biznes daromadini bir necha baravarga oshiradi.`;
-      }
-    }
-    // 1. Intent: Career / Job / Income after course completion
-    else if (/ish|daromad|kasb|frilanser|tugatib|so'ng|pul|agentlik|daromadga/i.test(queryClean)) {
-      aiReply = `🤖 **Mentor Kasbtech Bot**\n\nKasbtech Akademiyasining ushbu kursini muvaffaqiyatli tamomlab, siz quyidagi yo'nalishlarda ishlashingiz va daromad qilishingiz mumkin:\n\n1. **Digital Marketing va SMM Mutaxassisi**: Kompaniyalar va shaxsiy brendlar uchun marketing strategiyalarini tuzish hamda ijtimoiy tarmoqlarni yuritish.\n2. **Targetolog (Reklama Menejeri)**: Meta (Instagram/Facebook) platformalarida maqsadli auditoriyaga reklamalar yoqish va sotuvlar konversiyasini oshirish.\n3. **AI va Frilanser**: Zamonaviy Sun'iy Intellekt vositalaridan foydalanib masofaviy loyihalarda ishlash yoki shaxsiy agentlik ochish.`;
-    }
-    // 2. Intent: Homework / Submissions
-    else if (/vazifa|topshiriq|yuklash|topshirish|tekshirish|baholash/i.test(queryClean)) {
-      aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Uy vazifasini topshirish tartibi:**\n\n1. Dars sahifasiga kirib, dars pastidagi **'Uy vazifasi'** bo'limini ochasiz.\n2. Bajarilgan amaliy topshiriq faylingizni (rasm, PDF, arxiv yoki hujjat) yuklaysiz va izohingizni qoldirasiz.\n3. **'Vazifani topshirish'** tugmasini bosing.\n4. Ustozingiz vazifangizni tekshirib, 'Tasdiqlandi' (APPROVED) holatiga o'tkazgach, keyingi dars avtomatik ochiladi.`;
-    }
-    // 3. Intent: Progression / Rules
-    else if (/tartib|o'zlashtirish|ochiladi|keyingi|bosqich/i.test(queryClean)) {
-      aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Darslarni o'zlashtirish va tartib qoidalari:**\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriqni bajarib platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz topshiriqni tekshirib tasdiqlagach, keyingi dars qulfdan ochiladi.`;
-    }
-    // 4. Comprehensive Marketing & Technical Knowledge Matrix for Instant High-Precision AI Answers
-    else {
-      const technicalMatrix = [
-        {
-          regex: /affiliate|sheriklik|komissiya/i,
-          title: "Affiliate Marketing (Sheriklik Marketingi)",
-          content: "Affiliate Marketing (Sheriklik marketingi) — bu boshqa kompaniya yoki brendlarning mahsulot va xizmatlarini reklama qilib, har bir amalga oshirilgan sotuv yoki harakat uchun komissiya (foiz) ko'rinishida daromad olish modelidir.\n\n**Qanday ishlaydi:**\n1. Sheriklik dasturiga (Affiliate Program) a'zo bo'lasiz va shaxsiy referal havolangizni (link) olasiz.\n2. Havolani ijtimoiy tarmoqlar, Telegram kanal yoki saytingizda ulashasiz.\n3. Mijozlar sizning havolangiz orqali harid amalga oshirganda, sizga belgilangan sotuv foizi (komissiya) to'lanadi."
-        },
-        {
-          regex: /seo|search engine|qidiruv tizimi/i,
-          title: "SEO (Search Engine Optimization)",
-          content: "SEO (Search Engine Optimization) — bu veb-saytni Google, Yandex kabi qidiruv tizimlarining yuqori o'rinlariga (TOP-10) bepul (organik) olib chiqish va qidiruv orqali mijozlar oqimini jalb qilish jarayonidir."
-        },
-        {
-          regex: /smm|social media|tarmoq/i,
-          title: "SMM (Social Media Marketing)",
-          content: "SMM (Social Media Marketing) — bu Instagram, Telegram, Facebook, TikTok kabi ijtimoiy tarmoqlar orqali brendni rivojlantirish, maqsadli auditoriyani jalb qilish va sotuvlarni oshirish faoliyatidir."
-        },
-        {
-          regex: /target|targetolog|reklama yoqish/i,
-          title: "Targeting (Target Reklama)",
-          content: "Targeting (Target reklama) — bu ijtimoiy tarmoqlarda reklama xabarini faqat ma'lum bir yosh, jins, hudud va qiziqishlarga ega bo'lgan aniq maqsadli auditoriyaga (Target Audience) ko'rsatish texnologiyasidir."
-        },
-        {
-          regex: /copywriting|kopirayt|reklama matn/i,
-          title: "Copywriting (Kopirayting)",
-          content: "Copywriting (Kopirayting) — bu sotuvchi va ta'sirchan reklama matnlari, post sarlavhalari, takliflar (OFFER) va sotuv ssenariylarini yozish san'atidir."
-        },
-        {
-          regex: /digital|raqamli/i,
-          title: "Digital Marketing (Raqamli Marketing)",
-          content: "Digital Marketing — bu raqamli texnologiyalar, internet, ijtimoiy tarmoqlar, qidiruv tizimlari va sotuv voronkalari (Sales Funnel) orqali mahsulot yoki xizmatlarni ilgari surish faoliyati."
-        },
-        {
-          regex: /voronka|funnel|sotuv zanjiri/i,
-          title: "Sales Funnel (Sotuv Voronkasi)",
-          content: "Sales Funnel (Sotuv Voronkasi) — bu potensial mijozning brend bilan birinchi tanishuvidan to harid qilgunga qadar bosib o'tadigan mantiqiy bosqichlar zanjiridir (E'tibor -> Qiziqish -> Istak -> Harakat)."
-        },
-        {
-          regex: /reels|tiktok|shorts|short content/i,
-          title: "Short Video Content (Reels va TikTok)",
-          content: "Reels va TikTok — bu qisqa, ta'sirchan va e'tiborni tez tortuvchi sotuvchi videolar orqali bepul (organik) qamrov (reach) va mijozlarni jalb qilish usulidir."
-        },
-        {
-          regex: /python|dasturlash|kod/i,
-          title: "Python Dasturlash Tili",
-          content: "Python — bu o'rganish uchun juda sodda, universal va kuchli dasturlash tili bo'lib, veb-dasturlash, AI (Sun'iy Intellekt), ma'lumotlar tahlili (Data Science) va avtomatlashtirishda keng qo'llaniladi."
-        },
-        {
-          regex: /ai|gpt|chatgpt|midjourney|prompt/i,
-          title: "Sun'iy Intellekt (AI) va Prompt Engineering",
-          content: "Sun'iy Intellekt (AI) va Prompt Engineering — bu AI modellariga (ChatGPT, Midjourney, Claude) to'g'ri va aniq topshiriqlar (prompts) berish orqali matnlar, rasmlar va g'oyalarni sekundlar ichida yaratish texnologiyasidir."
-        }
-      ];
-
-      let matchedDict = technicalMatrix.find(item => item.regex.test(queryClean));
-      if (matchedDict) {
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${matchedDict.title}**\n\n${matchedDict.content}`;
-      }
-    }
-
-    // If no built-in intent matched, try Gemini API or Knowledge Base Synthesizer
-    if (!aiReply) {
-      // Retrieve Gemini API Key from database settings or process.env
-      const settingKey = await prisma.setting.findUnique({ where: { key: 'GEMINI_API_KEY' } });
-      const apiKey = settingKey?.value || process.env.GEMINI_API_KEY;
-
+    if (apiKey && apiKey.trim().length > 5) {
       const axios = require('axios');
+      const candidateModels = [
+        'gemini-flash-latest',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-2.5-flash-lite',
+        'gemini-3.6-flash'
+      ];
+      const contents = [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nFoydalanuvchi savoli: ${message}` }] }];
 
-      // Attempt calling Gemini models if API Key starts with AIza
-      if (apiKey && apiKey.startsWith('AIza')) {
-        const candidateModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-        const contents = [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nFoydalanuvchi savoli: ${message}` }] }];
-
-        for (const modelName of candidateModels) {
-          try {
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-            const response = await axios.post(geminiUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
-            const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text && !text.includes('topilmadi')) {
-              aiReply = text;
-              break;
-            }
-          } catch (err) {
-            console.warn(`Gemini model ${modelName} API error:`, err.response?.data?.error?.message || err.message);
+      for (const modelName of candidateModels) {
+        try {
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey.trim()}`;
+          const response = await axios.post(
+            geminiUrl,
+            { contents },
+            { headers: { 'Content-Type': 'application/json' }, timeout: 12000 }
+          );
+          const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && text.trim().length > 5) {
+            aiReply = text;
+            break;
           }
+        } catch (err) {
+          console.warn(`Gemini API call error (${modelName}):`, err.response?.data?.error?.message || err.message);
         }
       }
     }
 
-    // High-Precision Knowledge Base Score Matching with Natural Language Synthesizer
+    // 2. PRIORITY 2: Smart Typo-Tolerant RAG & Built-in Knowledge Engine (when Gemini API is keyless or quota limited)
     if (!aiReply) {
+      let queryClean = message.toLowerCase().trim();
+
+      // Typo & Synonym Normalizer for Uzbek natural language
+      queryClean = queryClean
+        .replace(/\bkabcoin\b|\bkasbkoin\b|\bkasb-coin\b|\bcoin\b|\btanga\b|\bkoin\b/gi, 'kasbcoin')
+        .replace(/\bqoydalari\b|\bqoidasi\b|\bqoida\b|\bintizom\b|\btalablar\b/gi, 'qoidalari')
+        .replace(/\btopshrish\b|\btopshrik\b|\bvazifalar\b|\btopshirish\b/gi, 'topshirish')
+        .replace(/\bo'rgatilinadimi\b|\bo'rganamiz\b|\bkursdami\b/gi, 'o\'rgatiladi');
+
+      // Check Knowledge Base entries from database
       const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
       const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar', 'men', 'ma\'lumot', 'bering', 'tizimi', 'bo\'yicha']);
       const keyWords = rawWords.filter(w => !stopWords.has(w));
@@ -2001,12 +1901,14 @@ ${combinedContextText}
 
       const scoredKB = kbItems.map(item => ({
         title: item.topic,
+        question: item.question,
         content: item.content,
         score: calcScore(`${item.topic} ${item.question || ''} ${item.content}`)
       }));
 
       const scoredLessons = lessons.map(l => ({
         title: `Dars: ${l.title}`,
+        question: null,
         content: l.description || `${l.title} darsi bo'yicha o'quv materiali.`,
         score: calcScore(`${l.title} ${l.description || ''} ${l.module?.title || ''}`)
       }));
@@ -2014,29 +1916,32 @@ ${combinedContextText}
       const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
       const bestMatch = allMatches[0];
 
-      if (bestMatch && bestMatch.score >= 3) {
-        let rawText = bestMatch.content.trim();
-        let cleanText = rawText
-          .replace(/📌|Dars:|Mavzu:|kitob-\d+|\(\d+-qism\)/gi, '')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        const sentences = cleanText.split(/(?<=[.!?])\s+/).filter(s => s.length > 15);
-        const mainPoints = sentences.slice(0, 3).map(s => `• ${s.trim()}`).join('\n');
-
-        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title.replace(/^Dars:\s*/i, '')}**\n\nTalaba savoli bo'yicha akademiya bilimlar bazasini va o'quv materiallarini tahlil qilib, quyidagi asosiy va muhim javobni taqdim etaman:\n\n${mainPoints || cleanText.substring(0, 350)}\n\n💡 *Batafsil va amaliy ko'rsatmalar platformamizdagi darsda taqdim etilgan.*`;
-      } else {
-        // Natural Language Knowledge AI Synthesizer for Fallback Handling
-        if (/kasbcoin|reyting|tanga|ball|leaderboard|coin/i.test(queryClean)) {
-          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **KasbCoin va Reyting Tizimi Haqida Ma'lumot:**\n\n1. **KasbCoin nima?**: KasbCoin — bu Kasbtech Akademiyasida faollik va yaxshi o'zlashtirish uchun talabalarga beriladigan rag'batlantiruvchi ichki valyuta (tanga) hisoblanadi.\n2. **KasbCoin qanday ishlanadi?**:\n   - Har bir topshirilgan va ustoz tomonidan tasdiqlangan uy vazifasi uchun KasbCoin taqdim etiladi.\n   - O'z vaqtida va a'lo bahoga bajarilgan topshiriqlar uchun qo'shimcha bonus coinlar beriladi.\n3. **Reyting va Sovrinlar**:\n   - Ishlangan KasbCoinlar hisobiga umumiy talabalar va guruhlar o'rtasida reyting (Leaderboard) shakllanadi.\n   - Eng yuqori reytingdagi talabalar akademiyaning maxsus sovg'alari, chegirmalari va sertifikatlari bilan taqdirlanadi!`;
-        } else if (/vazifa|topshiriq|yuklash|topshirish|tekshirish|baholash/i.test(queryClean)) {
-          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Uy vazifasini topshirish tartibi:**\n\n1. Dars sahifasiga kirib, dars pastidagi **'Uy vazifasi'** bo'limini ochasiz.\n2. Bajarilgan amaliy topshiriq faylingizni (rasm, PDF, arxiv yoki hujjat) yuklaysiz va izohingizni qoldirasiz.\n3. **'Vazifani topshirish'** tugmasini bosing.\n4. Ustozingiz vazifangizni tekshirib, 'Tasdiqlandi' (APPROVED) holatiga o'tkazgach, keyingi dars avtomatik ochiladi.`;
-        } else if (/tartib|o'zlashtirish|ochiladi|keyingi|bosqich|dars/i.test(queryClean)) {
-          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Darslarni o'zlashtirish va tartib qoidalari:**\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriqni bajarib platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz topshiriqni tekshirib tasdiqlagach, keyingi dars qulfdan ochiladi.`;
-        } else {
-          const cleanMsg = message.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').trim();
-          aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **Kasbtech Akademiyasi AI Mentor Javobi:**\n\nSizning **"${cleanMsg}"** savolingiz bo'yicha akademiyamiz o'quv dasturi va amaliy tavsiyalarini taqdim etaman:\n\n• Ushbu mavzu bo'yicha barcha nazariy va amaliy ma'lumotlar platformamizdagi o'quv darslarida hamda bilimlar bazasida to'liq tushuntirib o'tilgan.\n• Amaliy topshiriqlarni o'z vaqtida bajarish orqali KasbCoin ishlashingiz va sohadagi bilimlaringizni rivojlantirishingiz mumkin.\n\n💡 *Qo'shimcha savollaringiz bo'lsa, marhamat, yozib qoldiring!*`;
-        }
+      if (bestMatch && bestMatch.score >= 2) {
+        let contentText = bestMatch.content.trim();
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **${bestMatch.title.replace(/^Dars:\s*/i, '')}**\n\n${contentText}\n\n💡 *Kasbtech Akademiyasi Bilimlar Bazasi mutaxassislari tomonidan taqdim etilgan.*`;
+      } 
+      // Greetings
+      else if (/^(savolim|salom|assalomu|yordam|savol|hi|hello)/i.test(queryClean) || /savol(im)?\s*bor/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\nAssalomu alaykum! Albatta, bemalol savolingizni yo'llashingiz mumkin! 🎓✨\n\nKasbtech Akademiyasi bo'yicha kurs darslari, uy vazifalarini topshirish, marketing va IT yo'nalishlari yoki boshqa savollaringiz bo'lsa, marhamat, batafsil yozing!`;
+      }
+      // KasbCoin
+      else if (/kasbcoin|reyting|tanga|ball|leaderboard|coin/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **KasbCoin va Reyting Tizimi Haqida Ma'lumot:**\n\n1. **KasbCoin nima?**: KasbCoin — bu Kasbtech Akademiyasida faollik va yaxshi o'zlashtirish uchun talabalarga beriladigan rag'batlantiruvchi ichki valyuta (tanga) hisoblanadi.\n2. **KasbCoin qanday ishlanadi?**:\n   - Har bir topshirilgan va ustoz tomonidan tasdiqlangan uy vazifasi uchun KasbCoin taqdim etiladi.\n   - O'z vaqtida va a'lo bahoga bajarilgan topshiriqlar uchun qo'shimcha bonus coinlar beriladi.\n3. **Reyting va Sovrinlar**:\n   - Ishlangan KasbCoinlar hisobiga umumiy talabalar va guruhlar o'rtasida reyting (Leaderboard) shakllanadi.\n   - Eng yuqori reytingdagi talabalar akademiyaning maxsus sovg'alari, chegirmalari va sertifikatlari bilan taqdirlanadi!`;
+      }
+      // Guruh Qoidalari
+      else if (/guruh|intizom|odob|qoidalari|talablar/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **Kasbtech Akademiyasi Guruh Qoidalari va Talablari:**\n\n1. **O'zaro Hurmat va Odob**: Guruhda ustozlar, mentorlar va boshqa talabalarga nisbatan o'zaro hurmat saqlanishi hamda muloyim muloqot qilinishi shart.\n2. **Faqat Mavzuga Oid Muloqot**: Guruhda faqat darslar, amaliy topshiriqlar va marketing/IT sohasiga oid professional savol-javoblar olib boriladi.\n3. **Reklama va Spam Taqiqi**: Begona havolalar (linklar), ruxsatsiz reklama, tijorat takliflari hamda spam yuborish qat'iyan man etiladi.\n4. **Vazifalarni O'z Vaqtida Topshirish**: Berilgan amaliy topshiriq va uy vazifalarini belgilangan muhlatda topshirish talab etiladi.\n5. **Tartib-Intizom**: Guruh intizomini buzish yoki nojo'ya murojaatlar qilish taqiqlanadi.`;
+      }
+      // Homework
+      else if (/vazifa|topshiriq|yuklash|topshirish|tekshirish|baholash/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **Uy vazifasini topshirish tartibi:**\n\n1. Dars sahifasiga kirib, dars pastidagi **'Uy vazifasi'** bo'limini ochasiz.\n2. Bajarilgan amaliy topshiriq faylingizni (rasm, PDF, arxiv yoki hujjat) yuklaysiz va izohingizni qoldirasiz.\n3. **'Vazifani topshirish'** tugmasini bosing.\n4. Ustozingiz vazifangizni tekshirib, 'Tasdiqlandi' (APPROVED) holatiga o'tkazgach, keyingi dars avtomatik ochiladi.`;
+      }
+      // Progression / Rules
+      else if (/tartib|o'zlashtirish|ochiladi|keyingi|bosqich/i.test(queryClean)) {
+        aiReply = `🤖 **Mentor Kasbtech Bot** *(Mutaxassis AI Mentor)*\n\n📌 **Darslarni o'zlashtirish va tartib qoidalari:**\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriqni bajarib platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz topshiriqni tekshirib tasdiqlagach, keyingi dars qulfdan ochiladi.`;
+      }
+      else {
+        aiReply = `Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.`;
       }
     }
 

@@ -47,6 +47,8 @@ export default function BotKnowledgeBase() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -198,6 +200,21 @@ export default function BotKnowledgeBase() {
     }
   };
 
+  const handleClearAll = async () => {
+    setClearingAll(true);
+    try {
+      const res = await api.delete('/lms/bot-knowledge/clear-all');
+      showNotification(res.data?.message || "Bilimlar bazasi to'liq tozalab tashlandi", 'success');
+      setIsClearAllModalOpen(false);
+      fetchItems();
+    } catch (err) {
+      console.error('Clear all error:', err);
+      showNotification(err.response?.data?.error || "Tozalashda xatolik yuz berdi", 'error');
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -244,6 +261,15 @@ export default function BotKnowledgeBase() {
           >
             {training ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-300" />}
             <span>Botni Qayta O'qitish (AI Train)</span>
+          </button>
+
+          <button
+            onClick={() => setIsClearAllModalOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium text-sm border border-red-500/30 transition-all cursor-pointer"
+            title="Bilimlar bazasidagi barcha yozuvlarni to'liq tozalab tashlash"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Barchasini Tozalash</span>
           </button>
 
           <button
@@ -602,6 +628,44 @@ export default function BotKnowledgeBase() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Confirmation Modal */}
+      {isClearAllModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-dark-900 border border-dark-800 rounded-2xl p-6 w-full max-w-md shadow-2xl glass space-y-4">
+            <div className="flex items-center gap-3 text-red-500">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Bilimlar bazasini tozalash</h3>
+            </div>
+            
+            <p className="text-sm text-dark-300">
+              Haqiqatan ham bilimlar bazasidagi barcha yozuvlarni to'liq tozalab tashlamoqchimisiz? Ushbu amalni ortga qaytarib bo'lmaydi.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsClearAllModalOpen(false)}
+                disabled={clearingAll}
+                className="px-4 py-2 text-sm font-medium text-dark-300 hover:text-white bg-dark-800 hover:bg-dark-700 rounded-xl transition-all cursor-pointer"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                disabled={clearingAll}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded-xl shadow-lg shadow-red-600/20 transition-all cursor-pointer"
+              >
+                {clearingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span>Ha, To'liq tozalansin</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
