@@ -15,16 +15,39 @@ import {
   Star,
   BookOpen,
   Filter,
-  Layers
+  Layers,
+  Swords,
+  UserPlus,
+  Search,
+  Loader2,
+  Clock,
+  Check,
+  X,
+  Flame,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function StudentGames() {
-  const { fetchCoinBalance } = useOutletContext() || {};
-  const [activeTab, setActiveTab] = useState('menu'); // 'menu' | 'blitz' | 'match' | 'simulator' | 'leaderboard'
+  const { fetchCoinBalance, user } = useOutletContext() || {};
+  const [activeTab, setActiveTab] = useState('menu'); // 'menu' | 'blitz' | 'match' | 'simulator' | 'duels' | 'leaderboard'
   const [gameLeaderboard, setGameLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [rewardNotification, setRewardNotification] = useState(null);
   const [gameCoinsEarned, setGameCoinsEarned] = useState(0);
+
+  // Duels state
+  const [duelsList, setDuelsList] = useState([]);
+  const [loadingDuels, setLoadingDuels] = useState(false);
+  const [searchUserQuery, setSearchUserQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [selectedOpponent, setSelectedOpponent] = useState(null);
+  const [duelWager, setDuelWager] = useState(10);
+  const [duelGameType, setDuelGameType] = useState('blitz');
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  // Active playing duel
+  const [activePlayDuel, setActivePlayDuel] = useState(null);
 
   // Level progress stored in localStorage
   const [levelProgress, setLevelProgress] = useState(() => {
@@ -45,10 +68,11 @@ export default function StudentGames() {
   });
 
   const [selectedGameLevel, setSelectedGameLevel] = useState('easy'); // 'easy' | 'medium' | 'hard'
-  const [selectedModuleCategory, setSelectedModuleCategory] = useState('all'); // 'all' | 'hormozi' | 'foundation' | 'web_target' | 'bot_sales'
+  const [selectedModuleCategory, setSelectedModuleCategory] = useState('all');
 
   useEffect(() => {
     loadLeaderboard();
+    loadDuels();
   }, []);
 
   const saveLevelStars = (gameKey, levelKey, stars) => {
@@ -81,6 +105,72 @@ export default function StudentGames() {
     }
   };
 
+  const loadDuels = async () => {
+    setLoadingDuels(true);
+    try {
+      const res = await api.get('/lms/games/duels');
+      setDuelsList(res.data.duels || []);
+    } catch (err) {
+      console.error('Error loading duels:', err);
+    } finally {
+      setLoadingDuels(false);
+    }
+  };
+
+  const handleSearchUsers = async (query) => {
+    setSearchUserQuery(query);
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchingUsers(true);
+    try {
+      const res = await api.get(`/lms/games/users/search?q=${encodeURIComponent(query)}`);
+      setSearchResults(res.data.users || []);
+    } catch (err) {
+      console.error('Search error:', err);
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  const handleSendDuelInvite = async () => {
+    if (!selectedOpponent) return;
+    setSendingInvite(true);
+    try {
+      const res = await api.post('/lms/games/duels/invite', {
+        opponentId: selectedOpponent.id,
+        gameType: duelGameType,
+        level: selectedGameLevel,
+        wager: duelWager
+      });
+      if (res.data.success) {
+        setRewardNotification({
+          coins: duelWager,
+          message: `${selectedOpponent.name}ga 1v1 Duel taklifi yuborildi! 📩`
+        });
+        setTimeout(() => setRewardNotification(null), 4000);
+        setSelectedOpponent(null);
+        setSearchUserQuery('');
+        setSearchResults([]);
+        loadDuels();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || "Duel taklifini yuborishda xatolik");
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  const handleRespondDuel = async (duelId, action) => {
+    try {
+      await api.post(`/lms/games/duels/${duelId}/respond`, { action });
+      loadDuels();
+    } catch (err) {
+      console.error('Respond error:', err);
+    }
+  };
+
   const handleAwardCoins = async (amount, description, gameType) => {
     try {
       const res = await api.post('/lms/coins/award', { amount, description, gameType });
@@ -99,6 +189,22 @@ export default function StudentGames() {
     }
   };
 
+  const handleCompleteDuel = async (duelId, score) => {
+    try {
+      const res = await api.post(`/lms/games/duels/${duelId}/submit`, { score });
+      if (res.data.success) {
+        loadDuels();
+        setActivePlayDuel(null);
+        if (res.data.duel.status === 'COMPLETED') {
+          loadLeaderboard();
+          if (fetchCoinBalance) fetchCoinBalance();
+        }
+      }
+    } catch (err) {
+      console.error('Duel submit error:', err);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
@@ -110,13 +216,13 @@ export default function StudentGames() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold tracking-wide">
               <BookOpen className="w-4 h-4 text-purple-400" />
-              <span>Alex Hormozi "$100M Money Models" + KASBTECH Modulli Savollar Baza Tizimi</span>
+              <span>Alex Hormozi "$100M Money Models" + KASBTECH 1v1 Multiplayer Gamification</span>
             </div>
             <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">
               Interaktiv Ta'limiy O'yinlar 🎮
             </h1>
             <p className="text-dark-300 text-sm md:text-base max-w-2xl leading-relaxed">
-              Savollar endi **4 ta alohida Bo'lim va 3 ta Qiyinchilik darajasiga** ajratilgan! O'zingiz xohlagan bo'limni tanlab bilimingizni sinang!
+              Yakka tartibda va **1v1 Jamoaviy Duel ⚔️** rejimida do'stlaringizni taklif qiling, KasbCoin stavkalarini tikib g'olib bo'ling!
             </p>
           </div>
 
@@ -144,6 +250,18 @@ export default function StudentGames() {
           >
             <Gamepad2 className="w-4 h-4" />
             <span>O'yinlar Menusi</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('duels')}
+            className={`px-4 py-2.5 rounded-xl text-sm font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'duels'
+                ? 'bg-gradient-to-r from-rose-600 to-orange-600 text-white shadow-lg shadow-rose-600/40 scale-105 animate-pulse'
+                : 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:text-white hover:bg-rose-500/30'
+            }`}
+          >
+            <Swords className="w-4 h-4 text-rose-400" />
+            <span>Jamoaviy 1v1 Duel ⚔️</span>
           </button>
 
           <button
@@ -207,9 +325,52 @@ export default function StudentGames() {
         </div>
       )}
 
-      {/* Tab 1: MENU CARD SELECTION WITH DIFFICULTY BADGES */}
+      {/* Tab 1: MENU CARD SELECTION WITH DUEL MULTIPLAYER FEATURE */}
       {activeTab === 'menu' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Card 0: Multiplayer 1v1 Duels */}
+          <div className="group bg-gradient-to-b from-rose-950/40 to-dark-900/80 border border-rose-500/40 hover:border-rose-500/80 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-rose-500/20 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+                  <Swords className="w-7 h-7" />
+                </div>
+                <div className="flex items-center gap-1 text-xs text-rose-400 font-extrabold bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/30">
+                  <Flame className="w-3.5 h-3.5 fill-rose-400" />
+                  <span>1v1 Multi-Player</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold text-rose-400 uppercase tracking-wider">YANGI • JAMOAVIY DUEL</span>
+                <h3 className="text-xl font-bold text-white mt-1">1v1 Marketing Duellari ⚔️</h3>
+                <p className="text-dark-400 text-sm mt-2 leading-relaxed">
+                  Boshqa talabani ism yoki email orqali taklif qiling, KasbCoin stavkasini tikib bilimlaringiz bilan duelda g'olib bo'ling!
+                </p>
+              </div>
+
+              {/* Difficulty badges */}
+              <div className="space-y-2 pt-2 border-t border-dark-800">
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">📩 Foydalanuvchini Taklif Qilish</span>
+                  <span>Username / Email</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-dark-300">
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🪙 Stovka Stavkasi</span>
+                  <span>10 - 50 KasbCoin</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('duels')}
+              className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white font-extrabold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30"
+            >
+              <span>Duel Arenasiga Kirish</span>
+              <Swords className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Card 1: Blitz */}
           <div className="group bg-dark-900/70 border border-dark-800 hover:border-amber-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-amber-500/10 flex flex-col justify-between">
             <div className="space-y-4">
@@ -239,11 +400,7 @@ export default function StudentGames() {
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
                   <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 O'rta (15s timer)</span>
-                  <span>+15 KasbCoin (x1.5)</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 Qiyin (10s timer)</span>
-                  <span>+25 KasbCoin (x2.5)</span>
+                  <span>+15 KasbCoin</span>
                 </div>
               </div>
             </div>
@@ -252,7 +409,7 @@ export default function StudentGames() {
               onClick={() => { setActiveTab('blitz'); setSelectedGameLevel('easy'); }}
               className="mt-6 w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-dark-950 font-extrabold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
             >
-              <span>Bo'limlarni va Darajani Tanlash</span>
+              <span>O'ynash</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -281,16 +438,12 @@ export default function StudentGames() {
               {/* Difficulty badges */}
               <div className="space-y-2 pt-2 border-t border-dark-800">
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 6 ta Juftlik (Oson)</span>
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 6 ta Juftlik</span>
                   <span>+10 KasbCoin</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 8 ta Juftlik (O'rta)</span>
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 8 ta Juftlik</span>
                   <span>+15 KasbCoin</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 10 ta Juftlik (Qiyin)</span>
-                  <span>+25 KasbCoin</span>
                 </div>
               </div>
             </div>
@@ -299,7 +452,7 @@ export default function StudentGames() {
               onClick={() => { setActiveTab('match'); setSelectedGameLevel('easy'); }}
               className="mt-6 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-dark-950 font-extrabold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
             >
-              <span>Bo'limlarni va Darajani Tanlash</span>
+              <span>O'ynash</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -321,22 +474,18 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">3-O'YIN • STRATEGIK SIMULYATOR</span>
                 <h3 className="text-xl font-bold text-white mt-1">AI Marketer Simulator 🚀</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  Real bizneskeyslarda Bosh Marketolog rolini o'ynang. Attraction, Upsell, Downsell va Continuity zanjirini quring!
+                  Real bizneskeyslarda Bosh Marketolog rolini o'ynang. Attraction, Upsell va Downsell strategiyasini quring!
                 </p>
               </div>
 
               {/* Difficulty badges */}
               <div className="space-y-2 pt-2 border-t border-dark-800">
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Kitob Do'koni Keysi</span>
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Kitob Keysi</span>
                   <span>+15 KasbCoin</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 Erkaklar Kiyim Keysi</span>
-                  <span>+20 KasbCoin</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 High-Ticket $1000 Keysi</span>
+                  <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 High-Ticket $1000</span>
                   <span>+30 KasbCoin</span>
                 </div>
               </div>
@@ -346,9 +495,265 @@ export default function StudentGames() {
               onClick={() => { setActiveTab('simulator'); setSelectedGameLevel('easy'); }}
               className="mt-6 w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-dark-950 font-extrabold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
             >
-              <span>Bo'limlarni va Darajani Tanlash</span>
+              <span>O'ynash</span>
               <ArrowRight className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MULTIPLAYER 1v1 DUEL TAB */}
+      {activeTab === 'duels' && (
+        <div className="space-y-6">
+          {/* Invite User & Search Header */}
+          <div className="bg-dark-900/80 border border-rose-500/30 rounded-3xl p-6 md:p-8 backdrop-blur-xl space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-dark-800 pb-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                  <Swords className="w-6 h-6 text-rose-400" />
+                  <span>Jamoaviy 1v1 Duel Arena ⚔️</span>
+                </h2>
+                <p className="text-dark-400 text-sm mt-1">Boshqa talabani ism yoki email orqali taklif qiling, KasbCoin stavkasi bo'yicha duel o'ynang!</p>
+              </div>
+
+              <button
+                onClick={loadDuels}
+                className="px-4 py-2 rounded-xl bg-dark-800 text-dark-300 hover:text-white text-xs font-bold shrink-0"
+              >
+                Duellarni Yangilash
+              </button>
+            </div>
+
+            {/* Search User Form */}
+            <div className="space-y-4 max-w-xl">
+              <label className="text-xs font-bold text-dark-300 uppercase tracking-wider flex items-center gap-1.5">
+                <UserPlus className="w-4 h-4 text-rose-400" />
+                <span>Raqib Talabani Qidirish (Ism / Email / Nickname)</span>
+              </label>
+
+              <div className="relative">
+                <Search className="w-5 h-5 text-dark-500 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  className="input pl-11 bg-dark-950 border-dark-700 text-sm text-white w-full rounded-xl py-3"
+                  placeholder="Masalan: Azizbek yoki malika@kasbtech.uz..."
+                  value={searchUserQuery}
+                  onChange={(e) => handleSearchUsers(e.target.value)}
+                />
+                {searchingUsers && <Loader2 className="w-5 h-5 text-purple-400 animate-spin absolute right-3.5 top-3" />}
+              </div>
+
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="bg-dark-950 border border-dark-700 rounded-2xl p-2 space-y-1 max-h-60 overflow-y-auto">
+                  {searchResults.map(u => (
+                    <div
+                      key={u.id}
+                      onClick={() => setSelectedOpponent(u)}
+                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
+                        selectedOpponent?.id === u.id
+                          ? 'bg-rose-600/20 border border-rose-500/50 text-white font-bold'
+                          : 'hover:bg-dark-800 text-dark-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-purple-600/30 text-purple-300 flex items-center justify-center font-bold text-xs">
+                          {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover rounded-full" /> : u.name?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">{u.name}</p>
+                          <p className="text-xs text-dark-400">{u.email}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-rose-400 font-bold bg-rose-500/10 px-2.5 py-1 rounded-lg">Tanlash ⚔️</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected Opponent Invite Config */}
+              {selectedOpponent && (
+                <div className="bg-dark-950 border border-rose-500/40 p-5 rounded-2xl space-y-4 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Raqib:</span>
+                      <span className="text-rose-400">{selectedOpponent.name}</span>
+                    </span>
+                    <button onClick={() => setSelectedOpponent(null)} className="text-dark-400 hover:text-white">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-dark-400 font-semibold block mb-1">O'yin Turi</label>
+                      <select
+                        value={duelGameType}
+                        onChange={(e) => setDuelGameType(e.target.value)}
+                        className="input bg-dark-900 border-dark-700 text-xs text-white w-full rounded-xl"
+                      >
+                        <option value="blitz">1. Marketing Blitz ⚡</option>
+                        <option value="match">2. Match Master 🧩</option>
+                        <option value="simulator">3. AI Simulator 🚀</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-dark-400 font-semibold block mb-1">Stavka (KasbCoin Wager)</label>
+                      <select
+                        value={duelWager}
+                        onChange={(e) => setDuelWager(e.target.value)}
+                        className="input bg-dark-900 border-dark-700 text-xs text-white w-full rounded-xl font-bold text-yellow-400"
+                      >
+                        <option value="10">10 KasbCoin 🪙</option>
+                        <option value="20">20 KasbCoin 🪙</option>
+                        <option value="30">30 KasbCoin 🪙</option>
+                        <option value="50">50 KasbCoin 🪙</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    disabled={sendingInvite}
+                    onClick={handleSendDuelInvite}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 font-extrabold text-sm text-white flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30"
+                  >
+                    {sendingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
+                    <span>1v1 Duel Taklifini Yuborish</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pending & Active Duels List */}
+          <div className="bg-dark-900/80 border border-dark-800 rounded-3xl p-6 md:p-8 space-y-4 backdrop-blur-xl">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-400" />
+              <span>Sizning Duel Tarixingiz va Takliflaringiz</span>
+            </h3>
+
+            {loadingDuels ? (
+              <div className="py-8 text-center text-dark-400">Duellar yuklanmoqda...</div>
+            ) : duelsList.length === 0 ? (
+              <div className="py-8 text-center text-dark-400">Sizda hali aktiv duellar yo'q. Yuqoridagi qidiruv orqali do'stingizga duel yuboring!</div>
+            ) : (
+              <div className="space-y-3">
+                {duelsList.map(d => {
+                  const isChallenger = d.challengerId === user?.id;
+                  const opponentName = isChallenger ? d.opponentName : d.challengerName;
+                  const isPendingForMe = d.status === 'PENDING' && !isChallenger;
+
+                  return (
+                    <div 
+                      key={d.id}
+                      className="bg-dark-950 border border-dark-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-rose-600/20 border border-rose-500/30 flex items-center justify-center font-bold text-rose-300">
+                          ⚔️
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white flex items-center gap-2">
+                            <span>{d.challengerName} vs {d.opponentName}</span>
+                            <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded font-mono border border-yellow-500/20">
+                              {d.wager * 2} 🪙 Fond
+                            </span>
+                          </p>
+                          <p className="text-xs text-dark-400 mt-0.5">
+                            O'yin: <span className="text-purple-300 font-semibold uppercase">{d.gameType}</span> | Daraja: <span className="text-emerald-300 font-semibold uppercase">{d.level}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Duel Status & Action Buttons */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        {isPendingForMe ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleRespondDuel(d.id, 'accept')}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Qabul Qilish</span>
+                            </button>
+                            <button
+                              onClick={() => handleRespondDuel(d.id, 'decline')}
+                              className="px-3 py-1.5 rounded-xl bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white font-bold text-xs flex items-center gap-1"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Rad Etish</span>
+                            </button>
+                          </div>
+                        ) : d.status === 'PENDING' ? (
+                          <span className="text-xs text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-xl font-bold border border-amber-500/20">
+                            ⏳ Javob Kutilmoqda ({opponentName})
+                          </span>
+                        ) : d.status === 'ACCEPTED' ? (
+                          <button
+                            onClick={() => setActivePlayDuel(d)}
+                            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-rose-600/30"
+                          >
+                            <Swords className="w-4 h-4" />
+                            <span>Duelni Boshlash ⚔️</span>
+                          </button>
+                        ) : d.status === 'COMPLETED' ? (
+                          <div className="text-right">
+                            <span className={`text-xs px-2.5 py-1 rounded-xl font-bold ${
+                              d.winnerId === user?.id 
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                                : 'bg-red-500/20 text-red-300 border border-red-500/40'
+                            }`}>
+                              {d.winnerId === user?.id ? "🥇 Siz G'olib Bo'ldingiz!" : "🥈 Opponent G'olib"}
+                            </span>
+                            <p className="text-[11px] text-dark-400 mt-1 font-mono">
+                              Hisob: {d.challengerScore} vs {d.opponentScore}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-dark-500 italic">Rad Etilgan</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ACTIVE DUEL PLAYING MODAL ARENA */}
+      {activePlayDuel && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-dark-900 border border-rose-500/40 rounded-3xl max-w-2xl w-full p-6 md:p-8 space-y-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-dark-800 pb-4">
+              <div className="flex items-center gap-2 text-rose-400 font-extrabold">
+                <Swords className="w-6 h-6" />
+                <span>1v1 Duel Arena ({activePlayDuel.challengerName} vs {activePlayDuel.opponentName})</span>
+              </div>
+              <button onClick={() => setActivePlayDuel(null)} className="text-dark-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-center space-y-1">
+              <p className="text-sm font-bold text-rose-300">Stavka Fondu: {activePlayDuel.wager * 2} KasbCoin 🪙</p>
+              <p className="text-xs text-dark-300">G'olib talaba barcha koinlarni qo'lga kiritadi!</p>
+            </div>
+
+            <BlitzQuizGame
+              currentLevel={activePlayDuel.level}
+              onLevelChange={() => {}}
+              currentCategory="all"
+              onCategoryChange={() => {}}
+              levelProgress={{ easy: 3, medium: 3, hard: 3 }}
+              onSaveProgress={() => {}}
+              onComplete={(scoreAmount) => {
+                handleCompleteDuel(activePlayDuel.id, scoreAmount);
+              }}
+              onBack={() => setActivePlayDuel(null)}
+            />
           </div>
         </div>
       )}
@@ -599,7 +1004,6 @@ function LevelSelector({ currentLevel, onLevelChange, currentCategory, onCategor
 function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategoryChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const ALL_QUESTIONS = {
     easy: [
-      // 1-Bo'lim: Hormozi
       {
         cat: 'hormozi',
         q: "Alex Hormozi kitobi bo'yicha 'Attraction Offer' ning asosiy vazifasi nima?",
@@ -622,7 +1026,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 2-Bo'lim: Poydevor & Kopirayting
       {
         cat: 'foundation',
         q: "Shifokor qoidasi marketingda nimani anglatadi?",
@@ -678,7 +1081,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 3-Bo'lim: Sayt & Target
       {
         cat: 'web_target',
         q: "Kasbtech 15-Kun: Landing Page saytining oddiy saytdan ustunligi nima?",
@@ -690,7 +1092,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 4-Bo'lim: Bot & Savdo
       {
         cat: 'bot_sales',
         q: "Kasbtech 28-Kun: 'Speed to Lead' (Javob berish tezligi) qoidasi nima?",
@@ -704,7 +1105,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
       }
     ],
     medium: [
-      // 1-Bo'lim: Hormozi
       {
         cat: 'hormozi',
         q: "Alex Hormozi bo'yicha 'Decoy Offer' (Chalg'ituvchi o'lja) qanday ishlaydi?",
@@ -738,7 +1138,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 2-Bo'lim: Poydevor & Kopirayting
       {
         cat: 'foundation',
         q: "PAS va AIDA formulalari o'rtasidagi tub farq nima?",
@@ -772,7 +1171,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 3-Bo'lim: Sayt & Target
       {
         cat: 'web_target',
         q: "Kasbtech 23-Kun: CTR (Click-Through Rate) va CPL (Cost Per Lead) nimani bildiradi?",
@@ -795,7 +1193,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 4-Bo'lim: Bot & Savdo
       {
         cat: 'bot_sales',
         q: "Kasbtech 29-Kun: Reels kommentariyasiga auto-reply yozish nimaga foyda beradi?",
@@ -809,7 +1206,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
       }
     ],
     hard: [
-      // 1-Bo'lim: Hormozi
       {
         cat: 'hormozi',
         q: "Hormozi kitobidagi 'Anchor Upsell' mexanikasi qanday ishlaydi?",
@@ -854,7 +1250,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 3-Bo'lim: Sayt & Target
       {
         cat: 'web_target',
         q: "Kasbtech 26-Kun: Vertikal va Gorizontal Mashtablash (Scaling) farqi nima?",
@@ -877,7 +1272,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         ],
         correct: 0
       },
-      // 4-Bo'lim: Bot & Savdo
       {
         cat: 'bot_sales',
         q: "Kasbtech 31-Kun: Meta '24-Hour Rule' (24 soatlik qoida) va Smart Delay botda qanday ishlaydi?",
@@ -906,7 +1300,6 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
   const levelTime = currentLevel === 'easy' ? 20 : currentLevel === 'medium' ? 15 : 10;
   const levelMultiplier = currentLevel === 'easy' ? 1.0 : currentLevel === 'medium' ? 1.5 : 2.5;
 
-  // State for filtered & shuffled questions
   const [questionsList, setQuestionsList] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -916,12 +1309,11 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
   const [gameOver, setGameOver] = useState(false);
 
   useEffect(() => {
-    // Filter by category and shuffle
     const pool = ALL_QUESTIONS[currentLevel] || ALL_QUESTIONS.easy;
     let filtered = pool;
     if (currentCategory && currentCategory !== 'all') {
       filtered = pool.filter(q => q.cat === currentCategory);
-      if (filtered.length === 0) filtered = pool; // fallback
+      if (filtered.length === 0) filtered = pool;
     }
 
     const shuffled = [...filtered].sort(() => Math.random() - 0.5);
@@ -1126,7 +1518,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
 }
 
 /* =========================================================================
-   GAME 2 COMPONENT: MATCH MASTER (WITH CATEGORY & DYNAMIC SHUFFLE)
+   GAME 2 COMPONENT: MATCH MASTER
    ========================================================================= */
 function MatchMasterGame({ currentLevel, onLevelChange, currentCategory, onCategoryChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const MATCH_BANKS = {
@@ -1289,7 +1681,7 @@ function MatchMasterGame({ currentLevel, onLevelChange, currentCategory, onCateg
 }
 
 /* =========================================================================
-   GAME 3 COMPONENT: AI MARKETER SIMULATOR (WITH DYNAMIC SCENARIOS)
+   GAME 3 COMPONENT: AI MARKETER SIMULATOR
    ========================================================================= */
 function SimulatorGame({ currentLevel, onLevelChange, currentCategory, onCategoryChange, levelProgress, onSaveProgress, onComplete, onBack }) {
   const SCENARIOS_BANK = {

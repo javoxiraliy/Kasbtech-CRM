@@ -1130,6 +1130,192 @@ router.get('/games/leaderboard', authenticate, async (req, res) => {
   }
 });
 
+// In-memory Game Duels Store (persisted across active server uptime)
+let gameDuels = [];
+
+// GET /api/lms/games/users/search - Search students by name, email, or nickname
+router.get('/games/users/search', authenticate, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'STUDENT',
+        id: { not: req.user.id },
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+          { nickname: { contains: q, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        nickname: true,
+        avatar: true
+      },
+      take: 10
+    });
+
+    res.json({ users });
+  } catch (error) {
+    console.error('Search duel users error:', error);
+    res.status(500).json({ error: 'Foydalanuvchilarni qidirishda xatolik' });
+  }
+});
+
+// GET /api/lms/games/duels - Fetch current student's duels
+router.get('/games/duels', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userDuels = gameDuels.filter(d => d.challengerId === userId || d.opponentId === userId);
+    res.json({ duels: userDuels });
+  } catch (error) {
+    res.status(500).json({ error: 'Duellarni yuklashda xatolik' });
+  }
+});
+
+// POST /api/lms/games/duels/invite - Send a duel challenge invitation
+router.post('/games/duels/invite', authenticate, async (req, res) => {
+  try {
+    const challengerId = req.user.id;
+    const { opponentId, gameType, level, wager } = req.body;
+
+    if (!opponentId || opponentId === challengerId) {
+      return res.status(400).json({ error: 'Raqib foydalanuvchisi to\'g\'ri tanlanmadi' });
+    }
+
+    const opponent = await prisma.user.findUnique({
+      where: { id: opponentId },
+      select: { id: true, name: true, email: true, avatar: true }
+    });
+
+    if (!opponent) {
+      return res.status(404).json({ error: 'Raqib topilmadi' });
+    }
+
+    const challenger = await prisma.user.findUnique({
+      where: { id: challengerId },
+      select: { id: true, name: true, email: true, avatar: true }
+    });
+
+    const newDuel = {
+      id: 'duel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      challengerId,
+      challengerName: challenger.name,
+      challengerEmail: challenger.email,
+      challengerAvatar: challenger.avatar,
+      challengerScore: null,
+      opponentId: opponent.id,
+      opponentName: opponent.name,
+      opponentEmail: opponent.email,
+      opponentAvatar: opponent.avatar,
+      opponentScore: null,
+      gameType: gameType || 'blitz',
+      level: level || 'easy',
+      wager: Math.min(Math.max(parseInt(wager) || 10, 5), 50),
+      status: 'PENDING', // PENDING | ACCEPTED | DECLINED | COMPLETED
+      winnerId: null,
+      createdAt: new Date().toISOString()
+    };
+
+    gameDuels.unshift(newDuel);
+    if (gameDuels.length > 200) gameDuels = gameDuels.slice(0, 200);
+
+    res.json({ success: true, duel: newDuel });
+  } catch (error) {
+    console.error('Invite duel error:', error);
+    res.status(500).json({ error: 'Duel taklifini yuborishda xatolik' });
+  }
+});
+
+// POST /api/lms/games/duels/:id/respond - Accept or Decline a duel
+router.post('/games/duels/:id/respond', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { action } = req.body;
+    const duel = gameDuels.find(d => d.id === req.params.id);
+
+    if (!duel) {
+      return res.status(404).json({ error: 'Duel topilmadi' });
+    }
+
+    if (duel.opponentId !== userId) {
+      return res.status(403).json({ error: 'Ushbu taklif sizga tegishli emas' });
+    }
+
+    if (action === 'accept') {
+      duel.status = 'ACCEPTED';
+    } else {
+      duel.status = 'DECLINED';
+    }
+
+    res.json({ success: true, duel });
+  } catch (error) {
+    res.status(500).json({ error: 'Duel javobini saqlashda xatolik' });
+  }
+});
+
+// POST /api/lms/games/duels/:id/submit - Submit duel score & award KasbCoin to winner
+router.post('/games/duels/:id/submit', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { score } = req.body;
+    const duel = gameDuels.find(d => d.id === req.params.id);
+
+    if (!duel) {
+      return res.status(404).json({ error: 'Duel topilmadi' });
+    }
+
+    const numericScore = parseInt(score) || 0;
+
+    if (duel.challengerId === userId) {
+      duel.challengerScore = numericScore;
+    } else if (duel.opponentId === userId) {
+      duel.opponentScore = numericScore;
+    } else {
+      return res.status(403).json({ error: 'Siz ushbu duel qatnashchisi emassiz' });
+    }
+
+    if (duel.challengerScore !== null && duel.opponentScore !== null) {
+      duel.status = 'COMPLETED';
+      let winnerId = null;
+      let winnerName = '';
+
+      if (duel.challengerScore > duel.opponentScore) {
+        winnerId = duel.challengerId;
+        winnerName = duel.challengerName;
+      } else if (duel.opponentScore > duel.challengerScore) {
+        winnerId = duel.opponentId;
+        winnerName = duel.opponentName;
+      }
+
+      duel.winnerId = winnerId;
+
+      if (winnerId) {
+        const rewardCoins = duel.wager * 2;
+        await prisma.coinTransaction.create({
+          data: {
+            studentId: winnerId,
+            amount: rewardCoins,
+            type: 'GAME_DUEL_WIN',
+            description: `1v1 Jamoaviy Duel g'olibi (${winnerName}) - Mukofot: ${rewardCoins} KasbCoin`
+          }
+        }).catch(err => console.error("Duel coin award error:", err));
+      }
+    }
+
+    res.json({ success: true, duel });
+  } catch (error) {
+    console.error('Submit duel error:', error);
+    res.status(500).json({ error: 'Natijani topshirishda xatolik' });
+  }
+});
+
 
 // ==========================================
 // 8. TEACHER ASSIGNMENT & STUDENT PROFILES
