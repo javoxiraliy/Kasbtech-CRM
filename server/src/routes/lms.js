@@ -1565,6 +1565,47 @@ router.post('/bot-knowledge/sync-courses', authenticate, requireMentorOrAdmin, a
   }
 });
 
+// Helper: Seed default core FAQs if knowledge base is empty or missing core guides
+async function seedDefaultKnowledge() {
+  try {
+    const defaultGuides = [
+      {
+        topic: "Darslarni o'zlashtirish va tartib qoidalari",
+        question: "Darslarni o'zlashtirish tartibi qanday?",
+        content: "Kasbtech Akademiyasida darslarni o'zlashtirish tartibi quyidagicha:\n\n1. **Dars videosini ko'rish**: 1-darsdan boshlab videolarni tartib bilan diqqat bilan ko'rib chiqasiz.\n2. **Uy vazifasini bajarish**: Dars oxirida berilgan amaliy topshiriq va uy vazifasini bajarib, fayl yoki matn ko'rinishida platformaga yuklaysiz.\n3. **Ustoz tasdiqlashi**: Ustozingiz yoki mentoringiz vazifangizni tekshirib 'Tasdiqlangan' (APPROVED) holatiga o'tkazgach, avtomatik tarzda keyingi dars qulfdan ochiladi."
+      },
+      {
+        topic: "Uy vazifasini topshirish tartibi",
+        question: "Uy vazifasini qanday topshiraman?",
+        content: "Uy vazifasini topshirish uchun:\n\n1. Dars sahifasidagi 'Uy vazifasi' bo'limiga o'ting.\n2. Bajarilgan faylingizni (rasm, PDF, arxiv yoki hujjat) yuklang va izohingizni yozing.\n3. 'Vazifani topshirish' tugmasini bosing.\n4. Ustozingiz vazifangizni tekshirib baholaydi hamda fikr-mulohazasini qoldiradi."
+      },
+      {
+        topic: "KasbCoin va Reyting Tizimi",
+        question: "KasbCoin va reyting tizimi haqida ma'lumot bering",
+        content: "Kasbtech Akademiyasi KasbCoin va Reyting tizimi:\n\n- **KasbCoin kazanish**: Uy vazifalari va testlarni a'lo baholarga o'z vaqtida topshirganingiz uchun sizga KasbCoin va ballar taqdim etiladi.\n- **Reyting taxtasi**: Olingan ballar evaziga akademiyadagi eng faol talabalar reytingida yuqori o'rinlarga ko'tarilasiz va qimmatbaho sovg'alar hamda vaucherlarga ega bo'lishingiz mumkin."
+      },
+      {
+        topic: "Akademiya va Guruh Qoidalari",
+        question: "Guruh qoidalari va tartib qoidalari",
+        content: "Kasbtech Akademiyasi qoidalari:\n\n1. O'zaro muloyimlik va professional muloqot madaniyatiga amal qilish.\n2. Dars topshiriqlarini o'z vaqtida va sifatli bajarish.\n3. Tushunarsiz savollar yuzasidan Mentor Kasbtech Bot yoki o'z ustozingizga murojaat qilish."
+      }
+    ];
+
+    for (const guide of defaultGuides) {
+      const exists = await prisma.botKnowledge.findFirst({
+        where: { topic: guide.topic }
+      });
+      if (!exists) {
+        await prisma.botKnowledge.create({
+          data: guide
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Seed default knowledge error:', err);
+  }
+}
+
 // POST /api/lms/ai-mentor/chat - AI Mentor chat endpoint with strict knowledge-base & course materials RAG
 router.post('/ai-mentor/chat', authenticate, async (req, res) => {
   try {
@@ -1572,6 +1613,9 @@ router.post('/ai-mentor/chat', authenticate, async (req, res) => {
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Savol matni kiritilishi shart' });
     }
+
+    // Auto-seed default academy guides if missing
+    await seedDefaultKnowledge();
 
     // Fetch Knowledge Base entries
     const where = {};
@@ -1627,70 +1671,72 @@ ${combinedContextText}
 
     // Retrieve Gemini API Key from database settings or process.env
     const settingKey = await prisma.setting.findUnique({ where: { key: 'GEMINI_API_KEY' } });
-    const apiKey = settingKey?.value || process.env.GEMINI_API_KEY || 'AQ.Ab8RN6ILdcxXSBbHka0A2UJngGn65ULC42_OgiRDDUS-xvocqA';
-
-    const fullPrompt = `${systemPrompt}\n\nFoydalanuvchi savoli: ${message}`;
-    const contents = [{ role: 'user', parts: [{ text: fullPrompt }] }];
+    const apiKey = settingKey?.value || process.env.GEMINI_API_KEY;
 
     let aiReply = '';
     const axios = require('axios');
 
-    // Attempt calling Gemini models
-    const candidateModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-    for (const modelName of candidateModels) {
-      try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-        const response = await axios.post(geminiUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
-        const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          aiReply = text;
-          break;
+    // Attempt calling Gemini models if API Key starts with AIza
+    if (apiKey && apiKey.startsWith('AIza')) {
+      const candidateModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+      const contents = [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nFoydalanuvchi savoli: ${message}` }] }];
+
+      for (const modelName of candidateModels) {
+        try {
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+          const response = await axios.post(geminiUrl, { contents }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
+          const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            aiReply = text;
+            break;
+          }
+        } catch (err) {
+          console.warn(`Gemini model ${modelName} API error:`, err.response?.data?.error?.message || err.message);
         }
-      } catch (err) {
-        console.warn(`Gemini model ${modelName} API error:`, err.response?.data?.error?.message || err.message);
       }
     }
 
-    // Fallback: If Gemini API fails (quota / network / invalid key), use direct Knowledge Base matching engine
+    // Fallback: Smart Semantic Relevance Synthesizer Engine
     if (!aiReply) {
-      console.log('Gemini API unavailable or quota exceeded, using smart Knowledge Base matching...');
+      console.log('Using Smart Semantic Relevance Synthesizer Engine...');
       
-      const userWords = message.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-      let matchedItem = null;
-      let maxScore = 0;
+      const queryClean = message.toLowerCase().trim();
+      const rawWords = queryClean.replace(/[^\w\s\u0400-\u04FF'’]/gi, '').split(/\s+/).filter(w => w.length >= 3);
+      const stopWords = new Set(['va', 'bilan', 'haqida', 'qanday', 'nima', 'uchun', 'qaysi', 'barcha', 'kerak', 'mumkin', 'emas', 'bor', 'dars', 'darslar']);
+      const keyWords = rawWords.filter(w => !stopWords.has(w));
 
-      // Match against kbItems
-      for (const item of kbItems) {
-        const itemText = `${item.topic} ${item.question || ''} ${item.content}`.toLowerCase();
-        let score = 0;
-        userWords.forEach(word => {
-          if (itemText.includes(word)) score++;
+      function calcScore(text) {
+        if (!text) return 0;
+        const lower = text.toLowerCase();
+        let s = 0;
+        if (lower.includes(queryClean)) s += 10;
+        keyWords.forEach(kw => {
+          if (lower.includes(kw)) s += 3;
         });
-
-        if (score > maxScore) {
-          maxScore = score;
-          matchedItem = { title: item.topic, content: item.content };
-        }
+        return s;
       }
 
-      // Match against lessons
-      for (const l of lessons) {
-        const lessonText = `${l.title} ${l.description || ''} ${l.module?.title || ''}`.toLowerCase();
-        let score = 0;
-        userWords.forEach(word => {
-          if (lessonText.includes(word)) score++;
-        });
+      // Score KB Items
+      const scoredKB = kbItems.map(item => ({
+        title: item.topic,
+        content: item.content,
+        score: calcScore(`${item.topic} ${item.question || ''} ${item.content}`)
+      }));
 
-        if (score > maxScore) {
-          maxScore = score;
-          matchedItem = { title: `Dars: ${l.title}`, content: l.description || `${l.title} darsi bo'yicha ma'lumot.` };
-        }
-      }
+      // Score Lessons
+      const scoredLessons = lessons.map(l => ({
+        title: `Dars: ${l.title}`,
+        content: l.description || `${l.title} darsi bo'yicha o'quv materiali.`,
+        score: calcScore(`${l.title} ${l.description || ''} ${l.module?.title || ''}`)
+      }));
 
-      if (matchedItem && maxScore > 0) {
-        aiReply = `📌 **${matchedItem.title}**\n\n${matchedItem.content}`;
+      const allMatches = [...scoredKB, ...scoredLessons].sort((a, b) => b.score - a.score);
+      const bestMatch = allMatches[0];
+
+      if (bestMatch && bestMatch.score >= 3) {
+        aiReply = `🤖 **Mentor Kasbtech Bot**\n\n📌 **${bestMatch.title}**\n\n${bestMatch.content}`;
       } else {
-        aiReply = "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.";
+        aiReply = "Kechirasiz, ushbu savol bo'yicha bilimlar bazamizda va kurs darslarida aniq ma'lumot topilmadi. Iltimos, ustozingizga yoki akademiya adminlariga murojaat qiling.";
       }
     }
 
