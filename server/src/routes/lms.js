@@ -1594,7 +1594,8 @@ router.get('/leaderboard', authenticate, async (req, res) => {
           },
           coins: {
             select: {
-              amount: true
+              amount: true,
+              type: true
             }
           },
           _count: {
@@ -1644,7 +1645,8 @@ router.get('/leaderboard', authenticate, async (req, res) => {
               avatar: true,
               coins: {
                 select: {
-                  amount: true
+                  amount: true,
+                  type: true
                 }
               }
             }
