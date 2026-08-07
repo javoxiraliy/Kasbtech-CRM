@@ -1042,7 +1042,7 @@ router.get('/coins/balance', authenticate, async (req, res) => {
     const kasbTonBalance = Math.max(0, kasbTonTxs.reduce((acc, curr) => acc + curr.amount, 0));
 
     const coinTxs = transactions.filter(t => 
-      !t.type || (!t.type.startsWith('KASBTON_REWARD') && !t.type.startsWith('KASBTON_DUEL') && !t.type.startsWith('KASBTON_CONVERTED') && !t.type.startsWith('GAME_'))
+      !t.type || (!t.type.startsWith('KASBTON_') && !t.type.startsWith('GAME_'))
     );
     const balance = coinTxs.reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -1148,7 +1148,7 @@ router.post('/coins/convert-kasbton', authenticate, async (req, res) => {
     const newKasbTonBalance = Math.max(0, updatedKasbTonTxs.reduce((acc, curr) => acc + curr.amount, 0));
 
     const updatedCoinTxs = updatedTxs.filter(t => 
-      !t.type || (!t.type.startsWith('KASBTON_REWARD') && !t.type.startsWith('KASBTON_DUEL') && !t.type.startsWith('KASBTON_CONVERTED') && !t.type.startsWith('GAME_'))
+      !t.type || (!t.type.startsWith('KASBTON_') && !t.type.startsWith('GAME_'))
     );
     const newCoinBalance = updatedCoinTxs.reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -1187,7 +1187,7 @@ router.get('/games/leaderboard', authenticate, async (req, res) => {
     });
 
     const leaderboard = students.map(student => {
-      const totalCoins = student.coins.reduce((acc, curr) => acc + curr.amount, 0);
+      const totalCoins = student.coins.filter(c => !c.type || (!c.type.startsWith('KASBTON_') && !c.type.startsWith('GAME_'))).reduce((acc, curr) => acc + curr.amount, 0);
       const gameTransactions = student.coins.filter(c => c.type && (c.type.startsWith('KASBTON_') || c.type.startsWith('GAME_')));
       const gameTon = gameTransactions.filter(c => c.amount > 0).reduce((acc, curr) => acc + curr.amount, 0);
       const gamesPlayed = gameTransactions.length;
@@ -1383,7 +1383,7 @@ router.post('/games/duels/:id/submit', authenticate, async (req, res) => {
             studentId: winnerId,
             amount: rewardCoins,
             type: 'GAME_DUEL_WIN',
-            description: `1v1 Jamoaviy Duel g'olibi (${winnerName}) - Mukofot: ${rewardCoins} KasbCoin`
+            description: `1v1 Jamoaviy Duel g'olibi (${winnerName}) - Mukofot: ${rewardCoins} KasbTon`
           }
         }).catch(err => console.error("Duel coin award error:", err));
       }
@@ -1617,7 +1617,7 @@ router.get('/leaderboard', authenticate, async (req, res) => {
           ? Math.round(validGrades.reduce((acc, curr) => acc + curr.grade, 0) / validGrades.length)
           : 0;
 
-        const totalCoins = student.coins.reduce((acc, curr) => acc + curr.amount, 0);
+        const totalCoins = student.coins.filter(c => !c.type || (!c.type.startsWith('KASBTON_') && !c.type.startsWith('GAME_'))).reduce((acc, curr) => acc + curr.amount, 0);
         const submissionsCount = student._count.homeworks;
 
         return {
@@ -1691,7 +1691,7 @@ router.get('/leaderboard', authenticate, async (req, res) => {
           ? Math.round(hwData.approvedGrades.reduce((acc, curr) => acc + curr, 0) / hwData.approvedGrades.length)
           : 0;
 
-        const totalCoins = student.coins.reduce((acc, curr) => acc + curr.amount, 0);
+        const totalCoins = student.coins.filter(c => !c.type || (!c.type.startsWith('KASBTON_') && !c.type.startsWith('GAME_'))).reduce((acc, curr) => acc + curr.amount, 0);
 
         return {
           id: student.id,
