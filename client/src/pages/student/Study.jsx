@@ -43,6 +43,7 @@ export default function StudentStudy() {
   const [quizAnswers, setQuizAnswers] = useState([]);
   const [quizResult, setQuizResult] = useState(null);
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -166,6 +167,7 @@ export default function StudentStudy() {
       setQuiz(null);
       setQuizResult(null);
       setQuizAnswers([]);
+      setCurrentQuestionIndex(0);
       setHomeworkFile(null);
       setHomeworkText('');
       setIsDescExpanded(true);
@@ -586,39 +588,95 @@ export default function StudentStudy() {
 
                     {!quizResult ? (
                       <form onSubmit={handleQuizSubmit} className="space-y-6">
-                        <div className="divide-y divide-dark-800">
-                          {quiz.questions.map((q, qIdx) => (
-                            <div key={qIdx} className="py-4 space-y-3">
-                              <p className="text-sm font-semibold text-white">{qIdx + 1}. {q.questionText}</p>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                {q.options.map((opt, optIdx) => (
-                                  <button
-                                    key={optIdx}
-                                    type="button"
-                                    onClick={() => handleQuizOptionSelect(qIdx, optIdx)}
-                                    className={`p-3 rounded-lg text-left text-xs border transition-all duration-200 ${
-                                      quizAnswers[qIdx] === optIdx
-                                        ? 'bg-primary-600/20 text-white border-primary-500/80 font-bold'
-                                        : 'bg-dark-850 text-dark-200 border-dark-750 hover:bg-dark-800 hover:text-white'
-                                    }`}
-                                  >
-                                    {opt}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                        {/* Quiz Progress Bar */}
+                        <div className="flex items-center justify-between text-xs text-dark-400 mb-2 font-bold">
+                          <span>Savol {currentQuestionIndex + 1} / {quiz.questions.length}</span>
+                          <span>{Math.round(((currentQuestionIndex + 1) / quiz.questions.length) * 100)}%</span>
+                        </div>
+                        <div className="w-full bg-dark-800 h-2 rounded-full overflow-hidden mb-6">
+                          <div 
+                            className="bg-primary-500 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${((currentQuestionIndex + 1) / quiz.questions.length) * 100}%` }}
+                          ></div>
                         </div>
 
-                        <button 
-                          type="submit" 
-                          disabled={submittingQuiz}
-                          className="btn-primary py-2 px-4 text-xs font-bold"
-                        >
-                          {submittingQuiz ? 'Tekshirilmoqda...' : 'Javoblarni yuborish'}
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        {/* Current Question */}
+                        <div className="card bg-dark-900 border-dark-800 p-6 sm:p-8 space-y-6 relative overflow-hidden">
+                          {/* Decorative blur */}
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-primary-600/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                          
+                          <h4 className="text-lg sm:text-xl font-bold text-white leading-relaxed relative z-10">
+                            {currentQuestionIndex + 1}. {quiz.questions[currentQuestionIndex].questionText}
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 gap-3 relative z-10 mt-6">
+                            {quiz.questions[currentQuestionIndex].options.map((opt, optIdx) => (
+                              <button
+                                key={optIdx}
+                                type="button"
+                                onClick={() => {
+                                  handleQuizOptionSelect(currentQuestionIndex, optIdx);
+                                  if (currentQuestionIndex < quiz.questions.length - 1) {
+                                    setTimeout(() => setCurrentQuestionIndex(prev => prev + 1), 400);
+                                  }
+                                }}
+                                className={`w-full p-4 rounded-xl text-left text-sm font-medium border transition-all duration-300 transform ${
+                                  quizAnswers[currentQuestionIndex] === optIdx
+                                    ? 'bg-primary-600/20 text-white border-primary-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] translate-x-1'
+                                    : 'bg-dark-950 text-dark-200 border-dark-800 hover:bg-dark-850 hover:border-dark-700 hover:text-white'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border transition-colors ${
+                                    quizAnswers[currentQuestionIndex] === optIdx
+                                      ? 'bg-primary-500 text-white border-primary-500'
+                                      : 'bg-dark-800 text-dark-400 border-dark-700'
+                                  }`}>
+                                    {String.fromCharCode(65 + optIdx)}
+                                  </div>
+                                  <span>{opt}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Navigation Buttons */}
+                        <div className="flex items-center justify-between pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                            disabled={currentQuestionIndex === 0}
+                            className={`btn-outline py-2 px-4 text-xs ${currentQuestionIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <ArrowLeft className="w-4 h-4 mr-1 inline" />
+                            Oldingi
+                          </button>
+                          
+                          {currentQuestionIndex < quiz.questions.length - 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1))}
+                              className="btn-primary py-2 px-4 text-xs font-bold"
+                            >
+                              Keyingi
+                              <ChevronRight className="w-4 h-4 ml-1 inline" />
+                            </button>
+                          ) : (
+                            <button 
+                              type="submit" 
+                              disabled={submittingQuiz || quizAnswers.includes(-1)}
+                              className={`py-2 px-6 text-xs font-bold rounded-lg transition-all duration-300 ${
+                                quizAnswers.includes(-1)
+                                  ? 'bg-dark-800 text-dark-500 cursor-not-allowed border border-dark-700'
+                                  : 'btn-primary shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                              }`}
+                            >
+                              {submittingQuiz ? 'Tekshirilmoqda...' : 'Javoblarni yuborish'}
+                              <Send className="w-4 h-4 ml-2 inline" />
+                            </button>
+                          )}
+                        </div>
                       </form>
                     ) : (
                       // Quiz results card
@@ -658,15 +716,18 @@ export default function StudentStudy() {
                            )}
                         </div>
 
-                        {!quizResult.passed && (
                           <button 
-                            onClick={() => setQuizResult(null)} 
-                            className="btn-secondary py-1.5 px-3 text-xs mx-auto mt-2"
+                            type="button" 
+                            onClick={() => {
+                              setQuizResult(null);
+                              setCurrentQuestionIndex(0);
+                              setQuizAnswers(new Array(quiz.questions.length).fill(-1));
+                            }} 
+                            className="btn-primary-outline w-full justify-center text-xs"
                           >
                             Qayta urinib ko'rish
                           </button>
-                        )}
-                      </div>
+                        </div>
                     )}
                   </div>
                 )}
