@@ -24,7 +24,9 @@ import {
   Check,
   X,
   Flame,
-  ShieldAlert
+  Store,
+  ArrowRightLeft,
+  Gem
 } from 'lucide-react';
 
 export default function StudentGames() {
@@ -33,7 +35,13 @@ export default function StudentGames() {
   const [gameLeaderboard, setGameLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [rewardNotification, setRewardNotification] = useState(null);
-  const [gameCoinsEarned, setGameCoinsEarned] = useState(0);
+
+  // KasbTon & Store state
+  const [kasbTonBalance, setKasbTonBalance] = useState(0);
+  const [mainCoinBalance, setMainCoinBalance] = useState(0);
+  const [showStoreModal, setShowStoreModal] = useState(false);
+  const [convertAmount, setConvertAmount] = useState(50);
+  const [converting, setConverting] = useState(false);
 
   // Duels state
   const [duelsList, setDuelsList] = useState([]);
@@ -42,7 +50,7 @@ export default function StudentGames() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [selectedOpponent, setSelectedOpponent] = useState(null);
-  const [duelWager, setDuelWager] = useState(10);
+  const [duelWager, setDuelWager] = useState(50);
   const [duelGameType, setDuelGameType] = useState('blitz');
   const [sendingInvite, setSendingInvite] = useState(false);
 
@@ -79,10 +87,8 @@ export default function StudentGames() {
   const loadCoinBalance = async () => {
     try {
       const res = await api.get('/lms/coins/balance');
-      const transactions = res.data.transactions || [];
-      const gameTxs = transactions.filter(t => t.type && (t.type.startsWith('GAME_') || t.type.includes('DUEL')));
-      const gameSum = gameTxs.reduce((acc, curr) => acc + curr.amount, 0);
-      setGameCoinsEarned(gameSum > 0 ? gameSum : res.data.balance || 0);
+      setMainCoinBalance(res.data.balance || 0);
+      setKasbTonBalance(res.data.kasbTonBalance || 0);
     } catch (err) {
       console.error('Error loading coin balance:', err);
     }
@@ -188,11 +194,10 @@ export default function StudentGames() {
     try {
       const res = await api.post('/lms/coins/award', { amount, description, gameType });
       if (res.data.success) {
-        setGameCoinsEarned(prev => prev + amount);
         if (fetchCoinBalance) fetchCoinBalance();
         setRewardNotification({
           coins: amount,
-          message: description
+          message: `${amount} KasbTon 💎 yutdingiz! (${description})`
         });
         setTimeout(() => setRewardNotification(null), 4500);
         loadLeaderboard();
@@ -220,6 +225,37 @@ export default function StudentGames() {
     }
   };
 
+  const handleConvertKasbTon = async () => {
+    if (convertAmount < 50) {
+      alert("Kamida 50 KasbTon almashtirishingiz kerak (50 KasbTon = 1 KasbCoin)");
+      return;
+    }
+    if (convertAmount > kasbTonBalance) {
+      alert(`Sizda yetarli KasbTon yo'q. Hozirgi balansingiz: ${kasbTonBalance} KasbTon`);
+      return;
+    }
+
+    setConverting(true);
+    try {
+      const res = await api.post('/lms/coins/convert-kasbton', { kasbTonAmount: convertAmount });
+      if (res.data.success) {
+        setKasbTonBalance(res.data.newKasbTonBalance);
+        setMainCoinBalance(res.data.newCoinBalance);
+        if (fetchCoinBalance) fetchCoinBalance();
+        setRewardNotification({
+          coins: res.data.earnedCoins,
+          message: `${res.data.convertedTon} KasbTon ➡️ ${res.data.earnedCoins} KasbCoinga muvaffaqiyatli almashtirildi! 🎉`
+        });
+        setTimeout(() => setRewardNotification(null), 5000);
+        setShowStoreModal(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || "Almashtirishda xatolik yuz berdi");
+    } finally {
+      setConverting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
@@ -227,7 +263,7 @@ export default function StudentGames() {
         <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-10 -top-10 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold tracking-wide">
               <BookOpen className="w-4 h-4 text-purple-400" />
@@ -237,19 +273,32 @@ export default function StudentGames() {
               Interaktiv Ta'limiy O'yinlar 🎮
             </h1>
             <p className="text-dark-300 text-sm md:text-base max-w-2xl leading-relaxed">
-              Yakka tartibda va **1v1 Jamoaviy Duel ⚔️** rejimida do'stlaringizni taklif qiling, KasbCoin stavkalarini tikib g'olib bo'ling!
+              O'yinlarda **KasbTon 💎** yig'ing va **KasbTon Magazini 🏪** orqali **50 KasbTon = 1 KasbCoin 🪙** kursida almashtiring!
             </p>
           </div>
 
-          {/* User Fast Stats Badge */}
-          <div className="flex items-center gap-4 bg-dark-900/90 border border-purple-500/30 p-4 rounded-2xl shrink-0 shadow-xl">
-            <div className="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-2xl animate-pulse">
-              🪙
+          {/* User Fast Stats & KasbTon Magazini Button */}
+          <div className="flex flex-wrap items-center gap-3 bg-dark-900/90 border border-purple-500/30 p-4 rounded-2xl shrink-0 shadow-xl">
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-2xl animate-pulse">
+              💎
             </div>
             <div>
-              <p className="text-xs text-dark-400 font-semibold uppercase tracking-wider">O'yindan Yutilgan KasbCoin</p>
-              <p className="text-2xl font-black text-yellow-400">+{gameCoinsEarned} KasbCoin</p>
+              <p className="text-xs text-dark-400 font-semibold uppercase tracking-wider">O'yin KasbTon Balansi</p>
+              <p className="text-xl font-black text-cyan-400 flex items-center gap-1.5">
+                <span>{kasbTonBalance} Ton</span>
+                <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/30 font-bold">
+                  (= {Math.floor(kasbTonBalance / 50)} Coin)
+                </span>
+              </p>
             </div>
+
+            <button
+              onClick={() => setShowStoreModal(true)}
+              className="ml-auto lg:ml-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-dark-950 font-black text-xs transition-all flex items-center gap-2 shadow-lg shadow-yellow-500/20 scale-105"
+            >
+              <Store className="w-4 h-4" />
+              <span>KasbTon Magazini 🏪</span>
+            </button>
           </div>
         </div>
 
@@ -332,10 +381,103 @@ export default function StudentGames() {
       {/* Floating Reward Toast Notification */}
       {rewardNotification && (
         <div className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-dark-950 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce border border-yellow-300">
-          <div className="text-3xl">🪙</div>
+          <div className="text-3xl">💎</div>
           <div>
-            <p className="font-extrabold text-base">+{rewardNotification.coins} KasbCoin Yutdingiz!</p>
+            <p className="font-extrabold text-base">Mukofot Yutildi!</p>
             <p className="text-xs font-bold opacity-90">{rewardNotification.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* KASBTON EXCHANGE STORE MODAL (MAGAZIN) */}
+      {showStoreModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-dark-900 border border-yellow-500/40 rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute -right-12 -top-12 w-48 h-48 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-center justify-between border-b border-dark-800 pb-4">
+              <div className="flex items-center gap-2.5 text-yellow-400 font-black text-lg">
+                <Store className="w-6 h-6 text-yellow-400" />
+                <span>KasbTon Exchange Magazini 🏪</span>
+              </div>
+              <button onClick={() => setShowStoreModal(false)} className="text-dark-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Exchange Rate Info Box */}
+            <div className="bg-gradient-to-r from-yellow-500/15 via-amber-500/10 to-yellow-500/15 border border-yellow-500/30 p-4 rounded-2xl text-center space-y-1">
+              <span className="text-xs font-bold text-yellow-400 uppercase tracking-widest">RASMIY ALMASHTIRISH KURSI</span>
+              <p className="text-xl font-extrabold text-white flex items-center justify-center gap-2 mt-1">
+                <span className="text-cyan-400">50 KasbTon 💎</span>
+                <ArrowRightLeft className="w-4 h-4 text-yellow-400" />
+                <span className="text-yellow-400">1 KasbCoin 🪙</span>
+              </p>
+              <p className="text-xs text-dark-300">O'yinlardan yig'ilgan KasbTonlarni asosiy hisobingizdagi KasbCoinga almashtiring!</p>
+            </div>
+
+            {/* Current Balances Box */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-dark-950 border border-cyan-500/30 p-3.5 rounded-2xl text-center">
+                <p className="text-[11px] text-dark-400 font-bold uppercase">Sizning KasbTon</p>
+                <p className="text-lg font-black text-cyan-400 mt-0.5">💎 {kasbTonBalance} Ton</p>
+              </div>
+              <div className="bg-dark-950 border border-yellow-500/30 p-3.5 rounded-2xl text-center">
+                <p className="text-[11px] text-dark-400 font-bold uppercase">Asosiy KasbCoin</p>
+                <p className="text-lg font-black text-yellow-400 mt-0.5">🪙 {mainCoinBalance} Coin</p>
+              </div>
+            </div>
+
+            {/* Preset Buttons */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-dark-300 uppercase tracking-wider block">Almashtirish Miqdorini Tanlang:</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[50, 100, 250, 500].map(amt => (
+                  <button
+                    key={amt}
+                    onClick={() => setConvertAmount(amt)}
+                    className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
+                      convertAmount === amt
+                        ? 'bg-yellow-500/20 border-yellow-500 text-yellow-300 shadow-md shadow-yellow-500/10 scale-105'
+                        : 'bg-dark-950 border-dark-800 text-dark-300 hover:text-white hover:bg-dark-800'
+                    }`}
+                  >
+                    <span>💎 {amt} Ton</span>
+                    <span className="text-yellow-400 font-mono">➜ 🪙 {Math.floor(amt / 50)} Coin</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Input */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-dark-400">Yoki Boshqa Miqdor (50 ga karrali):</label>
+              <input
+                type="number"
+                step="50"
+                min="50"
+                max={kasbTonBalance}
+                value={convertAmount}
+                onChange={(e) => setConvertAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                className="input bg-dark-950 border-dark-700 text-sm text-white font-bold w-full rounded-xl"
+              />
+            </div>
+
+            {/* Conversion Preview & Submit Button */}
+            <div className="space-y-3 pt-2">
+              <div className="p-3 bg-dark-950 rounded-xl text-xs text-center font-bold text-dark-200">
+                Siz <span className="text-cyan-400">{convertAmount} KasbTon</span> evaziga <span className="text-yellow-400">{Math.floor(convertAmount / 50)} KasbCoin</span> olasiz!
+              </div>
+
+              <button
+                disabled={converting || convertAmount < 50 || convertAmount > kasbTonBalance}
+                onClick={handleConvertKasbTon}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 hover:from-yellow-600 hover:to-amber-700 disabled:opacity-40 text-dark-950 font-black text-sm transition-all flex items-center justify-center gap-2 shadow-xl shadow-yellow-500/20"
+              >
+                {converting ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRightLeft className="w-5 h-5" />}
+                <span>KasbCoinga Almashtirish 🚀</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -360,7 +502,7 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-rose-400 uppercase tracking-wider">YANGI • JAMOAVIY DUEL</span>
                 <h3 className="text-xl font-bold text-white mt-1">1v1 Marketing Duellari ⚔️</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  Boshqa talabani ism yoki email orqali taklif qiling, KasbCoin stavkasini tikib bilimlaringiz bilan duelda g'olib bo'ling!
+                  Boshqa talabani ism yoki email orqali taklif qiling, KasbTon stavkasini tikib g'olib bo'ling!
                 </p>
               </div>
 
@@ -371,8 +513,8 @@ export default function StudentGames() {
                   <span>Username / Email</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
-                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">🪙 Stovka Stavkasi</span>
-                  <span>10 - 50 KasbCoin</span>
+                  <span className="flex items-center gap-1.5 text-cyan-400 font-bold">💎 Stovka Stavkasi</span>
+                  <span>50 - 200 KasbTon</span>
                 </div>
               </div>
             </div>
@@ -411,11 +553,11 @@ export default function StudentGames() {
               <div className="space-y-2 pt-2 border-t border-dark-800">
                 <div className="flex items-center justify-between text-xs text-dark-300">
                   <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Oson (20s timer)</span>
-                  <span>+10 KasbCoin</span>
+                  <span className="text-cyan-400 font-bold">+50 KasbTon 💎</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
                   <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 O'rta (15s timer)</span>
-                  <span>+15 KasbCoin</span>
+                  <span className="text-cyan-400 font-bold">+100 KasbTon 💎</span>
                 </div>
               </div>
             </div>
@@ -446,7 +588,7 @@ export default function StudentGames() {
                 <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">2-O'YIN • BOSQICHLI MOSLASHTIRISH</span>
                 <h3 className="text-xl font-bold text-white mt-1">Match Master 🧩</h3>
                 <p className="text-dark-400 text-sm mt-2 leading-relaxed">
-                  Money Models formulalari (Decoy, Anchor, Rollover) va Kasbtech 40-kunlik atamalari juftliklari!
+                  Pul Modellari formulalari (Decoy, Anchor, Rollover) va Kasbtech 40-kunlik atamalari juftliklari!
                 </p>
               </div>
 
@@ -454,11 +596,11 @@ export default function StudentGames() {
               <div className="space-y-2 pt-2 border-t border-dark-800">
                 <div className="flex items-center justify-between text-xs text-dark-300">
                   <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 6 ta Juftlik</span>
-                  <span>+10 KasbCoin</span>
+                  <span className="text-cyan-400 font-bold">+50 KasbTon 💎</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
                   <span className="flex items-center gap-1.5 text-amber-400 font-bold">🟡 8 ta Juftlik</span>
-                  <span>+15 KasbCoin</span>
+                  <span className="text-cyan-400 font-bold">+100 KasbTon 💎</span>
                 </div>
               </div>
             </div>
@@ -497,11 +639,11 @@ export default function StudentGames() {
               <div className="space-y-2 pt-2 border-t border-dark-800">
                 <div className="flex items-center justify-between text-xs text-dark-300">
                   <span className="flex items-center gap-1.5 text-emerald-400 font-bold">🟢 Kitob Keysi</span>
-                  <span>+15 KasbCoin</span>
+                  <span className="text-cyan-400 font-bold">+50 KasbTon 💎</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-dark-300">
                   <span className="flex items-center gap-1.5 text-rose-400 font-bold">🔴 High-Ticket $1000</span>
-                  <span>+30 KasbCoin</span>
+                  <span className="text-cyan-400 font-bold">+200 KasbTon 💎</span>
                 </div>
               </div>
             </div>
@@ -528,7 +670,7 @@ export default function StudentGames() {
                   <Swords className="w-6 h-6 text-rose-400" />
                   <span>Jamoaviy 1v1 Duel Arena ⚔️</span>
                 </h2>
-                <p className="text-dark-400 text-sm mt-1">Boshqa talabani ism yoki email orqali taklif qiling, KasbCoin stavkasi bo'yicha duel o'ynang!</p>
+                <p className="text-dark-400 text-sm mt-1">Boshqa talabani ism yoki email orqali taklif qiling, KasbTon stavkasi bo'yicha duel o'ynang!</p>
               </div>
 
               <button
@@ -614,16 +756,16 @@ export default function StudentGames() {
                     </div>
 
                     <div>
-                      <label className="text-xs text-dark-400 font-semibold block mb-1">Stavka (KasbCoin Wager)</label>
+                      <label className="text-xs text-dark-400 font-semibold block mb-1">Stavka (KasbTon Wager)</label>
                       <select
                         value={duelWager}
                         onChange={(e) => setDuelWager(e.target.value)}
-                        className="input bg-dark-900 border-dark-700 text-xs text-white w-full rounded-xl font-bold text-yellow-400"
+                        className="input bg-dark-900 border-dark-700 text-xs text-white w-full rounded-xl font-bold text-cyan-400"
                       >
-                        <option value="10">10 KasbCoin 🪙</option>
-                        <option value="20">20 KasbCoin 🪙</option>
-                        <option value="30">30 KasbCoin 🪙</option>
-                        <option value="50">50 KasbCoin 🪙</option>
+                        <option value="50">50 KasbTon 💎</option>
+                        <option value="100">100 KasbTon 💎</option>
+                        <option value="200">200 KasbTon 💎</option>
+                        <option value="500">500 KasbTon 💎</option>
                       </select>
                     </div>
                   </div>
@@ -671,8 +813,8 @@ export default function StudentGames() {
                         <div>
                           <p className="text-sm font-bold text-white flex items-center gap-2">
                             <span>{d.challengerName} vs {d.opponentName}</span>
-                            <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded font-mono border border-yellow-500/20">
-                              {d.wager * 2} 🪙 Fond
+                            <span className="text-xs text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded font-mono border border-cyan-500/20 font-bold">
+                              {d.wager * 2} 💎 Fond
                             </span>
                           </p>
                           <p className="text-xs text-dark-400 mt-0.5">
@@ -753,8 +895,8 @@ export default function StudentGames() {
             </div>
 
             <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-center space-y-1">
-              <p className="text-sm font-bold text-rose-300">Stavka Fondu: {activePlayDuel.wager * 2} KasbCoin 🪙</p>
-              <p className="text-xs text-dark-300">G'olib talaba barcha koinlarni qo'lga kiritadi!</p>
+              <p className="text-sm font-bold text-cyan-300">Stavka Fondu: {activePlayDuel.wager * 2} KasbTon 💎</p>
+              <p className="text-xs text-dark-300">G'olib talaba barcha KasbTonlarni qo'lga kiritadi!</p>
             </div>
 
             <BlitzQuizGame
@@ -824,7 +966,7 @@ export default function StudentGames() {
                 <Trophy className="w-6 h-6 text-yellow-400" />
                 <span>O'yinlar bo'yicha Eng Kuchli Talabalar</span>
               </h2>
-              <p className="text-dark-400 text-sm mt-1">Interaktiv o'yinlarda eng ko'p KasbCoin to'plagan liderlar</p>
+              <p className="text-dark-400 text-sm mt-1">Interaktiv o'yinlarda eng ko'p KasbTon yig'gan liderlar</p>
             </div>
             <button
               onClick={loadLeaderboard}
@@ -846,7 +988,7 @@ export default function StudentGames() {
                     <th className="py-3 px-4">O'rin</th>
                     <th className="py-3 px-4">Talaba</th>
                     <th className="py-3 px-4 text-center">O'ynalgan O'yinlar</th>
-                    <th className="py-3 px-4 text-right">O'yindan Yutgan Koini</th>
+                    <th className="py-3 px-4 text-right">O'yindan Yutgan KasbToni</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dark-800/50">
@@ -885,8 +1027,8 @@ export default function StudentGames() {
                         <td className="py-3 px-4 text-center text-sm font-semibold text-dark-300">
                           {item.gamesPlayed} ta o'yin
                         </td>
-                        <td className="py-3 px-4 text-right font-black text-yellow-400 text-sm">
-                          +{item.gameCoins} 🪙
+                        <td className="py-3 px-4 text-right font-black text-cyan-400 text-sm">
+                          +{item.gameTon || item.gameCoins || 0} 💎 KasbTon
                         </td>
                       </tr>
                     );
@@ -1313,7 +1455,7 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
   };
 
   const levelTime = currentLevel === 'easy' ? 20 : currentLevel === 'medium' ? 15 : 10;
-  const levelMultiplier = currentLevel === 'easy' ? 1.0 : currentLevel === 'medium' ? 1.5 : 2.5;
+  const levelMultiplier = currentLevel === 'easy' ? 1.0 : currentLevel === 'medium' ? 1.5 : 2.0;
 
   const [questionsList, setQuestionsList] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -1383,12 +1525,12 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
 
         onSaveProgress(currentLevel, calculatedStars);
 
-        const baseReward = currentLevel === 'easy' ? 10 : currentLevel === 'medium' ? 15 : 25;
-        const awardedCoins = Math.round(baseReward * levelMultiplier);
+        const baseReward = currentLevel === 'easy' ? 50 : currentLevel === 'medium' ? 100 : 150;
+        const awardedTon = Math.round(baseReward * levelMultiplier);
 
         onComplete(
-          awardedCoins, 
-          `Marketing Blitz (${currentLevel.toUpperCase()}) da ${finalScore} ball to'plaganingiz uchun`, 
+          awardedTon, 
+          `Marketing Blitz (${currentLevel.toUpperCase()}) da ${finalScore} ball uchun ${awardedTon} KasbTon 💎`, 
           `blitz_${currentLevel}`
         );
       }
@@ -1482,8 +1624,8 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
         </div>
       ) : (
         <div className="text-center py-8 space-y-6 max-w-md mx-auto">
-          <div className="w-20 h-20 bg-amber-500/20 border-2 border-amber-500/40 rounded-full flex items-center justify-center mx-auto text-4xl animate-bounce">
-            🏆
+          <div className="w-20 h-20 bg-cyan-500/20 border-2 border-cyan-500/40 rounded-full flex items-center justify-center mx-auto text-4xl animate-bounce">
+            💎
           </div>
           <div>
             <h3 className="text-2xl font-extrabold text-white">
@@ -1492,8 +1634,8 @@ function BlitzQuizGame({ currentLevel, onLevelChange, currentCategory, onCategor
             <p className="text-dark-300 text-sm mt-1">Siz {score} ball to'pladingiz!</p>
           </div>
 
-          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-300 text-sm font-bold">
-            🎉 KasbCoin Mukofoti Hisobingizga O'tkazildi!
+          <div className="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-300 text-sm font-bold">
+            🎉 KasbTon 💎 Mukofoti Hisobingizga O'tkazildi!
           </div>
 
           <div className="flex gap-3 justify-center">
@@ -1610,7 +1752,7 @@ function MatchMasterGame({ currentLevel, onLevelChange, currentCategory, onCateg
           const stars = moves <= currentPairs.length + 3 ? 3 : moves <= currentPairs.length + 6 ? 2 : 1;
           onSaveProgress(currentLevel, stars);
 
-          const baseCoin = currentLevel === 'easy' ? 10 : currentLevel === 'medium' ? 15 : 25;
+          const baseCoin = currentLevel === 'easy' ? 50 : currentLevel === 'medium' ? 100 : 150;
           onComplete(baseCoin, `Match Master (${currentLevel.toUpperCase()}) da ${moves} ta urinish uchun`, `match_${currentLevel}`);
         }
       } else {
@@ -1665,16 +1807,16 @@ function MatchMasterGame({ currentLevel, onLevelChange, currentCategory, onCateg
         </div>
       ) : (
         <div className="text-center py-8 space-y-6 max-w-md mx-auto">
-          <div className="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-500/40 rounded-full flex items-center justify-center mx-auto text-4xl animate-bounce">
-            🧩
+          <div className="w-20 h-20 bg-cyan-500/20 border-2 border-cyan-500/40 rounded-full flex items-center justify-center mx-auto text-4xl animate-bounce">
+            💎
           </div>
           <div>
             <h3 className="text-2xl font-extrabold text-white">Match Master G'olibi!</h3>
             <p className="text-dark-300 text-sm mt-1">Siz {moves} ta urinishda barcha juftliklarni topdingiz!</p>
           </div>
 
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-300 text-sm font-bold">
-            🎉 KasbCoin Mukofoti Hisobingizga O'tkazildi!
+          <div className="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-300 text-sm font-bold">
+            🎉 KasbTon 💎 Mukofoti Hisobingizga O'tkazildi!
           </div>
 
           <div className="flex gap-3 justify-center">
@@ -1764,7 +1906,7 @@ function SimulatorGame({ currentLevel, onLevelChange, currentCategory, onCategor
     const stars = selectedOption?.score >= 90 ? 3 : 1;
     onSaveProgress(currentLevel, stars);
 
-    const baseCoins = currentLevel === 'easy' ? 15 : currentLevel === 'medium' ? 20 : 30;
+    const baseCoins = currentLevel === 'easy' ? 50 : currentLevel === 'medium' ? 100 : 200;
     onComplete(baseCoins, `AI Marketer Simulator (${currentLevel.toUpperCase()}) keysi muvaffaqiyati uchun`, `simulator_${currentLevel}`);
   };
 
@@ -1838,7 +1980,7 @@ function SimulatorGame({ currentLevel, onLevelChange, currentCategory, onCategor
       ) : (
         <div className="text-center py-8 space-y-6 max-w-md mx-auto">
           <div className="w-20 h-20 bg-cyan-500/20 border-2 border-cyan-500/40 rounded-full flex items-center justify-center mx-auto text-4xl animate-bounce">
-            🚀
+            💎
           </div>
           <div>
             <h3 className="text-2xl font-extrabold text-white">AI Marketer Simulyatsiyasi Yakunlandi!</h3>
@@ -1846,7 +1988,7 @@ function SimulatorGame({ currentLevel, onLevelChange, currentCategory, onCategor
           </div>
 
           <div className="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-300 text-sm font-bold">
-            🎉 KasbCoin Mukofoti Hisobingizga Qo'shildi!
+            🎉 KasbTon 💎 Mukofoti Hisobingizga Qo'shildi!
           </div>
 
           <div className="flex gap-3 justify-center">

@@ -1026,7 +1026,7 @@ router.post('/quizzes/:quizId/submit', authenticate, async (req, res) => {
 // 7. GAMIFICATION & TRANSACTION HISTORY
 // ==========================================
 
-// GET /api/lms/coins/balance - Get current student coin balance & history
+// GET /api/lms/coins/balance - Get current student coin balance, KasbTon balance & history
 router.get('/coins/balance', authenticate, async (req, res) => {
   try {
     const studentId = req.user.id;
@@ -1036,10 +1036,19 @@ router.get('/coins/balance', authenticate, async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const balance = transactions.reduce((acc, curr) => acc + curr.amount, 0);
+    const kasbTonTxs = transactions.filter(t => 
+      t.type && (t.type.startsWith('KASBTON_') || t.type.startsWith('GAME_'))
+    );
+    const kasbTonBalance = Math.max(0, kasbTonTxs.reduce((acc, curr) => acc + curr.amount, 0));
+
+    const coinTxs = transactions.filter(t => 
+      !t.type || (!t.type.startsWith('KASBTON_REWARD') && !t.type.startsWith('KASBTON_DUEL') && !t.type.startsWith('KASBTON_CONVERTED') && !t.type.startsWith('GAME_'))
+    );
+    const balance = coinTxs.reduce((acc, curr) => acc + curr.amount, 0);
 
     res.json({
       balance,
+      kasbTonBalance,
       transactions
     });
   } catch (error) {
@@ -1048,44 +1057,115 @@ router.get('/coins/balance', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/lms/coins/award - Award coins to student for completing educational games
+// POST /api/lms/coins/award - Award KasbTon to student for completing educational games
 router.post('/coins/award', authenticate, async (req, res) => {
   try {
     const studentId = req.user.id;
     const { amount, description, gameType } = req.body;
 
-    const coinsToAward = Math.min(Math.max(parseInt(amount) || 0, 1), 50); // Cap per game round to prevent abuse
-    if (coinsToAward <= 0) {
-      return res.status(400).json({ error: 'Koin miqdori to\'g\'ri kiritilmadi' });
+    const tonToAward = Math.min(Math.max(parseInt(amount) || 0, 1), 100);
+    if (tonToAward <= 0) {
+      return res.status(400).json({ error: 'KasbTon miqdori to\'g\'ri kiritilmadi' });
     }
 
     const tx = await prisma.coinTransaction.create({
       data: {
         studentId,
-        amount: coinsToAward,
-        type: gameType ? `GAME_${gameType.toUpperCase()}` : 'GAME_REWARD',
-        description: description || 'Interaktiv ta\'limiy o\'yinda g\'oliblik uchun mukofot'
+        amount: tonToAward,
+        type: gameType ? `KASBTON_${gameType.toUpperCase()}` : 'KASBTON_REWARD',
+        description: description || 'Interaktiv ta\'limiy o\'yinda g\'oliblik uchun KasbTon mukofoti'
       }
     });
 
     const allTx = await prisma.coinTransaction.findMany({
       where: { studentId }
     });
-    const newBalance = allTx.reduce((acc, curr) => acc + curr.amount, 0);
+    const kasbTonTxs = allTx.filter(t => t.type && (t.type.startsWith('KASBTON_') || t.type.startsWith('GAME_')));
+    const newKasbTonBalance = Math.max(0, kasbTonTxs.reduce((acc, curr) => acc + curr.amount, 0));
 
     res.json({
       success: true,
-      awardedCoins: coinsToAward,
-      newBalance,
+      awardedTon: tonToAward,
+      kasbTonBalance: newKasbTonBalance,
       transaction: tx
     });
   } catch (error) {
-    console.error('Award coins error:', error);
-    res.status(500).json({ error: 'Koin mukofotini taqdim etishda xatolik' });
+    console.error('Award KasbTon error:', error);
+    res.status(500).json({ error: 'KasbTon mukofotini taqdim etishda xatolik' });
   }
 });
 
-// GET /api/lms/games/leaderboard - Fetch top students by game scores & KasbCoin activity
+// POST /api/lms/coins/convert-kasbton - Convert KasbTon into KasbCoin (50 KasbTon = 1 KasbCoin)
+router.post('/coins/convert-kasbton', authenticate, async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { kasbTonAmount } = req.body;
+
+    const tonToConvert = parseInt(kasbTonAmount) || 0;
+    if (tonToConvert < 50) {
+      return res.status(400).json({ error: 'Kamida 50 KasbTon almashtirishingiz kerak (50 KasbTon = 1 KasbCoin)' });
+    }
+
+    const transactions = await prisma.coinTransaction.findMany({
+      where: { studentId }
+    });
+
+    const kasbTonTxs = transactions.filter(t => 
+      t.type && (t.type.startsWith('KASBTON_') || t.type.startsWith('GAME_'))
+    );
+    const currentKasbTonBalance = Math.max(0, kasbTonTxs.reduce((acc, curr) => acc + curr.amount, 0));
+
+    if (tonToConvert > currentKasbTonBalance) {
+      return res.status(400).json({ error: `Sizda yetarli KasbTon yo'q. Hozirgi balans: ${currentKasbTonBalance} KasbTon` });
+    }
+
+    const coinsToEarn = Math.floor(tonToConvert / 50);
+    const actualTonDeducted = coinsToEarn * 50;
+
+    await prisma.coinTransaction.create({
+      data: {
+        studentId,
+        amount: -actualTonDeducted,
+        type: 'KASBTON_CONVERTED',
+        description: `${actualTonDeducted} KasbTon -> ${coinsToEarn} KasbCoin ga almashtirildi`
+      }
+    });
+
+    await prisma.coinTransaction.create({
+      data: {
+        studentId,
+        amount: coinsToEarn,
+        type: 'KASBCOIN_FROM_KASBTON',
+        description: `${actualTonDeducted} KasbTon almashtirish evaziga ${coinsToEarn} KasbCoin taqdim etildi`
+      }
+    });
+
+    const updatedTxs = await prisma.coinTransaction.findMany({
+      where: { studentId }
+    });
+
+    const updatedKasbTonTxs = updatedTxs.filter(t => t.type && (t.type.startsWith('KASBTON_') || t.type.startsWith('GAME_')));
+    const newKasbTonBalance = Math.max(0, updatedKasbTonTxs.reduce((acc, curr) => acc + curr.amount, 0));
+
+    const updatedCoinTxs = updatedTxs.filter(t => 
+      !t.type || (!t.type.startsWith('KASBTON_REWARD') && !t.type.startsWith('KASBTON_DUEL') && !t.type.startsWith('KASBTON_CONVERTED') && !t.type.startsWith('GAME_'))
+    );
+    const newCoinBalance = updatedCoinTxs.reduce((acc, curr) => acc + curr.amount, 0);
+
+    res.json({
+      success: true,
+      convertedTon: actualTonDeducted,
+      earnedCoins: coinsToEarn,
+      newKasbTonBalance,
+      newCoinBalance
+    });
+  } catch (error) {
+    console.error('Convert KasbTon error:', error);
+    res.status(500).json({ error: 'KasbTonni KasbCoinga almashtirishda xatolik' });
+  }
+});
+
+// GET /api/lms/games/leaderboard - Fetch top students by game KasbTon scores
 router.get('/games/leaderboard', authenticate, async (req, res) => {
   try {
     const students = await prisma.user.findMany({
@@ -1108,8 +1188,8 @@ router.get('/games/leaderboard', authenticate, async (req, res) => {
 
     const leaderboard = students.map(student => {
       const totalCoins = student.coins.reduce((acc, curr) => acc + curr.amount, 0);
-      const gameTransactions = student.coins.filter(c => c.type && c.type.startsWith('GAME_'));
-      const gameCoins = gameTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+      const gameTransactions = student.coins.filter(c => c.type && (c.type.startsWith('KASBTON_') || c.type.startsWith('GAME_')));
+      const gameTon = gameTransactions.filter(c => c.amount > 0).reduce((acc, curr) => acc + curr.amount, 0);
       const gamesPlayed = gameTransactions.length;
 
       return {
@@ -1118,10 +1198,10 @@ router.get('/games/leaderboard', authenticate, async (req, res) => {
         email: student.email,
         avatar: student.avatar,
         totalCoins,
-        gameCoins,
+        gameTon,
         gamesPlayed
       };
-    }).sort((a, b) => b.gameCoins - a.gameCoins || b.totalCoins - a.totalCoins);
+    }).sort((a, b) => b.gameTon - a.gameTon || b.totalCoins - a.totalCoins);
 
     res.json({ leaderboard: leaderboard.slice(0, 20) });
   } catch (error) {

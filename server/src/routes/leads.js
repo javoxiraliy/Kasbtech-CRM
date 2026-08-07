@@ -683,6 +683,106 @@ router.post('/import/excel', upload.single('file'), async (req, res) => {
   }
 });
 
+// POST /api/leads/import/json - Import mapped JSON leads (from frontend preview)
+router.post('/import/json', async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { leads, operatorIds } = req.body;
+    if (!leads || !Array.isArray(leads) || leads.length === 0) {
+      return res.status(400).json({ error: 'Lidlar mavjud emas' });
+    }
+
+    const slaSetting = await prisma.setting.findUnique({
+      where: { key: 'sla_time_minutes' },
+    });
+    const slaMinutes = slaSetting ? parseInt(slaSetting.value) : 15;
+
+    let targetOperatorIds = [];
+    if (operatorIds) {
+      targetOperatorIds = typeof operatorIds === 'string' ? JSON.parse(operatorIds) : operatorIds;
+    }
+
+    let operators = [];
+    if (Array.isArray(targetOperatorIds) && targetOperatorIds.length > 0) {
+      operators = await prisma.user.findMany({
+        where: { id: { in: targetOperatorIds }, isActive: true },
+        select: { id: true }
+      });
+    }
+
+    if (operators.length === 0) {
+      operators = await prisma.user.findMany({
+        where: { role: 'OPERATOR', isActive: true },
+        select: { id: true }
+      });
+    }
+    let operatorIndex = 0;
+
+    let importedCount = 0;
+    let errorCount = 0;
+    let lastError = null;
+
+    for (const rawLead of leads) {
+      try {
+        let assignedToId = null;
+        if (operators.length > 0) {
+          assignedToId = operators[operatorIndex % operators.length].id;
+          operatorIndex++;
+        }
+
+        let createdAt = new Date();
+        if (rawLead.createdAt) {
+          const parsed = new Date(rawLead.createdAt);
+          if (!isNaN(parsed.getTime())) createdAt = parsed;
+        }
+        
+        let normalizedPhone = normalizePhoneNumber(rawLead.phone);
+        let normalizedPhone2 = normalizePhoneNumber(rawLead.phone2);
+
+        await prisma.lead.create({
+          data: {
+            name: String(rawLead.name || 'Noma\'lum').trim(),
+            phone: normalizedPhone || '',
+            phone2: normalizedPhone2 || null,
+            courseInterest: normalizeCourse(rawLead.courseInterest),
+            employmentStatus: normalizeEmployment(rawLead.employmentStatus),
+            isGrantEligible: !!rawLead.isGrantEligible,
+            source: 'excel_import',
+            status: 'NEW',
+            slaDeadline: new Date(Date.now() + slaMinutes * 60 * 1000),
+            notes: rawLead.notes ? String(rawLead.notes) : undefined,
+            createdAt,
+            assignedToId
+          }
+        });
+        importedCount++;
+      } catch (err) {
+        errorCount++;
+        lastError = err.message;
+        console.error('Single lead JSON import error:', err);
+      }
+    }
+
+    if (importedCount === 0 && leads.length > 0) {
+      return res.status(500).json({ 
+        error: 'Barcha lidlarni saqlashda xatolik yuz berdi.', 
+        details: lastError 
+      });
+    }
+
+    res.json({ 
+      message: `${importedCount} ta lid muvaffaqiyatli import qilindi. ${errorCount > 0 ? errorCount + ' ta xatolik.' : ''}`,
+      count: importedCount 
+    });
+  } catch (error) {
+    console.error('JSON Import error:', error);
+    res.status(500).json({ error: 'Import qilishda xatolik', details: error.message });
+  }
+});
+
 // GET /api/leads/export/excel - Export leads to Excel (both ADMIN and OPERATOR)
 router.get('/export/excel', async (req, res) => {
   try {

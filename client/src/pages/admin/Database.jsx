@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Download, Upload, FileSpreadsheet, Search, Loader2, Edit2, Trash2, X, Plus, UserPlus, CheckSquare, Square } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Download, Upload, FileSpreadsheet, Search, Loader2, Edit2, Trash2, X, Plus, UserPlus, CheckSquare, Square, Settings2 } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -81,9 +82,20 @@ export default function Database() {
   const [selectedIds, setSelectedIds] = useState([]);
   
   // Import Modal & Operator Assignment state
-  const [isImportAssignModalOpen, setIsImportAssignModalOpen] = useState(false);
+  const [isExcelPreviewModalOpen, setIsExcelPreviewModalOpen] = useState(false);
   const [selectedImportFile, setSelectedImportFile] = useState(null);
   const [selectedImportOperatorIds, setSelectedImportOperatorIds] = useState([]);
+  const [parsedExcelData, setParsedExcelData] = useState([]);
+  const [excelHeaders, setExcelHeaders] = useState([]);
+  const [columnMapping, setColumnMapping] = useState({
+    name: '',
+    phone: '',
+    phone2: '',
+    courseInterest: '',
+    employmentStatus: '',
+    isGrantEligible: '',
+    notes: ''
+  });
 
   // Bulk Assignment Modal state
   const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
@@ -178,40 +190,88 @@ export default function Database() {
     }
   };
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSelectedImportFile(file);
-    setSelectedImportOperatorIds(operators.map(o => o.id));
-    setIsImportAssignModalOpen(true);
+    
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rawData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      
+      if (rawData.length > 0) {
+        const headers = Object.keys(rawData[0]);
+        setExcelHeaders(headers);
+        setParsedExcelData(rawData);
+        
+        const guessMapping = { name: '', phone: '', phone2: '', courseInterest: '', employmentStatus: '', isGrantEligible: '', notes: '' };
+        headers.forEach(h => {
+          const lower = h.toLowerCase().replace(/['’`‘]/g, '');
+          if (!guessMapping.name && (lower.includes('ism') || lower.includes('name') || lower.includes('fio'))) guessMapping.name = h;
+          else if (!guessMapping.phone && (lower.includes('tel') || lower.includes('phone') || lower.includes('raqam') || lower.includes('nomer'))) guessMapping.phone = h;
+          else if (!guessMapping.phone2 && guessMapping.phone && (lower.includes('tel') || lower.includes('phone') || lower.includes('raqam') || lower.includes('2') || lower.includes('qo\'sh'))) guessMapping.phone2 = h;
+          else if (!guessMapping.courseInterest && (lower.includes('kurs') || lower.includes('yo\'nalish') || lower.includes('yonalish') || lower.includes('course'))) guessMapping.courseInterest = h;
+          else if (!guessMapping.employmentStatus && (lower.includes('bandlik') || lower.includes('ish') || lower.includes('employment'))) guessMapping.employmentStatus = h;
+          else if (!guessMapping.isGrantEligible && lower.includes('grant')) guessMapping.isGrantEligible = h;
+          else if (!guessMapping.notes && (lower.includes('izoh') || lower.includes('note') || lower.includes('comment') || lower.includes('o\'qiydi') || lower.includes('oqiydi'))) guessMapping.notes = h;
+        });
+        setColumnMapping(guessMapping);
+        setSelectedImportOperatorIds(operators.map(o => o.id));
+        setIsExcelPreviewModalOpen(true);
+      } else {
+        addNotification('error', "Fayl bo'sh");
+      }
+    } catch (error) {
+      console.error(error);
+      addNotification('error', "Faylni o'qishda xatolik yuz berdi");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
-  const handleConfirmImport = async () => {
-    if (!selectedImportFile) return;
+  const handleConfirmImportJSON = async () => {
+    if (parsedExcelData.length === 0) return;
     if (selectedImportOperatorIds.length === 0) {
       addNotification('warning', "Kamida bitta operatorni tanlashingiz shart");
       return;
     }
+    if (!columnMapping.name && !columnMapping.phone) {
+      addNotification('warning', "Kamida Ism yoki Telefon ustuni tanlanishi shart");
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append('file', selectedImportFile);
-    formData.append('operatorIds', JSON.stringify(selectedImportOperatorIds));
+    const leadsToImport = parsedExcelData.map(row => {
+      let createdDate = row['created_time'] || row['createdAt'] || row['sana'] || row['date'] || new Date().toISOString();
+      return {
+        name: columnMapping.name ? row[columnMapping.name] : '',
+        phone: columnMapping.phone ? row[columnMapping.phone] : '',
+        phone2: columnMapping.phone2 ? row[columnMapping.phone2] : '',
+        courseInterest: columnMapping.courseInterest ? row[columnMapping.courseInterest] : '',
+        employmentStatus: columnMapping.employmentStatus ? row[columnMapping.employmentStatus] : '',
+        isGrantEligible: columnMapping.isGrantEligible ? row[columnMapping.isGrantEligible] : false,
+        notes: columnMapping.notes ? row[columnMapping.notes] : '',
+        createdAt: createdDate
+      }
+    });
 
     setImporting(true);
     try {
-      const res = await api.post('/leads/import/excel', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const res = await api.post('/leads/import/json', {
+        leads: leadsToImport,
+        operatorIds: selectedImportOperatorIds
       });
       addNotification('success', res.data?.message || "Import muvaffaqiyatli bajarildi");
-      setIsImportAssignModalOpen(false);
+      setIsExcelPreviewModalOpen(false);
+      setParsedExcelData([]);
       setSelectedImportFile(null);
       fetchLeads(searchTerm, startDate, endDate);
     } catch (error) {
-      const errorMsg = error.response?.data?.details || error.response?.data?.error || "Import qilishda xatolik yuz berdi";
-      addNotification('error', errorMsg);
+      addNotification('error', error.response?.data?.error || "Import qilishda xatolik yuz berdi");
     } finally {
       setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -965,119 +1025,174 @@ export default function Database() {
         </div>
       )}
 
-      {/* Excel Import - Operator Selection & Assignment Modal */}
-      {isImportAssignModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="card glass max-w-lg w-full p-6 space-y-6">
-            <div className="flex justify-between items-center border-b border-dark-800 pb-4">
-              <div className="flex items-center gap-2 text-primary-400">
-                <Upload className="w-5 h-5" />
-                <h3 className="text-lg font-bold text-white">Import va Operatorlarga Biriktirish</h3>
+      {/* Excel Import - Preview & Operator Assignment Modal */}
+      {isExcelPreviewModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="card glass w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center border-b border-dark-800 p-4 shrink-0 bg-dark-900/50">
+              <div className="flex items-center gap-3 text-primary-400">
+                <FileSpreadsheet className="w-6 h-6" />
+                <div>
+                  <h3 className="text-lg font-bold text-white">Excel Import va Ustunlarni Sozlash</h3>
+                  <p className="text-xs text-dark-300">Jami {parsedExcelData.length} qator topildi</p>
+                </div>
               </div>
               <button 
                 onClick={() => {
-                  setIsImportAssignModalOpen(false);
+                  setIsExcelPreviewModalOpen(false);
                   setSelectedImportFile(null);
+                  setParsedExcelData([]);
                 }} 
-                className="text-dark-400 hover:text-white"
+                className="text-dark-400 hover:text-white p-2"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            {selectedImportFile && (
-              <div className="bg-dark-900/60 p-3 rounded-lg border border-dark-800 text-xs text-dark-300 flex items-center justify-between">
-                <span className="font-mono text-white truncate max-w-[280px]">📄 {selectedImportFile.name}</span>
-                <span>{(selectedImportFile.size / 1024).toFixed(1)} KB</span>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-dark-300 uppercase tracking-wider">
-                  Ruxsat berilgan operatorlar: ({selectedImportOperatorIds.length}/{operators.length})
-                </label>
-                <div className="flex gap-2">
-                  <button 
-                    type="button" 
-                    onClick={() => setSelectedImportOperatorIds(operators.map(o => o.id))}
-                    className="text-xs text-primary-400 hover:underline"
-                  >
-                    Barchasi
-                  </button>
-                  <span className="text-dark-600">|</span>
-                  <button 
-                    type="button" 
-                    onClick={() => setSelectedImportOperatorIds([])}
-                    className="text-xs text-dark-400 hover:underline"
-                  >
-                    Tozalash
-                  </button>
+            <div className="flex-1 overflow-auto p-4 space-y-6">
+              {/* Column Mapping Section */}
+              <div className="bg-dark-900/50 border border-dark-800 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4 text-primary-400">
+                  <Settings2 className="w-5 h-5" />
+                  <h4 className="font-semibold text-white">1. Ustunlarni moslashtiring</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { key: 'name', label: 'Ism' },
+                    { key: 'phone', label: 'Telefon' },
+                    { key: 'phone2', label: "Qo'shimcha tel" },
+                    { key: 'courseInterest', label: 'Kurs / Yo\'nalish' },
+                    { key: 'employmentStatus', label: 'Bandlik' },
+                    { key: 'notes', label: 'Izohlar' },
+                    { key: 'isGrantEligible', label: 'Grant (ha/yo\'q)' }
+                  ].map(field => (
+                    <div key={field.key} className="space-y-1">
+                      <label className="text-xs text-dark-400 font-medium">{field.label}</label>
+                      <select
+                        className="input h-9 text-xs bg-dark-800 border-dark-700"
+                        value={columnMapping[field.key]}
+                        onChange={e => setColumnMapping({ ...columnMapping, [field.key]: e.target.value })}
+                      >
+                        <option value="">-- Tanlanmadi --</option>
+                        {excelHeaders.map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                {operators.length === 0 ? (
-                  <p className="text-xs text-dark-500 italic">Faol operatorlar topilmadi.</p>
-                ) : (
-                  operators.map(op => {
+              {/* Data Preview Section */}
+              <div className="bg-dark-900/50 border border-dark-800 rounded-xl overflow-hidden flex flex-col">
+                <div className="p-3 border-b border-dark-800">
+                  <h4 className="font-semibold text-white text-sm">2. Ma'lumotlarni tekshiring (Dastlabki 5 qator)</h4>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs whitespace-nowrap">
+                    <thead className="bg-dark-800/50">
+                      <tr>
+                        <th className="px-4 py-2 font-medium text-dark-300">Ism</th>
+                        <th className="px-4 py-2 font-medium text-dark-300">Telefon</th>
+                        <th className="px-4 py-2 font-medium text-dark-300">Qo'shimcha tel</th>
+                        <th className="px-4 py-2 font-medium text-dark-300">Kurs</th>
+                        <th className="px-4 py-2 font-medium text-dark-300">Bandlik</th>
+                        <th className="px-4 py-2 font-medium text-dark-300">Izoh</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-800/50">
+                      {parsedExcelData.slice(0, 5).map((row, idx) => (
+                        <tr key={idx} className="hover:bg-dark-800/30">
+                          <td className="px-4 py-2 text-white">{columnMapping.name ? row[columnMapping.name] : '-'}</td>
+                          <td className="px-4 py-2 text-dark-200">{columnMapping.phone ? row[columnMapping.phone] : '-'}</td>
+                          <td className="px-4 py-2 text-dark-400">{columnMapping.phone2 ? row[columnMapping.phone2] : '-'}</td>
+                          <td className="px-4 py-2 text-primary-300">{columnMapping.courseInterest ? row[columnMapping.courseInterest] : '-'}</td>
+                          <td className="px-4 py-2 text-dark-300">{columnMapping.employmentStatus ? row[columnMapping.employmentStatus] : '-'}</td>
+                          <td className="px-4 py-2 text-dark-400 max-w-[150px] truncate">{columnMapping.notes ? row[columnMapping.notes] : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Operator Assignment Section */}
+              <div className="bg-dark-900/50 border border-dark-800 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-white text-sm flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-primary-400" />
+                    3. Operatorlarga taqsimlash
+                  </h4>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setSelectedImportOperatorIds(operators.map(o => o.id))}
+                      className="text-xs text-primary-400 hover:underline"
+                    >
+                      Barchasi
+                    </button>
+                    <span className="text-dark-600">|</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setSelectedImportOperatorIds([])}
+                      className="text-xs text-dark-400 hover:underline"
+                    >
+                      Tozalash
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                  {operators.map(op => {
                     const isChecked = selectedImportOperatorIds.includes(op.id);
                     return (
                       <div 
                         key={op.id}
                         onClick={() => {
-                          if (isChecked) {
-                            setSelectedImportOperatorIds(selectedImportOperatorIds.filter(id => id !== op.id));
-                          } else {
-                            setSelectedImportOperatorIds([...selectedImportOperatorIds, op.id]);
-                          }
+                          if (isChecked) setSelectedImportOperatorIds(selectedImportOperatorIds.filter(id => id !== op.id));
+                          else setSelectedImportOperatorIds([...selectedImportOperatorIds, op.id]);
                         }}
-                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                        className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${
                           isChecked 
                             ? 'bg-primary-500/10 border-primary-500/50 text-white' 
                             : 'bg-dark-900/40 border-dark-800 text-dark-400 hover:border-dark-700'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          {isChecked ? (
-                            <CheckSquare className="w-4 h-4 text-primary-400 shrink-0" />
-                          ) : (
-                            <Square className="w-4 h-4 text-dark-600 shrink-0" />
-                          )}
+                        {isChecked ? <CheckSquare className="w-4 h-4 text-primary-400" /> : <Square className="w-4 h-4 text-dark-600" />}
+                        <div className="flex flex-col">
                           <span className="text-sm font-medium">{op.name}</span>
+                          <span className="text-[10px] text-dark-400">{op.email}</span>
                         </div>
-                        <span className="text-xs text-dark-400 font-mono">{op.email}</span>
                       </div>
                     );
-                  })
+                  })}
+                </div>
+                {selectedImportOperatorIds.length > 0 && (
+                  <p className="mt-3 text-xs text-emerald-400 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Barcha {parsedExcelData.length} ta lid {selectedImportOperatorIds.length} ta operator o'rtasida teng taqsimlanadi.
+                  </p>
                 )}
               </div>
-
-              {selectedImportOperatorIds.length > 0 && (
-                <p className="text-xs text-emerald-400 bg-emerald-500/10 p-2.5 rounded border border-emerald-500/20">
-                  💡 Yuklangan lidlar tanlangan <b>{selectedImportOperatorIds.length}</b> ta operator o'rtasida teng taqsimlanadi.
-                </p>
-              )}
             </div>
 
-            <div className="pt-4 flex gap-3 border-t border-dark-800">
+            <div className="p-4 border-t border-dark-800 bg-dark-900/50 flex gap-3 shrink-0">
               <button 
                 type="button" 
                 onClick={() => {
-                  setIsImportAssignModalOpen(false);
+                  setIsExcelPreviewModalOpen(false);
                   setSelectedImportFile(null);
                 }} 
-                className="flex-1 btn-secondary justify-center py-2.5"
+                className="flex-1 btn-secondary justify-center py-3"
               >
                 Bekor qilish
               </button>
               <button 
                 type="button" 
-                onClick={handleConfirmImport} 
-                disabled={importing || selectedImportOperatorIds.length === 0} 
-                className="flex-1 btn-primary justify-center py-2.5 bg-primary-600 hover:bg-primary-700"
+                onClick={handleConfirmImportJSON} 
+                disabled={importing || selectedImportOperatorIds.length === 0 || (!columnMapping.name && !columnMapping.phone)} 
+                className="flex-[2] btn-primary justify-center py-3 bg-primary-600 hover:bg-primary-700"
               >
-                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tasdiqlash va Yuklash"}
+                {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : "Tasdiqlash va Bazaga Qo'shish"}
               </button>
             </div>
           </div>
