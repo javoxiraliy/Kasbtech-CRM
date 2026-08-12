@@ -730,15 +730,27 @@ router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), 
 // GET /api/lms/homeworks/pending - Get pending homeworks for review (Teacher/Admin only)
 router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
+    const whereClause = { status: 'PENDING' };
+
+    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
+      whereClause.lesson = {
+        module: {
+          course: {
+            teacherId: req.user.id
+          }
+        }
+      };
+    }
+
     const homeworks = await prisma.homework.findMany({
-      where: { status: 'PENDING' },
+      where: whereClause,
       include: {
         student: { select: { id: true, name: true, email: true } },
         lesson: {
           select: {
             id: true,
             title: true,
-            module: { select: { title: true, course: { select: { title: true } } } }
+            module: { select: { title: true, course: { select: { id: true, title: true, teacherId: true } } } }
           }
         }
       },
@@ -764,11 +776,32 @@ router.post('/homeworks/:homeworkId/review', authenticate, requireMentorOrAdmin,
 
     const homework = await prisma.homework.findUnique({
       where: { id: homeworkId },
-      include: { lesson: { select: { title: true } } }
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            module: {
+              select: {
+                course: {
+                  select: { id: true, teacherId: true }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!homework) {
       return res.status(404).json({ error: 'Uy vazifasi topilmadi' });
+    }
+
+    if (
+      (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') &&
+      homework.lesson?.module?.course?.teacherId !== req.user.id
+    ) {
+      return res.status(403).json({ error: 'Siz faqat o\'zingizga biriktirilgan kurs uy vazifalarini tekshira olasiz' });
     }
 
     const updated = await prisma.homework.update({
@@ -1562,6 +1595,82 @@ router.get('/students', authenticate, requireMentorOrAdmin, async (req, res) => 
   } catch (error) {
     console.error('List students error:', error);
     res.status(500).json({ error: 'Talabalar ro\'yxatini yuklashda xatolik yuz berdi' });
+  }
+});
+
+// PUT /api/lms/students/:id - Update student credentials/info (Teacher/Admin)
+router.put('/students/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, password, isActive } = req.body;
+
+    const student = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Talaba topilmadi' });
+    }
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email && email.toLowerCase().trim() !== student.email.toLowerCase()) {
+      const existing = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'Ushbu email allaqachon boshqa foydalanuvchida mavjud' });
+      }
+      updateData.email = email.toLowerCase().trim();
+    }
+    if (typeof isActive === 'boolean') updateData.isActive = isActive;
+
+    if (password && password.trim() !== '') {
+      const bcrypt = require('bcryptjs');
+      updateData.password = await bcrypt.hash(password.trim(), 10);
+    }
+
+    const updatedStudent = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true
+      }
+    });
+
+    res.json({ message: 'Talaba ma\'lumotlari (login/parol) yangilandi', student: updatedStudent });
+  } catch (error) {
+    console.error('Update student error:', error);
+    res.status(500).json({ error: 'Talaba ma\'lumotlarini yangilashda xatolik yuz berdi' });
+  }
+});
+
+// DELETE /api/lms/students/:id - Delete a student (Teacher/Admin)
+router.delete('/students/:id', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const student = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Talaba topilmadi' });
+    }
+
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Talaba hisobi muvaffaqiyatli o\'chirildi' });
+  } catch (error) {
+    console.error('Delete student error:', error);
+    res.status(500).json({ error: 'Talabani o\'chirishda xatolik yuz berdi' });
   }
 });
 

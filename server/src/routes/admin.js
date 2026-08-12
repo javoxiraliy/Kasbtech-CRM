@@ -204,13 +204,17 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// GET /api/admin/users - Get all users
+// GET /api/admin/users - Get all staff users (excludes STUDENTS)
 router.get('/users', async (req, res) => {
   try {
     const users = await prisma.user.findMany({
+      where: {
+        role: { in: ['ADMIN', 'OPERATOR', 'TEACHER', 'SMM', 'MENTOR'] }
+      },
       select: {
         id: true, name: true, email: true,
         role: true, isActive: true, createdAt: true,
+        workingHours: true,
         _count: { select: { leads: true } },
       },
       orderBy: { createdAt: 'desc' },

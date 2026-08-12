@@ -156,10 +156,6 @@ export default function Users() {
             <Plus className="w-5 h-5" />
             Yangi Xodim qo'shish
           </button>
-          <button className="btn-secondary border-dark-700 text-dark-300 hover:text-white" onClick={() => navigate('/admin/students', { state: { openRegister: true } })}>
-            <Plus className="w-5 h-5 text-emerald-400" />
-            Yangi Talaba qo'shish
-          </button>
         </div>
       </div>
 
