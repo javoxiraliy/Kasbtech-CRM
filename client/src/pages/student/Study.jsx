@@ -221,7 +221,11 @@ export default function StudentStudy() {
       }
       formData.append('textResponse', homeworkText);
 
-      await api.post(`/lms/lessons/${selectedLesson.id}/homework`, formData);
+      await api.post(`/lms/lessons/${selectedLesson.id}/homework`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
 
       alert('Vazifangiz topshirildi! Mentor tez orada tekshiradi.');
       
