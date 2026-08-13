@@ -11,6 +11,11 @@ import api from '../../lib/api';
 
 export default function HomeworkReview() {
   const [homeworks, setHomeworks] = useState([]);
+  const [reviewedHomeworks, setReviewedHomeworks] = useState([]);
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'reviewed'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'APPROVED' | 'REJECTED'
+  
   const [selectedHw, setSelectedHw] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -105,14 +110,18 @@ export default function HomeworkReview() {
   };
 
   useEffect(() => {
-    fetchPendingHomeworks();
+    fetchHomeworks();
   }, []);
 
-  const fetchPendingHomeworks = async () => {
+  const fetchHomeworks = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/lms/homeworks/pending');
-      setHomeworks(res.data.homeworks || []);
+      const [pendingRes, reviewedRes] = await Promise.all([
+        api.get('/lms/homeworks/pending'),
+        api.get('/lms/homeworks/reviewed')
+      ]);
+      setHomeworks(pendingRes.data.homeworks || []);
+      setReviewedHomeworks(reviewedRes.data.homeworks || []);
       setError('');
     } catch (err) {
       console.error(err);
@@ -144,7 +153,7 @@ export default function HomeworkReview() {
 
       alert(`Vazifa muvaffaqiyatli ${reviewForm.status === 'APPROVED' ? 'tasdiqlandi' : 'rad etildi'}!`);
       setSelectedHw(null);
-      fetchPendingHomeworks();
+      fetchHomeworks();
     } catch (err) {
       console.error(err);
       alert('Vazifani baholashda xatolik yuz berdi.');
@@ -172,29 +181,71 @@ export default function HomeworkReview() {
       {loading ? (
         <div className="text-center py-12 text-dark-400">Yuklanmoqda...</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Homework list */}
-          <div className="lg:col-span-1 space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary-400" />
-              Kelib tushgan vazifalar ({homeworks.length})
-            </h2>
+        <div className="space-y-6">
+          {/* Tabs */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-dark-800 pb-2">
+            <button 
+              onClick={() => { setActiveTab('pending'); setSelectedHw(null); }}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors ${activeTab === 'pending' ? 'text-primary-400 border-b-2 border-primary-500 bg-primary-500/5' : 'text-dark-400 hover:text-white hover:bg-dark-800/50'}`}
+            >
+              Tekshiruv kutmoqda ({homeworks.length})
+            </button>
+            <button 
+              onClick={() => { setActiveTab('reviewed'); setSelectedHw(null); }}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors ${activeTab === 'reviewed' ? 'text-primary-400 border-b-2 border-primary-500 bg-primary-500/5' : 'text-dark-400 hover:text-white hover:bg-dark-800/50'}`}
+            >
+              Tekshirilganlar ({reviewedHomeworks.length})
+            </button>
+          </div>
 
-            <div className="space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
-              {homeworks.map(hw => {
-                const isSelected = selectedHw?.id === hw.id;
-                
-                return (
-                  <button
-                    key={hw.id}
-                    onClick={() => handleSelectHw(hw)}
-                    className={`w-full text-left card-hover p-4 bg-dark-900 border transition-all duration-200 ${
-                      isSelected 
-                        ? 'border-primary-500/80 bg-primary-600/5 shadow-primary-500/5' 
-                        : 'border-dark-800'
-                    }`}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Homework list */}
+            <div className="lg:col-span-1 space-y-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary-400" />
+                {activeTab === 'pending' ? 'Kelib tushgan vazifalar' : 'Tekshirilgan vazifalar'}
+              </h2>
+
+              {activeTab === 'reviewed' && (
+                <div className="space-y-3 bg-dark-900/50 p-3 rounded-lg border border-dark-800">
+                  <input 
+                    type="text" 
+                    placeholder="Talaba ismi bo'yicha izlash..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="input text-sm py-2"
+                  />
+                  <select 
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="input text-sm py-2"
                   >
+                    <option value="ALL">Barcha holatlar</option>
+                    <option value="APPROVED">Qabul qilinganlar (APPROVED)</option>
+                    <option value="REJECTED">Rad etilganlar (REJECTED)</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1 custom-scrollbar">
+                {(activeTab === 'pending' ? homeworks : reviewedHomeworks.filter(hw => {
+                  const matchesSearch = hw.student?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+                  const matchesStatus = statusFilter === 'ALL' || hw.status === statusFilter;
+                  return matchesSearch && matchesStatus;
+                })).map(hw => {
+                  const isSelected = selectedHw?.id === hw.id;
+                  
+                  return (
+                    <button
+                      key={hw.id}
+                      onClick={() => handleSelectHw(hw)}
+                      className={`w-full text-left card-hover p-4 bg-dark-900 border transition-all duration-200 ${
+                        isSelected 
+                          ? 'border-primary-500/80 bg-primary-600/5 shadow-primary-500/5' 
+                          : 'border-dark-800'
+                      }`}
+                    >
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-xs font-semibold text-primary-400 flex items-center gap-1">
                         <User className="w-3.5 h-3.5" />
@@ -213,9 +264,9 @@ export default function HomeworkReview() {
                 );
               })}
 
-              {homeworks.length === 0 && (
+              {(activeTab === 'pending' ? homeworks : reviewedHomeworks).length === 0 && (
                 <div className="text-center py-12 text-dark-500 border border-dashed border-dark-700 rounded-xl">
-                  Hozircha tekshiriladigan yangi vazifalar yo'q. Dam oling!
+                  {activeTab === 'pending' ? "Hozircha tekshiriladigan yangi vazifalar yo'q. Dam oling!" : "Tekshirilgan vazifalar topilmadi."}
                 </div>
               )}
             </div>
@@ -384,6 +435,7 @@ export default function HomeworkReview() {
             )}
           </div>
 
+        </div>
         </div>
       )}
 

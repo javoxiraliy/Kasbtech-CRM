@@ -764,6 +764,43 @@ router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req,
   }
 });
 
+// GET /api/lms/homeworks/reviewed - Get reviewed homeworks (Teacher/Admin only)
+router.get('/homeworks/reviewed', authenticate, requireMentorOrAdmin, async (req, res) => {
+  try {
+    const whereClause = { status: { in: ['APPROVED', 'REJECTED'] } };
+
+    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
+      whereClause.lesson = {
+        module: {
+          course: {
+            teacherId: req.user.id
+          }
+        }
+      };
+    }
+
+    const homeworks = await prisma.homework.findMany({
+      where: whereClause,
+      include: {
+        student: { select: { id: true, name: true, email: true } },
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            module: { select: { title: true, course: { select: { id: true, title: true, teacherId: true } } } }
+          }
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    res.json({ homeworks });
+  } catch (error) {
+    console.error('Fetch reviewed homework error:', error);
+    res.status(500).json({ error: 'Server xatosi' });
+  }
+});
+
 // POST /api/lms/homeworks/:homeworkId/review - Review/grade homework (Teacher/Admin only)
 router.post('/homeworks/:homeworkId/review', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
