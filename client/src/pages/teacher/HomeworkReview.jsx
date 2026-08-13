@@ -50,6 +50,12 @@ export default function HomeworkReview() {
         return 'doc';
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
         return 'docx';
+      case 'application/vnd.ms-excel':
+        return 'xls';
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        return 'xlsx';
+      case 'text/csv':
+        return 'csv';
       case 'text/plain':
         return 'txt';
       default:
@@ -248,15 +254,38 @@ export default function HomeworkReview() {
 
                   {selectedHw.fileUrl && (
                     <div className="pt-2 space-y-3">
-                      {/* Image Preview for screenshots/images */}
+                      {/* File Preview Handling */}
                       {(selectedHw.fileUrl.startsWith('data:image/') || 
-                        /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedHw.fileUrl)) && (
+                        /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedHw.fileUrl)) ? (
                         <div className="mt-2 max-w-lg border border-dark-800 rounded-lg overflow-hidden bg-dark-900">
                           <img 
                             src={selectedHw.fileUrl.startsWith('data:') ? selectedHw.fileUrl : getFileUrl(selectedHw.fileUrl)} 
                             alt="Vazifa rasmi" 
                             className="w-full h-auto max-h-[400px] object-contain" 
                           />
+                        </div>
+                      ) : /\.pdf$/i.test(selectedHw.fileUrl) ? (
+                        <div className="mt-2 border border-dark-800 rounded-lg overflow-hidden bg-dark-900 h-[500px]">
+                          <iframe 
+                            src={getFileUrl(selectedHw.fileUrl)} 
+                            title="PDF Preview"
+                            className="w-full h-full"
+                          />
+                        </div>
+                      ) : /\.(doc|docx|xls|xlsx|csv)$/i.test(selectedHw.fileUrl) ? (
+                        <div className="mt-2 border border-dark-800 rounded-lg overflow-hidden bg-dark-900 h-[500px]">
+                          <iframe 
+                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(getFileUrl(selectedHw.fileUrl))}&embedded=true`}
+                            title="Document Preview"
+                            className="w-full h-full"
+                          />
+                        </div>
+                      ) : (
+                        <div className="mt-2 p-4 border border-dark-800 rounded-lg bg-dark-900">
+                          <p className="text-dark-300 text-sm flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Hujjat yuklangan. Ko'rish uchun quyidagi tugma orqali yuklab oling.
+                          </p>
                         </div>
                       )}
                       

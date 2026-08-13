@@ -538,10 +538,10 @@ export default function StudentStudy() {
                     {(homeworkStatus === 'NOT_SUBMITTED' || homeworkStatus === 'REJECTED') ? (
                       <form onSubmit={handleHomeworkSubmit} className="space-y-4">
                         <div>
-                          <label className="label">Fayl yuklash (ZIP, RAR, PDF, Rasm)</label>
+                          <label className="label">Fayl yuklash (ZIP, RAR, PDF, Word, Excel, Rasm)</label>
                           <input 
                             type="file" 
-                            accept=".zip,.rar,.pdf,.png,.jpg,.jpeg,.doc,.docx"
+                            accept=".zip,.rar,.pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.csv"
                             onChange={(e) => setHomeworkFile(e.target.files[0])}
                             className="block w-full text-xs text-dark-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dark-800 file:text-dark-100 hover:file:bg-dark-700 cursor-pointer"
                           />

@@ -35,10 +35,10 @@ const upload = multer({
   storage,
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|webp|gif|zip|rar|pdf|doc|docx|txt/;
+    const allowed = /jpeg|jpg|png|webp|gif|zip|rar|pdf|doc|docx|txt|xls|xlsx|csv/;
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
     if (ext) return cb(null, true);
-    cb(new Error('Ruxsat berilmagan fayl formati! (Rasm, ZIP, RAR, PDF, DOC, DOCX, TXT ruxsat etiladi)'));
+    cb(new Error('Ruxsat berilmagan fayl formati! (Rasm, ZIP, RAR, PDF, Word, Excel, TXT ruxsat etiladi)'));
   }
 });
 
