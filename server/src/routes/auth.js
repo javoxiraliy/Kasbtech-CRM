@@ -100,9 +100,11 @@ router.post('/google', async (req, res) => {
     });
 
     if (user.role === 'STUDENT' && activeSessions.length >= 3) {
+      const terminationToken = jwt.sign({ userId: user.id, action: 'terminate_session' }, process.env.JWT_SECRET, { expiresIn: '15m' });
       return res.status(403).json({
         error: 'DEVICE_LIMIT_EXCEEDED',
         message: 'Siz ruxsat etilgan maksimal qurilmalar soniga (3 ta faol qurilma) yetdingiz.',
+        terminationToken,
         sessions: activeSessions.map(s => ({
           id: s.id,
           deviceInfo: s.deviceInfo,
@@ -182,9 +184,11 @@ router.post('/login', async (req, res) => {
 
     if (user.role === 'STUDENT') {
       if (activeSessions.length >= 3) {
+        const terminationToken = jwt.sign({ userId: user.id, action: 'terminate_session' }, process.env.JWT_SECRET, { expiresIn: '15m' });
         return res.status(403).json({
           error: 'DEVICE_LIMIT_EXCEEDED',
           message: 'Siz ruxsat etilgan maksimal qurilmalar soniga (3 ta faol qurilma) yetdingiz. Tizimga kirish uchun quyidagi faol qurilmalardan birini o\'chirishingiz lozim:',
+          terminationToken,
           sessions: activeSessions.map(s => ({
             id: s.id,
             deviceInfo: s.deviceInfo,
@@ -234,27 +238,47 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/terminate-session
 router.post('/terminate-session', async (req, res) => {
   try {
-    const { email, password, sessionId } = req.body;
-    if (!email || !password || !sessionId) {
-      return res.status(400).json({ error: 'Email, password and sessionId are required' });
+    const { email, password, sessionId, terminationToken } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
-    });
+    let userId;
 
-    if (!user || !user.isActive) {
-      return res.status(401).json({ error: 'Mijoz topilmadi yoki hisobingiz nofaol' });
-    }
+    if (terminationToken) {
+      try {
+        const decoded = jwt.verify(terminationToken, process.env.JWT_SECRET);
+        if (decoded.action !== 'terminate_session') {
+          throw new Error('Yaroqsiz token');
+        }
+        userId = decoded.userId;
+      } catch (err) {
+        return res.status(401).json({ error: 'Ruxsat muddati tugagan yoki noto\'g\'ri token' });
+      }
+    } else {
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email, password and sessionId are required' });
+      }
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Noto\'g\'ri parol' });
+      if (!user || !user.isActive) {
+        return res.status(401).json({ error: 'Mijoz topilmadi yoki hisobingiz nofaol' });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Noto\'g\'ri parol' });
+      }
+      
+      userId = user.id;
     }
 
     // O'chirmoqchi bo'lgan sessiyasini topish va u ushbu foydalanuvchiga tegishli ekanini tekshirish
     const session = await prisma.deviceSession.findFirst({
-      where: { id: sessionId, userId: user.id }
+      where: { id: sessionId, userId }
     });
 
     if (!session) {

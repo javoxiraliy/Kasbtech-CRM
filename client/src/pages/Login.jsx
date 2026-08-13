@@ -14,6 +14,7 @@ export default function Login() {
   const [deviceLimitError, setDeviceLimitError] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
   const [terminatingSessionId, setTerminatingSessionId] = useState(null);
+  const [terminationToken, setTerminationToken] = useState(null);
   
   // Google Auth Fallback Modal state
   const [showGoogleModal, setShowGoogleModal] = useState(false);
@@ -52,6 +53,7 @@ export default function Login() {
       if (error.response?.data?.error === 'DEVICE_LIMIT_EXCEEDED') {
         setDeviceLimitError(true);
         setActiveSessions(error.response.data.sessions || []);
+        setTerminationToken(error.response.data.terminationToken || null);
         addNotification('warning', "Maksimal qurilmalar soniga yetdingiz");
       } else {
         addNotification('error', error.response?.data?.error || error.response?.data?.message || "Google orqali ro'yxatdan o'tishda xatolik");
@@ -120,6 +122,7 @@ export default function Login() {
       if (error.response?.data?.error === 'DEVICE_LIMIT_EXCEEDED') {
         setDeviceLimitError(true);
         setActiveSessions(error.response.data.sessions || []);
+        setTerminationToken(error.response.data.terminationToken || null);
         addNotification('warning', "Maksimal qurilmalar soniga yetdingiz");
       } else {
         addNotification('error', error.response?.data?.message || error.response?.data?.error || "Login yoki parol noto'g'ri");
@@ -135,13 +138,21 @@ export default function Login() {
       await api.post('/auth/terminate-session', {
         email,
         password,
-        sessionId
+        sessionId,
+        terminationToken
       });
       addNotification('success', "Qurilma o'chirildi. Tizimga qayta kirilmoqda...");
       setDeviceLimitError(false);
       setActiveSessions([]);
+      setTerminationToken(null);
       
-      const user = await login(email, password);
+      let user;
+      if (!email || !password) {
+        addNotification('info', 'Iltimos, Google orqali qaytadan kiring.');
+        return;
+      } else {
+        user = await login(email, password);
+      }
       addNotification('success', 'Tizimga muvaffaqiyatli kirdingiz');
       if (user.role === 'ADMIN') {
         navigate('/admin');
