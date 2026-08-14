@@ -70,8 +70,11 @@ export default function HomeworkReview() {
   };
 
   const handleDownloadFile = (hw) => {
-    const fileUrl = hw.fileUrl;
+    const fileUrl = hw?.fileUrl;
     if (!fileUrl) return;
+
+    const studentName = hw?.student?.name || 'Talaba';
+    const lessonTitle = hw?.lesson?.title || 'Vazifa';
 
     if (fileUrl.startsWith('data:')) {
       const arr = fileUrl.split(',');
@@ -90,7 +93,7 @@ export default function HomeworkReview() {
       
       const a = document.createElement('a');
       a.href = blobUrl;
-      const cleanName = `${hw.student.name}_${hw.lesson.title}`.replace(/[^a-zA-Z0-9_]/g, '_');
+      const cleanName = `${studentName}_${lessonTitle}`.replace(/[^a-zA-Z0-9_]/g, '_');
       a.download = `${cleanName}.${ext}`;
       
       document.body.appendChild(a);
@@ -102,7 +105,7 @@ export default function HomeworkReview() {
       const a = document.createElement('a');
       a.href = getFileUrl(fileUrl);
       a.target = '_blank';
-      a.download = `vazifa_${hw.id}`;
+      a.download = `vazifa_${hw?.id || 'download'}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -114,26 +117,38 @@ export default function HomeworkReview() {
   }, []);
 
   const fetchHomeworks = async () => {
+    setLoading(true);
+    setError('');
+
+    let pendingList = [];
+    let reviewedList = [];
+
     try {
-      setLoading(true);
-      const [pendingRes, reviewedRes] = await Promise.all([
-        api.get('/lms/homeworks/pending'),
-        api.get('/lms/homeworks/reviewed')
-      ]);
-      setHomeworks(pendingRes.data.homeworks || []);
-      setReviewedHomeworks(reviewedRes.data.homeworks || []);
-      setError('');
+      const pendingRes = await api.get('/lms/homeworks/pending');
+      pendingList = pendingRes.data?.homeworks || [];
     } catch (err) {
-      console.error(err);
-      setError('Tekshiriladigan vazifalarni yuklashda xatolik yuz berdi.');
-    } finally {
-      setLoading(false);
+      console.error('Pending homeworks fetch error:', err);
     }
+
+    try {
+      const reviewedRes = await api.get('/lms/homeworks/reviewed');
+      reviewedList = reviewedRes.data?.homeworks || [];
+    } catch (err) {
+      console.error('Reviewed homeworks fetch error:', err);
+    }
+
+    setHomeworks(pendingList);
+    setReviewedHomeworks(reviewedList);
+    setLoading(false);
   };
 
   const handleSelectHw = (hw) => {
     setSelectedHw(hw);
-    setReviewForm({ status: 'APPROVED', grade: '100', feedback: '' });
+    setReviewForm({ 
+      status: hw?.status === 'REJECTED' ? 'REJECTED' : 'APPROVED', 
+      grade: hw?.grade !== null && hw?.grade !== undefined ? String(hw.grade) : '100', 
+      feedback: hw?.feedback || '' 
+    });
   };
 
   const handleSubmitReview = async (e) => {
@@ -161,6 +176,15 @@ export default function HomeworkReview() {
       setSubmitting(false);
     }
   };
+
+  const filteredReviewed = reviewedHomeworks.filter(hw => {
+    const studentName = hw?.student?.name?.toLowerCase() || '';
+    const matchesSearch = studentName.includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'ALL' || hw?.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const displayList = activeTab === 'pending' ? homeworks : filteredReviewed;
 
   return (
     <div className="space-y-6">
@@ -229,11 +253,7 @@ export default function HomeworkReview() {
               )}
 
               <div className="space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1 custom-scrollbar">
-                {(activeTab === 'pending' ? homeworks : reviewedHomeworks.filter(hw => {
-                  const matchesSearch = hw.student?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-                  const matchesStatus = statusFilter === 'ALL' || hw.status === statusFilter;
-                  return matchesSearch && matchesStatus;
-                })).map(hw => {
+                {displayList.map(hw => {
                   const isSelected = selectedHw?.id === hw.id;
                   
                   return (
@@ -246,196 +266,211 @@ export default function HomeworkReview() {
                           : 'border-dark-800'
                       }`}
                     >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-semibold text-primary-400 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" />
-                        {hw.student.name}
-                      </span>
-                      <span className="text-[10px] text-dark-500">
-                        {new Date(hw.createdAt).toLocaleDateString('uz-UZ')}
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-semibold text-primary-400 flex items-center gap-1">
+                          <User className="w-3.5 h-3.5" />
+                          {hw.student?.name || 'Noma\'lum talaba'}
+                        </span>
+                        <span className="text-[10px] text-dark-500">
+                          {hw.createdAt ? new Date(hw.createdAt).toLocaleDateString('uz-UZ') : ''}
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-white text-sm line-clamp-1">
+                        {hw.lesson?.title || 'Dars'}
+                      </h4>
+                      <p className="text-[10px] text-dark-400 mt-1 uppercase tracking-wide">
+                        {hw.lesson?.module?.course?.title || 'Kurs'}
+                      </p>
+
+                      {hw.status !== 'PENDING' && (
+                        <div className="mt-2 flex items-center justify-between text-xs border-t border-dark-850 pt-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            hw.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}>
+                            {hw.status === 'APPROVED' ? 'Qabul qilingan' : 'Rad etilgan'}
+                          </span>
+                          {hw.grade !== null && hw.grade !== undefined && (
+                            <span className="text-yellow-400 font-bold text-xs">{hw.grade} ball</span>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {displayList.length === 0 && (
+                  <div className="text-center py-12 text-dark-500 border border-dashed border-dark-700 rounded-xl">
+                    {activeTab === 'pending' ? "Hozircha tekshiriladigan yangi vazifalar yo'q. Dam oling!" : "Tekshirilgan vazifalar topilmadi."}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Grading Area */}
+            <div className="lg:col-span-2">
+              {selectedHw ? (
+                <div className="card bg-dark-900 border-dark-800 p-6 space-y-6">
+                  
+                  {/* Header detail */}
+                  <div className="border-b border-dark-800 pb-4">
+                    <span className="text-[10px] uppercase text-primary-400 font-bold tracking-wider">
+                      {selectedHw.lesson?.module?.course?.title || 'Kurs'} &gt; {selectedHw.lesson?.module?.title || 'Modul'}
+                    </span>
+                    
+                    <h3 className="text-lg font-bold text-white mt-1">{selectedHw.lesson?.title || 'Dars'}</h3>
+                    
+                    <div className="flex items-center gap-3 mt-3 text-xs text-dark-400">
+                      <span className="flex items-center gap-1">
+                        <User className="w-4 h-4 text-emerald-400" />
+                        Talaba: <strong>{selectedHw.student?.name || 'Noma\'lum'}</strong> ({selectedHw.student?.email || '-'})
                       </span>
                     </div>
+                  </div>
 
-                    <h4 className="font-bold text-white text-sm line-clamp-1">{hw.lesson.title}</h4>
-                    <p className="text-[10px] text-dark-400 mt-1 uppercase tracking-wide">
-                      {hw.lesson.module.course.title}
-                    </p>
-                  </button>
-                );
-              })}
+                  {/* Submission content */}
+                  <div className="space-y-4 bg-dark-950 p-4 rounded-lg border border-dark-850">
+                    <h4 className="font-bold text-white text-xs uppercase tracking-wider text-dark-400">Talaba javobi</h4>
+                    
+                    {selectedHw.textResponse && (
+                      <div className="text-sm text-dark-200 whitespace-pre-line leading-relaxed">
+                        {selectedHw.textResponse}
+                      </div>
+                    )}
 
-              {(activeTab === 'pending' ? homeworks : reviewedHomeworks).length === 0 && (
-                <div className="text-center py-12 text-dark-500 border border-dashed border-dark-700 rounded-xl">
-                  {activeTab === 'pending' ? "Hozircha tekshiriladigan yangi vazifalar yo'q. Dam oling!" : "Tekshirilgan vazifalar topilmadi."}
+                    {selectedHw.fileUrl && (
+                      <div className="pt-2 space-y-3">
+                        {/* File Preview Handling */}
+                        {(selectedHw.fileUrl.startsWith('data:image/') || 
+                          /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedHw.fileUrl)) ? (
+                          <div className="mt-2 max-w-lg border border-dark-800 rounded-lg overflow-hidden bg-dark-900">
+                            <img 
+                              src={selectedHw.fileUrl.startsWith('data:') ? selectedHw.fileUrl : getFileUrl(selectedHw.fileUrl)} 
+                              alt="Vazifa rasmi" 
+                              className="w-full h-auto max-h-[400px] object-contain" 
+                            />
+                          </div>
+                        ) : /\.pdf$/i.test(selectedHw.fileUrl) ? (
+                          <div className="mt-2 border border-dark-800 rounded-lg overflow-hidden bg-dark-900 h-[500px]">
+                            <iframe 
+                              src={getFileUrl(selectedHw.fileUrl)} 
+                              title="PDF Preview"
+                              className="w-full h-full"
+                            />
+                          </div>
+                        ) : /\.(doc|docx|xls|xlsx|csv)$/i.test(selectedHw.fileUrl) ? (
+                          <div className="mt-2 border border-dark-800 rounded-lg overflow-hidden bg-dark-900 h-[500px]">
+                            <iframe 
+                              src={`https://docs.google.com/viewer?url=${encodeURIComponent(getFileUrl(selectedHw.fileUrl))}&embedded=true`}
+                              title="Document Preview"
+                              className="w-full h-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-4 border border-dark-800 rounded-lg bg-dark-900">
+                            <p className="text-dark-300 text-sm flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Hujjat yuklangan. Ko'rish uchun quyidagi tugma orqali yuklab oling.
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div>
+                          <button 
+                            type="button"
+                            onClick={() => handleDownloadFile(selectedHw)}
+                            className="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5 bg-dark-800 hover:bg-dark-700 text-white cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            Biriktirilgan faylni yuklab olish
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!selectedHw.textResponse && !selectedHw.fileUrl && (
+                      <p className="text-xs text-dark-500 italic">Javob matni va fayl yo'q.</p>
+                    )}
+                  </div>
+
+                  {/* Review form */}
+                  <form onSubmit={handleSubmitReview} className="space-y-5 border-t border-dark-800 pt-5">
+                    <h4 className="font-bold text-white text-sm flex items-center gap-1">
+                      <Award className="w-4 h-4 text-yellow-500" />
+                      Vazifani baholash va taqriz
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="label">Qaror (Status)</label>
+                        <select 
+                          value={reviewForm.status} 
+                          onChange={(e) => setReviewForm({ ...reviewForm, status: e.target.value })}
+                          className="input"
+                        >
+                          <option value="APPROVED">Qabul qilish (APPROVED)</option>
+                          <option value="REJECTED">Rad etish (REJECTED)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="label">Baholash (0-100 ball)</label>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="100"
+                          value={reviewForm.grade}
+                          onChange={(e) => setReviewForm({ ...reviewForm, grade: e.target.value })}
+                          className="input"
+                          placeholder="masalan, 95"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="label">Izoh / Mentor mulohazasi</label>
+                      <textarea 
+                        rows="4"
+                        value={reviewForm.feedback}
+                        onChange={(e) => setReviewForm({ ...reviewForm, feedback: e.target.value })}
+                        placeholder="Xatolarni ko'rsating yoki a'lo baho uchun izoh yozing..."
+                        className="input"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <button 
+                        type="button" 
+                        onClick={() => setSelectedHw(null)} 
+                        className="btn-secondary"
+                      >
+                        Bekor qilish
+                      </button>
+                      
+                      <button 
+                        type="submit" 
+                        disabled={submitting}
+                        className="btn-primary"
+                      >
+                        {submitting ? 'Yuborilmoqda...' : 'Baholashni tasdiqlash'}
+                      </button>
+                    </div>
+                  </form>
+
+                </div>
+              ) : (
+                <div className="card border-dark-800 p-12 text-center text-dark-500 flex flex-col items-center justify-center py-24 bg-dark-900/40">
+                  <MessageSquare className="w-12 h-12 text-dark-600 mb-3" />
+                  <h3 className="font-bold text-white text-md">Taqriz uchun vazifa tanlanmagan</h3>
+                  <p className="text-xs text-dark-400 mt-1 max-w-xs">
+                    Baholashni boshlash uchun chap tarafdagi ro'yxatdan birorta o'quvchining vazifasini tanlang.
+                  </p>
                 </div>
               )}
             </div>
+
           </div>
-
-          {/* Grading Area */}
-          <div className="lg:col-span-2">
-            {selectedHw ? (
-              <div className="card bg-dark-900 border-dark-800 p-6 space-y-6">
-                
-                {/* Header detail */}
-                <div className="border-b border-dark-800 pb-4">
-                  <span className="text-[10px] uppercase text-primary-400 font-bold tracking-wider">
-                    {selectedHw.lesson.module.course.title} &gt; {selectedHw.lesson.module.title}
-                  </span>
-                  
-                  <h3 className="text-lg font-bold text-white mt-1">{selectedHw.lesson.title}</h3>
-                  
-                  <div className="flex items-center gap-3 mt-3 text-xs text-dark-400">
-                    <span className="flex items-center gap-1">
-                      <User className="w-4 h-4 text-emerald-400" />
-                      Talaba: <strong>{selectedHw.student.name}</strong> ({selectedHw.student.email})
-                    </span>
-                  </div>
-                </div>
-
-                {/* Submission content */}
-                <div className="space-y-4 bg-dark-950 p-4 rounded-lg border border-dark-850">
-                  <h4 className="font-bold text-white text-xs uppercase tracking-wider text-dark-400">Talaba javobi</h4>
-                  
-                  {selectedHw.textResponse && (
-                    <div className="text-sm text-dark-200 whitespace-pre-line leading-relaxed">
-                      {selectedHw.textResponse}
-                    </div>
-                  )}
-
-                  {selectedHw.fileUrl && (
-                    <div className="pt-2 space-y-3">
-                      {/* File Preview Handling */}
-                      {(selectedHw.fileUrl.startsWith('data:image/') || 
-                        /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedHw.fileUrl)) ? (
-                        <div className="mt-2 max-w-lg border border-dark-800 rounded-lg overflow-hidden bg-dark-900">
-                          <img 
-                            src={selectedHw.fileUrl.startsWith('data:') ? selectedHw.fileUrl : getFileUrl(selectedHw.fileUrl)} 
-                            alt="Vazifa rasmi" 
-                            className="w-full h-auto max-h-[400px] object-contain" 
-                          />
-                        </div>
-                      ) : /\.pdf$/i.test(selectedHw.fileUrl) ? (
-                        <div className="mt-2 border border-dark-800 rounded-lg overflow-hidden bg-dark-900 h-[500px]">
-                          <iframe 
-                            src={getFileUrl(selectedHw.fileUrl)} 
-                            title="PDF Preview"
-                            className="w-full h-full"
-                          />
-                        </div>
-                      ) : /\.(doc|docx|xls|xlsx|csv)$/i.test(selectedHw.fileUrl) ? (
-                        <div className="mt-2 border border-dark-800 rounded-lg overflow-hidden bg-dark-900 h-[500px]">
-                          <iframe 
-                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(getFileUrl(selectedHw.fileUrl))}&embedded=true`}
-                            title="Document Preview"
-                            className="w-full h-full"
-                          />
-                        </div>
-                      ) : (
-                        <div className="mt-2 p-4 border border-dark-800 rounded-lg bg-dark-900">
-                          <p className="text-dark-300 text-sm flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Hujjat yuklangan. Ko'rish uchun quyidagi tugma orqali yuklab oling.
-                          </p>
-                        </div>
-                      )}
-                      
-                      <div>
-                        <button 
-                          type="button"
-                          onClick={() => handleDownloadFile(selectedHw)}
-                          className="btn-secondary py-1.5 px-3 text-xs inline-flex items-center gap-1.5 bg-dark-800 hover:bg-dark-700 text-white cursor-pointer"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          Biriktirilgan faylni yuklab olish
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!selectedHw.textResponse && !selectedHw.fileUrl && (
-                    <p className="text-xs text-dark-500 italic">Javob matni va fayl yo'q.</p>
-                  )}
-                </div>
-
-                {/* Review form */}
-                <form onSubmit={handleSubmitReview} className="space-y-5 border-t border-dark-800 pt-5">
-                  <h4 className="font-bold text-white text-sm flex items-center gap-1">
-                    <Award className="w-4 h-4 text-yellow-500" />
-                    Vazifani baholash va taqriz
-                  </h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="label">Qaror (Status)</label>
-                      <select 
-                        value={reviewForm.status} 
-                        onChange={(e) => setReviewForm({ ...reviewForm, status: e.target.value })}
-                        className="input"
-                      >
-                        <option value="APPROVED">Qabul qilish (APPROVED)</option>
-                        <option value="REJECTED">Rad etish (REJECTED)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="label">Baholash (0-100 ball)</label>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        max="100"
-                        value={reviewForm.grade}
-                        onChange={(e) => setReviewForm({ ...reviewForm, grade: e.target.value })}
-                        className="input"
-                        placeholder="masalan, 95"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="label">Izoh / Mentor mulohazasi</label>
-                    <textarea 
-                      rows="4"
-                      value={reviewForm.feedback}
-                      onChange={(e) => setReviewForm({ ...reviewForm, feedback: e.target.value })}
-                      placeholder="Xatolarni ko'rsating yoki a'lo baho uchun izoh yozing..."
-                      className="input"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 justify-end">
-                    <button 
-                      type="button" 
-                      onClick={() => setSelectedHw(null)} 
-                      className="btn-secondary"
-                    >
-                      Bekor qilish
-                    </button>
-                    
-                    <button 
-                      type="submit" 
-                      disabled={submitting}
-                      className="btn-primary"
-                    >
-                      {submitting ? 'Yuborilmoqda...' : 'Baholashni tasdiqlash'}
-                    </button>
-                  </div>
-                </form>
-
-              </div>
-            ) : (
-              <div className="card border-dark-800 p-12 text-center text-dark-500 flex flex-col items-center justify-center py-24 bg-dark-900/40">
-                <MessageSquare className="w-12 h-12 text-dark-600 mb-3" />
-                <h3 className="font-bold text-white text-md">Taqriz uchun vazifa tanlanmagan</h3>
-                <p className="text-xs text-dark-400 mt-1 max-w-xs">
-                  Baholashni boshlash uchun chap tarafdagi ro'yxatdan birorta o'quvchining vazifasini tanlang.
-                </p>
-              </div>
-            )}
-          </div>
-
-        </div>
         </div>
       )}
 

@@ -736,7 +736,10 @@ router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req,
       whereClause.lesson = {
         module: {
           course: {
-            teacherId: req.user.id
+            OR: [
+              { teacherId: req.user.id },
+              { teacherId: null }
+            ]
           }
         }
       };
@@ -773,7 +776,10 @@ router.get('/homeworks/reviewed', authenticate, requireMentorOrAdmin, async (req
       whereClause.lesson = {
         module: {
           course: {
-            teacherId: req.user.id
+            OR: [
+              { teacherId: req.user.id },
+              { teacherId: null }
+            ]
           }
         }
       };
