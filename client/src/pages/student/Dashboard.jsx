@@ -18,6 +18,15 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const { fetchCoinBalance } = useOutletContext();
   
+  const getFileUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
+    const base = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api', '') 
+      : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin);
+    return `${base}${path}`;
+  };
+  
   const [courses, setCourses] = useState([]);
   const [coinsData, setCoinsData] = useState({ balance: 0, transactions: [] });
   const [loading, setLoading] = useState(true);
@@ -154,7 +163,7 @@ export default function StudentDashboard() {
                   <div>
                     <div className="aspect-video bg-dark-800 rounded-lg overflow-hidden relative mb-4 border border-dark-700">
                       {course.thumbnail ? (
-                        <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={getFileUrl(course.thumbnail)} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-dark-500 bg-dark-900/50">
                           <BookOpen className="w-10 h-10" />

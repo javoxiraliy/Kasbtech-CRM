@@ -25,6 +25,15 @@ export default function Courses() {
   const isAdmin = user?.role === 'ADMIN';
   const isTeacher = user?.role === 'TEACHER';
 
+  const getFileUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
+    const base = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api', '') 
+      : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin);
+    return `${base}${path}`;
+  };
+
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
@@ -399,7 +408,7 @@ export default function Courses() {
                 <div>
                   <div className="aspect-video bg-dark-800 rounded-lg overflow-hidden relative mb-4 border border-dark-700">
                     {course.thumbnail ? (
-                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                      <img src={getFileUrl(course.thumbnail)} alt={course.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-dark-500 bg-dark-900/50">
                         <BookOpen className="w-12 h-12" />
@@ -421,15 +430,15 @@ export default function Courses() {
                   </div>
                 </div>
 
-                <div className="border-t border-dark-800 pt-4 flex justify-between items-center mt-4">
-                  <span className="text-primary-400 font-bold text-lg">
+                <div className="border-t border-dark-800 pt-4 flex flex-wrap gap-3 justify-between items-center mt-4">
+                  <span className="text-primary-400 font-bold text-lg whitespace-nowrap">
                     {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(course.price)}
                   </span>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap items-center">
                     <button 
                       onClick={() => handleCourseClick(course)} 
-                      className="btn-secondary py-1.5 px-3 text-xs"
+                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap"
                     >
                       {isTeacher ? "Darslarni boshqarish" : "Darslarni ko'rish"} ({course._count?.modules || 0} modul)
                     </button>
