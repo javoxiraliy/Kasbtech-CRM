@@ -17,9 +17,10 @@ const getRedirectUri = (req) => {
 router.get('/auth', async (req, res) => {
   try {
     const appIdSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_ID' } });
-    const FB_APP_ID = (appIdSetting?.value && appIdSetting.value !== '2142572693250828') 
-      ? appIdSetting.value 
-      : DEFAULT_FB_APP_ID;
+    let FB_APP_ID = appIdSetting?.value || DEFAULT_FB_APP_ID;
+    if (FB_APP_ID === '2142572693250828') {
+      FB_APP_ID = DEFAULT_FB_APP_ID;
+    }
     
     // Ensure database setting is updated
     await prisma.setting.upsert({
