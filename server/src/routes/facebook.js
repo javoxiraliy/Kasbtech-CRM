@@ -14,7 +14,7 @@ const getRedirectUri = (req) => {
 router.get('/auth', async (req, res) => {
   try {
     const appIdSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_ID' } });
-    const FB_APP_ID = appIdSetting?.value || process.env.FB_APP_ID || '2142572693250828';
+    const FB_APP_ID = appIdSetting?.value || process.env.FB_APP_ID || '2637179990074660';
     const redirectUri = getRedirectUri(req);
     const scope = 'pages_manage_metadata,pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_ads';
     
@@ -41,8 +41,8 @@ router.get('/callback', async (req, res) => {
   try {
     const appIdSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_ID' } });
     const appSecretSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_SECRET' } });
-    const FB_APP_ID = appIdSetting?.value || process.env.FB_APP_ID || '2142572693250828';
-    const FB_APP_SECRET = appSecretSetting?.value || process.env.FB_APP_SECRET || '4341d2d6b7a6291987ba57f82fb8b198';
+    const FB_APP_ID = appIdSetting?.value || process.env.FB_APP_ID || '2637179990074660';
+    const FB_APP_SECRET = appSecretSetting?.value || process.env.FB_APP_SECRET || '6b35de3e472a4b147a91a9a5922193f8';
     const redirectUri = getRedirectUri(req);
 
     // Exchange code for short-lived user token
