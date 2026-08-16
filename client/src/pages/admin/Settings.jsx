@@ -93,6 +93,9 @@ export default function Settings() {
         description: settings[key].description,
       });
       addNotification('success', "Sozlama saqlandi");
+      if (key.startsWith('FB_')) {
+        checkFbStatus();
+      }
     } catch (error) {
       addNotification('error', "Saqlashda xatolik yuz berdi");
     } finally {
