@@ -325,7 +325,7 @@ export default function Settings() {
                       <input 
                         type="text" 
                         className="input text-xs font-mono" 
-                        placeholder="2142572693250828"
+                        placeholder="2637179990074660"
                         value={settings.FB_APP_ID?.value || ''}
                         onChange={(e) => handleChange('FB_APP_ID', 'value', e.target.value)}
                       />
