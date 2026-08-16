@@ -17,9 +17,9 @@ const getRedirectUri = (req) => {
 router.get('/auth', async (req, res) => {
   try {
     const appIdSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_ID' } });
-    let FB_APP_ID = appIdSetting?.value || DEFAULT_FB_APP_ID;
-    if (FB_APP_ID === '2142572693250828') {
-      FB_APP_ID = DEFAULT_FB_APP_ID;
+    let FB_APP_ID = '2637179990074660';
+    if (appIdSetting?.value && appIdSetting.value.length > 5 && appIdSetting.value !== '2142572693250828') {
+      FB_APP_ID = appIdSetting.value;
     }
     
     // Ensure database setting is updated
@@ -34,7 +34,7 @@ router.get('/auth', async (req, res) => {
     
     const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=kasbtech`;
     
-    res.json({ url: authUrl, redirectUri });
+    res.json({ url: authUrl, redirectUri, appId: FB_APP_ID });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
