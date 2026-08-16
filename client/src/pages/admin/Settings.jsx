@@ -12,9 +12,48 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const { addNotification } = useNotification();
 
+  const [fbStatus, setFbStatus] = useState({ connected: false, name: '' });
+  const [testingLead, setTestingLead] = useState(false);
+
   useEffect(() => {
     fetchSettings();
+    checkFbStatus();
+
+    const handleMessage = (event) => {
+      if (event.data === 'FB_CONNECTED') {
+        addNotification('success', "Facebook muvaffaqiyatli ulandi!");
+        checkFbStatus();
+        fetchSettings();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  const checkFbStatus = async () => {
+    try {
+      const res = await api.get('/facebook/status');
+      setFbStatus(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleTestLead = async () => {
+    try {
+      setTestingLead(true);
+      const res = await api.post('/facebook/test-lead', {
+        name: 'Test Facebook Lead',
+        phone: '+99890' + Math.floor(1000000 + Math.random() * 9000000),
+        courseInterest: 'WEB_DEVELOPMENT'
+      });
+      addNotification('success', res.data.message || "Test lid yaratildi! Kanban doskasidan tekshirishingiz mumkin.");
+    } catch (e) {
+      addNotification('error', "Test lid yaratishda xatolik");
+    } finally {
+      setTestingLead(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -207,24 +246,131 @@ export default function Settings() {
           </div>
           
           <div className="relative z-10 flex flex-col sm:flex-row gap-6">
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-2 text-blue-400 mb-2">
-                <Facebook className="w-5 h-5" />
-                <h3 className="text-lg font-semibold text-white">Facebook Integratsiyasi (Lead Ads)</h3>
+            <div className="flex-1 space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Facebook className="w-5 h-5" />
+                  <h3 className="text-lg font-semibold text-white">Facebook Integratsiyasi (Lead Ads)</h3>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {fbStatus.connected ? (
+                    <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold px-3 py-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      Ulangan ({fbStatus.name || 'Faol'})
+                    </span>
+                  ) : (
+                    <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-3 py-1">
+                      Ulanmagan
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-dark-400">
-                Ushbu bo'lim orqali Facebook reklamalaridan tushadigan lidlarni avtomatik tarzda CRM tizimiga ulashingiz mumkin. Tugmani bosing va 100k.uz kabi Facebook orqali ruxsatlarni tasdiqlang.
+
+              <p className="text-sm text-dark-400 leading-relaxed">
+                Ushbu bo'lim orqali Facebook va Instagram lead forma reklamalaridan tushadigan lidlarni avtomatik tarzda CRM tizimiga tushirishni sozlaysiz.
               </p>
-              
-              <div className="pt-2">
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-3 pt-1">
                 <button 
                   onClick={handleFacebookConnect}
-                  className="btn-primary bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                  className="btn-primary bg-blue-600 hover:bg-blue-700"
                 >
-                  <Facebook className="w-4 h-4 mr-2" />
-                  Facebookga bog'lash
+                  <Facebook className="w-4 h-4 mr-1.5" />
+                  Facebook Akkauntga bog'lash (OAuth)
+                </button>
+
+                <button 
+                  onClick={handleTestLead}
+                  disabled={testingLead}
+                  className="btn-secondary text-xs font-bold border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                >
+                  {testingLead ? <Loader2 className="w-4 h-4 animate-spin" /> : '🧪 Test Lid Yaratish'}
                 </button>
               </div>
+
+              {/* Form Settings for Facebook Credentials */}
+              <div className="space-y-4 pt-4 border-t border-dark-800">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Facebook API va Token Sozlamalari</h4>
+
+                <div>
+                  <label className="label">Page Access Token (Qo'lda kiritish muqobili)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="password" 
+                      className="input font-mono text-xs" 
+                      placeholder="EAA..."
+                      value={settings.FB_PAGE_ACCESS_TOKEN?.value || ''}
+                      onChange={(e) => handleChange('FB_PAGE_ACCESS_TOKEN', 'value', e.target.value)}
+                    />
+                    <button 
+                      onClick={() => handleSave('FB_PAGE_ACCESS_TOKEN')}
+                      disabled={saving === 'FB_PAGE_ACCESS_TOKEN'}
+                      className="btn-primary py-1 px-3 text-xs shrink-0"
+                    >
+                      {saving === 'FB_PAGE_ACCESS_TOKEN' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Saqlash
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">FB App ID</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        className="input text-xs font-mono" 
+                        placeholder="2142572693250828"
+                        value={settings.FB_APP_ID?.value || ''}
+                        onChange={(e) => handleChange('FB_APP_ID', 'value', e.target.value)}
+                      />
+                      <button 
+                        onClick={() => handleSave('FB_APP_ID')}
+                        disabled={saving === 'FB_APP_ID'}
+                        className="btn-secondary py-1 px-2.5 text-xs shrink-0"
+                      >
+                        <Save className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="label">FB App Secret</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="password" 
+                        className="input text-xs font-mono" 
+                        placeholder="4341d2d..."
+                        value={settings.FB_APP_SECRET?.value || ''}
+                        onChange={(e) => handleChange('FB_APP_SECRET', 'value', e.target.value)}
+                      />
+                      <button 
+                        onClick={() => handleSave('FB_APP_SECRET')}
+                        disabled={saving === 'FB_APP_SECRET'}
+                        className="btn-secondary py-1 px-2.5 text-xs shrink-0"
+                      >
+                        <Save className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Webhook Guide */}
+              <div className="p-4 bg-dark-950/80 border border-dark-800 rounded-xl space-y-2 text-xs text-dark-300">
+                <p className="font-bold text-white text-xs uppercase tracking-wider text-blue-400">
+                  📌 Meta Developer Webhook Sozlash Yo'riqnomasi:
+                </p>
+                <p>Facebook Developer Console (developers.facebook.com) portalida <strong>Webhooks</strong> bo'limiga o'ting va quyidagi ma'lumotlarni kiriting:</p>
+                <div className="bg-dark-900 p-2.5 rounded border border-dark-800 space-y-1 font-mono text-[11px]">
+                  <p><span className="text-dark-500">Callback URL:</span> <span className="text-emerald-400">{window.location.origin.replace('5173', '5000')}/api/webhooks/meta</span></p>
+                  <p><span className="text-dark-500">Verify Token:</span> <span className="text-yellow-400">KASBTECH_META_WEBHOOK_SECRET_123</span></p>
+                  <p><span className="text-dark-500">Subscribed Fields:</span> <span className="text-primary-400">leadgen</span></p>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>

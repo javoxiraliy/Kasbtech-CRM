@@ -1,71 +1,155 @@
 const express = require('express');
 const axios = require('axios');
-const prisma = require('../prismaClient'); // Assuming prismaClient is correctly exported
+const prisma = require('../prismaClient');
 const router = express.Router();
 
-// Ilova kalitlari (.env dan olinadi yoki to'g'ridan-to'g'ri berilgan bo'ladi)
-const FB_APP_ID = process.env.FB_APP_ID || '2142572693250828';
-const FB_APP_SECRET = process.env.FB_APP_SECRET || '4341d2d6b7a6291987ba57f82fb8b198';
-// Callback URL (Renderdagi API manzili, o'zgarishi mumkin)
-const FB_REDIRECT_URI = process.env.FB_REDIRECT_URI || 'https://kasbtech-crm.onrender.com/api/facebook/callback';
+const getRedirectUri = (req) => {
+  if (process.env.FB_REDIRECT_URI) return process.env.FB_REDIRECT_URI;
+  const host = req.get('host');
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  return `${protocol}://${host}/api/facebook/callback`;
+};
 
-// 1. Frontend uchun Facebook Avtorizatsiya URL manzilini yaratib berish
-router.get('/auth', (req, res) => {
-  // Qaysi huquqlar (ruxsatlar) so'ralayotgani:
-  const scope = 'pages_manage_metadata,pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_ads';
-  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(FB_REDIRECT_URI)}&scope=${scope}&state=kasbtech`;
-  
-  res.json({ url: authUrl });
+// 1. Generate OAuth Auth URL
+router.get('/auth', async (req, res) => {
+  try {
+    const appIdSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_ID' } });
+    const FB_APP_ID = appIdSetting?.value || process.env.FB_APP_ID || '2142572693250828';
+    const redirectUri = getRedirectUri(req);
+    const scope = 'pages_manage_metadata,pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_ads';
+    
+    const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=kasbtech`;
+    
+    res.json({ url: authUrl, redirectUri });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// 2. Foydalanuvchi ruxsat bergandan so'ng Facebook qaytarib yuboradigan Callback manzil
+// 2. OAuth Callback
 router.get('/callback', async (req, res) => {
-  const { code, state, error } = req.query;
+  const { code, error } = req.query;
   
   if (error) {
-    return res.status(400).send(`Xatolik yuz berdi: ${error}`);
+    return res.status(400).send(`Facebook xatosi: ${error}`);
   }
 
   if (!code) {
-    return res.status(400).send('Facebook tasdiqlash kodi topilmadi.');
+    return res.status(400).send('Facebook OAuth kodi topilmadi.');
   }
 
   try {
-    // Facebook 'code' ni haqiqiy 'Access Token' ga almashtirish
-    const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(FB_REDIRECT_URI)}&client_secret=${FB_APP_SECRET}&code=${code}`;
-    
-    const { data } = await axios.get(tokenUrl);
-    const accessToken = data.access_token;
-    
-    // Olingan kalitni ma'lumotlar bazasiga (Setting jadvaliga) saqlash
+    const appIdSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_ID' } });
+    const appSecretSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_SECRET' } });
+    const FB_APP_ID = appIdSetting?.value || process.env.FB_APP_ID || '2142572693250828';
+    const FB_APP_SECRET = appSecretSetting?.value || process.env.FB_APP_SECRET || '4341d2d6b7a6291987ba57f82fb8b198';
+    const redirectUri = getRedirectUri(req);
+
+    // Exchange code for short-lived user token
+    const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${FB_APP_SECRET}&code=${code}`;
+    const { data: tokenData } = await axios.get(tokenUrl);
+    let userToken = tokenData.access_token;
+
+    // Exchange short-lived user token for long-lived user token
+    try {
+      const longLivedUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FB_APP_ID}&client_secret=${FB_APP_SECRET}&fb_exchange_token=${userToken}`;
+      const { data: longLivedData } = await axios.get(longLivedUrl);
+      if (longLivedData.access_token) {
+        userToken = longLivedData.access_token;
+      }
+    } catch (e) {
+      console.warn('Long-lived token exchange warning:', e.message);
+    }
+
+    // Fetch user pages to get Page Access Token
+    let pageAccessToken = userToken;
+    let pageName = 'Facebook Page';
+    try {
+      const pagesRes = await axios.get(`https://graph.facebook.com/v19.0/me/accounts?access_token=${userToken}`);
+      const pages = pagesRes.data?.data || [];
+      if (pages.length > 0) {
+        pageAccessToken = pages[0].access_token || userToken;
+        pageName = pages[0].name || pageName;
+      }
+    } catch (e) {
+      console.warn('Facebook pages fetch warning:', e.message);
+    }
+
+    // Save Page Access Token to settings
     await prisma.setting.upsert({
       where: { key: 'FB_PAGE_ACCESS_TOKEN' },
-      update: { value: accessToken },
-      create: { 
-        key: 'FB_PAGE_ACCESS_TOKEN', 
-        value: accessToken, 
-        description: 'Facebook OAuth Page Access Token for Leads' 
-      }
+      update: { value: pageAccessToken, description: `Page Access Token for ${pageName}` },
+      create: { key: 'FB_PAGE_ACCESS_TOKEN', value: pageAccessToken, description: `Page Access Token for ${pageName}` }
     });
 
-    // Muvaffaqiyatli saqlangach, CRM sahifasiga qaytarish yoki oynani yopish
     res.send(`
       <html>
         <head><title>Muvaffaqiyatli ulandi</title></head>
-        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-          <h2 style="color: green;">Facebook akkauntingiz muvaffaqiyatli ulandi! ✅</h2>
-          <p>Endi reklamalaringizdan lidlar CRM ga to'g'ridan-to'g'ri tushadi.</p>
-          <button onclick="window.close()" style="padding: 10px 20px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer;">Oynani yopish</button>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: white;">
+          <h2 style="color: #4ade80;">Facebook akkauntingiz muvaffaqiyatli ulandi! ✅</h2>
+          <p style="color: #94a3b8;">Sahifa: <strong>${pageName}</strong></p>
+          <p style="color: #94a3b8;">Endi reklamalaringizdan tushadigan lidlar CRM ga avtomatik keladi.</p>
+          <button onclick="window.close()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Oynani yopish</button>
           <script>
-             setTimeout(() => { window.close(); }, 3000);
+            if (window.opener) {
+              window.opener.postMessage('FB_CONNECTED', '*');
+            }
+            setTimeout(() => { window.close(); }, 2500);
           </script>
         </body>
       </html>
     `);
   } catch (error) {
-    console.error('Facebook Auth Error:', error.response?.data || error.message);
-    res.status(500).send('Autentifikatsiya vaqtida server xatosi yuz berdi.');
+    console.error('Facebook Auth Callback Error:', error.response?.data || error.message);
+    res.status(500).send(`Autentifikatsiya vaqtida server xatosi yuz berdi: ${error.message}`);
+  }
+});
+
+// 3. Check Facebook Connection Status
+router.get('/status', async (req, res) => {
+  try {
+    const tokenSetting = await prisma.setting.findUnique({ where: { key: 'FB_PAGE_ACCESS_TOKEN' } });
+    const token = tokenSetting?.value || process.env.FB_PAGE_ACCESS_TOKEN;
+
+    if (!token) {
+      return res.json({ connected: false, message: 'Token kiritilmagan' });
+    }
+
+    try {
+      const meRes = await axios.get(`https://graph.facebook.com/v19.0/me?access_token=${token}`);
+      return res.json({ connected: true, name: meRes.data.name || 'Facebook User/Page', id: meRes.data.id });
+    } catch (e) {
+      return res.json({ connected: true, valid: false, message: 'Token saqlangan, lekin Graph API tekshirib bo\'lmadi' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 4. Trigger Test Lead to verify CRM insertion
+router.post('/test-lead', async (req, res) => {
+  try {
+    const testName = req.body.name || 'Test Facebook Lid';
+    const testPhone = req.body.phone || '+998901234567';
+    const testCourse = req.body.courseInterest || 'WEB_DEVELOPMENT';
+
+    const newLead = await prisma.lead.create({
+      data: {
+        name: testName,
+        phone: testPhone,
+        source: 'Facebook Ads',
+        status: 'NEW',
+        courseInterest: testCourse,
+        employmentStatus: 'Ishsiz',
+        notes: `Test Lead generated from CRM Facebook settings panel at ${new Date().toLocaleString('uz-UZ')}`
+      }
+    });
+
+    res.json({ success: true, message: 'Test lid muvaffaqiyatli saqlandi!', lead: newLead });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
 module.exports = router;
+
