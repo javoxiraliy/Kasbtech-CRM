@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ClipboardList, LogOut, Bell, Menu, X, CheckCheck, AlertCircle, Smartphone, FileText } from 'lucide-react';
+import { ClipboardList, LogOut, Bell, Menu, X, CheckCheck, AlertCircle, Smartphone, FileText, Facebook } from 'lucide-react';
 import api from '../lib/api';
 import ReportWarningBanner from '../components/ReportWarningBanner';
 import MotivationalBanner from '../components/MotivationalBanner';
 import ProfileModal from '../components/ProfileModal';
-
-
 
 export default function SMMLayout() {
   const { user, logout } = useAuth();
@@ -93,6 +91,7 @@ export default function SMMLayout() {
 
   const navItems = [
     { to: '/smm', icon: ClipboardList, label: 'Topshiriqlar Markazi', end: true },
+    { to: '/smm/facebook', icon: Facebook, label: 'Facebook Integratsiyasi', end: false },
     { to: '/smm/reports', icon: FileText, label: 'Hisobotlar', end: false },
   ];
 

@@ -194,15 +194,46 @@ router.get('/accounts', async (req, res) => {
   try {
     let accounts = await getAccountsList();
     
-    // Fallback if accounts list empty but single FB_PAGE_ACCESS_TOKEN exists
+    // Fallback: If accounts list is empty, construct active default connection
     if (accounts.length === 0) {
-      const tokenSetting = await prisma.setting.findUnique({ where: { key: 'FB_PAGE_ACCESS_TOKEN' } });
-      const token = tokenSetting?.value;
+      let tokenSetting = await prisma.setting.findUnique({ where: { key: 'FB_PAGE_ACCESS_TOKEN' } });
+      let token = tokenSetting?.value || process.env.FB_PAGE_ACCESS_TOKEN;
+      let name = 'Kasbtech CRM (Meta App Token Faol)';
+
+      const appIdSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_ID' } });
+      const appSecretSetting = await prisma.setting.findUnique({ where: { key: 'FB_APP_SECRET' } });
+      const FB_APP_ID = appIdSetting?.value || process.env.FB_APP_ID || DEFAULT_FB_APP_ID;
+      const FB_APP_SECRET = appSecretSetting?.value || process.env.FB_APP_SECRET || DEFAULT_FB_APP_SECRET;
+
+      if (!token) {
+        try {
+          const appTokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FB_APP_ID}&client_secret=${FB_APP_SECRET}&grant_type=client_credentials`;
+          const { data } = await axios.get(appTokenUrl);
+          if (data.access_token) {
+            token = data.access_token;
+            await prisma.setting.upsert({
+              where: { key: 'FB_PAGE_ACCESS_TOKEN' },
+              update: { value: token, description: 'Meta App Access Token for Kasbtech CRM' },
+              create: { key: 'FB_PAGE_ACCESS_TOKEN', value: token, description: 'Meta App Access Token for Kasbtech CRM' }
+            });
+          }
+        } catch (e) {
+          console.warn('App Token auto-fetch warning:', e.message);
+        }
+      }
+
       if (token) {
+        try {
+          const meRes = await axios.get(`https://graph.facebook.com/v19.0/me?access_token=${token}`);
+          if (meRes.data && meRes.data.name) {
+            name = meRes.data.name;
+          }
+        } catch (e) {}
+
         accounts = [{
           id: 'primary_page',
-          name: 'Kasbtech CRM (Meta App Token Faol)',
-          category: 'Asosiy Reklama Sahifasi',
+          name: name,
+          category: `Asosiy Reklama Sahifasi (App ID: ${FB_APP_ID})`,
           accessToken: token,
           connectedAt: new Date().toISOString(),
           status: 'ACTIVE',

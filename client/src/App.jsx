@@ -122,6 +122,7 @@ function App() {
                 </ProtectedRoute>
               }>
                 <Route index element={<TeacherTasks />} />
+                <Route path="facebook" element={<AdminSettings />} />
                 <Route path="reports" element={<Reports />} />
               </Route>
 
