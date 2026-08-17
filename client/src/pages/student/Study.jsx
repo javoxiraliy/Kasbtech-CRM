@@ -221,20 +221,29 @@ export default function StudentStudy() {
       }
       formData.append('textResponse', homeworkText);
 
-      await api.post(`/lms/lessons/${selectedLesson.id}/homework`, formData);
+      const submitRes = await api.post(`/lms/lessons/${selectedLesson.id}/homework`, formData);
 
       alert('Vazifangiz topshirildi! Mentor tez orada tekshiradi.');
       
+      // Update local state immediately
+      setHomeworkStatus('PENDING');
+      setHomeworkDetails(submitRes.data.homework || { textResponse: homeworkText, status: 'PENDING' });
+
       // Refresh current study details
       const res = await api.get(`/lms/courses/${courseId}/study`);
-      setModules(res.data.modules || []);
+      const updatedMods = res.data.modules || [];
+      setModules(updatedMods);
       setCourseProgress(res.data.progress || 0);
 
-      // Reload lesson details
-      fetchLessonDetails(selectedLesson.id);
+      const matchingModule = updatedMods.find(m => m.lessons.some(l => l.id === selectedLesson.id));
+      const matchingLesson = matchingModule?.lessons.find(l => l.id === selectedLesson.id);
+      if (matchingLesson) {
+        setHomeworkStatus(matchingLesson.homeworkStatus);
+        setHomeworkDetails(matchingLesson.homeworkDetails);
+      }
     } catch (err) {
       console.error(err);
-      alert('Vazifani yuklashda xatolik yuz berdi.');
+      alert(err.response?.data?.error || 'Vazifani yuklashda xatolik yuz berdi.');
     } finally {
       setSubmittingHw(false);
     }

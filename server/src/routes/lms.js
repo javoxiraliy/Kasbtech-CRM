@@ -654,16 +654,12 @@ router.get('/lessons/:lessonId', authenticate, async (req, res) => {
 // 5. HOMEWORK SUBMISSION & REVIEW
 // ==========================================
 
-// POST /api/lms/lessons/:lessonId/homework - Submit homework (Student only)
+// POST /api/lms/lessons/:lessonId/homework - Submit homework
 router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), async (req, res) => {
   try {
     const { lessonId } = req.params;
     const { textResponse } = req.body;
     const studentId = req.user.id;
-
-    if (req.user.role !== 'STUDENT' && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Faqat talabalar uy vazifasini topshira oladilar' });
-    }
 
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId },
@@ -674,32 +670,28 @@ router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), 
       return res.status(404).json({ error: 'Dars topilmadi' });
     }
 
-    // Check if homework already exists
+    // Check if homework already exists for this student & lesson
     const existing = await prisma.homework.findFirst({
       where: { lessonId, studentId }
     });
-
-    if (existing && (existing.status === 'PENDING' || existing.status === 'APPROVED')) {
-      return res.status(400).json({ error: 'Ushbu dars uchun uy vazifasi allaqachon topshirilgan yoki tasdiqlangan' });
-    }
 
     let fileUrl = null;
     if (req.file) {
       fileUrl = `/uploads/${req.file.filename}`;
     }
 
-    if (!fileUrl && !textResponse) {
+    if (!fileUrl && !textResponse && !existing?.fileUrl && !existing?.textResponse) {
       return res.status(400).json({ error: 'Fayl yuklang yoki javob matnini yozing' });
     }
 
     let homework;
-    if (existing && existing.status === 'REJECTED') {
-      // Re-submit
+    if (existing) {
+      // Re-submit / Update existing submission (if pending or rejected)
       homework = await prisma.homework.update({
         where: { id: existing.id },
         data: {
-          fileUrl,
-          textResponse,
+          fileUrl: fileUrl || existing.fileUrl,
+          textResponse: textResponse !== undefined ? textResponse : existing.textResponse,
           status: 'PENDING',
           grade: null,
           feedback: null,
@@ -708,7 +700,7 @@ router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), 
         }
       });
     } else {
-      // Create new
+      // Create new submission
       homework = await prisma.homework.create({
         data: {
           lessonId,
@@ -727,28 +719,13 @@ router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), 
   }
 });
 
-// GET /api/lms/homeworks/pending - Get pending homeworks for review (Teacher/Admin only)
+// GET /api/lms/homeworks/pending - Get pending homeworks for review (Teacher/Mentor/Admin)
 router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
-    const whereClause = { status: 'PENDING' };
-
-    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
-      whereClause.lesson = {
-        module: {
-          course: {
-            OR: [
-              { teacherId: req.user.id },
-              { teacherId: null }
-            ]
-          }
-        }
-      };
-    }
-
     const homeworks = await prisma.homework.findMany({
-      where: whereClause,
+      where: { status: 'PENDING' },
       include: {
-        student: { select: { id: true, name: true, email: true } },
+        student: { select: { id: true, name: true, email: true, avatar: true } },
         lesson: {
           select: {
             id: true,
@@ -767,28 +744,13 @@ router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req,
   }
 });
 
-// GET /api/lms/homeworks/reviewed - Get reviewed homeworks (Teacher/Admin only)
+// GET /api/lms/homeworks/reviewed - Get reviewed homeworks (Teacher/Mentor/Admin)
 router.get('/homeworks/reviewed', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
-    const whereClause = { status: { in: ['APPROVED', 'REJECTED'] } };
-
-    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
-      whereClause.lesson = {
-        module: {
-          course: {
-            OR: [
-              { teacherId: req.user.id },
-              { teacherId: null }
-            ]
-          }
-        }
-      };
-    }
-
     const homeworks = await prisma.homework.findMany({
-      where: whereClause,
+      where: { status: { in: ['APPROVED', 'REJECTED'] } },
       include: {
-        student: { select: { id: true, name: true, email: true } },
+        student: { select: { id: true, name: true, email: true, avatar: true } },
         lesson: {
           select: {
             id: true,
@@ -807,7 +769,7 @@ router.get('/homeworks/reviewed', authenticate, requireMentorOrAdmin, async (req
   }
 });
 
-// POST /api/lms/homeworks/:homeworkId/review - Review/grade homework (Teacher/Admin only)
+// POST /api/lms/homeworks/:homeworkId/review - Review/grade homework (Teacher/Mentor/Admin)
 router.post('/homeworks/:homeworkId/review', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
     const { homeworkId } = req.params;
@@ -840,19 +802,12 @@ router.post('/homeworks/:homeworkId/review', authenticate, requireMentorOrAdmin,
       return res.status(404).json({ error: 'Uy vazifasi topilmadi' });
     }
 
-    if (
-      (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') &&
-      homework.lesson?.module?.course?.teacherId !== req.user.id
-    ) {
-      return res.status(403).json({ error: 'Siz faqat o\'zingizga biriktirilgan kurs uy vazifalarini tekshira olasiz' });
-    }
-
     const updated = await prisma.homework.update({
       where: { id: homeworkId },
       data: {
         status,
-        grade: grade ? parseInt(grade) : null,
-        feedback,
+        grade: grade !== undefined && grade !== null && grade !== '' ? parseInt(grade) : null,
+        feedback: feedback || null,
         reviewerId: req.user.id
       }
     });
