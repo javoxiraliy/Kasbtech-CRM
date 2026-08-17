@@ -13,6 +13,27 @@ const getRedirectUri = (req) => {
   return `${protocol}://${host}/api/facebook/callback`;
 };
 
+// Helper to get connected accounts list
+const getAccountsList = async () => {
+  try {
+    const setting = await prisma.setting.findUnique({ where: { key: 'FB_ACCOUNTS' } });
+    if (!setting || !setting.value) return [];
+    return JSON.parse(setting.value);
+  } catch (e) {
+    return [];
+  }
+};
+
+// Helper to save connected accounts list
+const saveAccountsList = async (accounts) => {
+  const jsonStr = JSON.stringify(accounts);
+  await prisma.setting.upsert({
+    where: { key: 'FB_ACCOUNTS' },
+    update: { value: jsonStr, description: 'Connected Facebook Pages and Accounts' },
+    create: { key: 'FB_ACCOUNTS', value: jsonStr, description: 'Connected Facebook Pages and Accounts' }
+  });
+};
+
 // 1. Generate OAuth Auth URL
 router.get('/auth', async (req, res) => {
   try {
@@ -75,34 +96,83 @@ router.get('/callback', async (req, res) => {
       console.warn('Long-lived token exchange warning:', e.message);
     }
 
-    // Fetch user pages to get Page Access Token
-    let pageAccessToken = userToken;
-    let pageName = 'Facebook Page';
+    // Fetch all user pages
+    let newAccounts = [];
     try {
       const pagesRes = await axios.get(`https://graph.facebook.com/v19.0/me/accounts?access_token=${userToken}`);
       const pages = pagesRes.data?.data || [];
-      if (pages.length > 0) {
-        pageAccessToken = pages[0].access_token || userToken;
-        pageName = pages[0].name || pageName;
-      }
+      
+      pages.forEach(p => {
+        newAccounts.push({
+          id: p.id || `page_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          name: p.name || 'Facebook Sahifa',
+          category: p.category || 'Business Page',
+          accessToken: p.access_token || userToken,
+          connectedAt: new Date().toISOString(),
+          status: 'ACTIVE',
+          type: 'PAGE'
+        });
+      });
     } catch (e) {
       console.warn('Facebook pages fetch warning:', e.message);
     }
 
-    // Save Page Access Token to settings
-    await prisma.setting.upsert({
-      where: { key: 'FB_PAGE_ACCESS_TOKEN' },
-      update: { value: pageAccessToken, description: `Page Access Token for ${pageName}` },
-      create: { key: 'FB_PAGE_ACCESS_TOKEN', value: pageAccessToken, description: `Page Access Token for ${pageName}` }
+    if (newAccounts.length === 0) {
+      // Fallback: Add primary user account
+      try {
+        const meRes = await axios.get(`https://graph.facebook.com/v19.0/me?access_token=${userToken}`);
+        newAccounts.push({
+          id: meRes.data.id || `user_${Date.now()}`,
+          name: meRes.data.name || 'Facebook Akkaunt',
+          category: 'Personal / Ad Account',
+          accessToken: userToken,
+          connectedAt: new Date().toISOString(),
+          status: 'ACTIVE',
+          type: 'USER'
+        });
+      } catch (e) {
+        newAccounts.push({
+          id: `acc_${Date.now()}`,
+          name: 'Facebook Akkaunt',
+          category: 'Ad Account',
+          accessToken: userToken,
+          connectedAt: new Date().toISOString(),
+          status: 'ACTIVE',
+          type: 'USER'
+        });
+      }
+    }
+
+    // Merge with existing accounts
+    const existingList = await getAccountsList();
+    const updatedList = [...existingList];
+    
+    newAccounts.forEach(newAcc => {
+      const idx = updatedList.findIndex(a => a.id === newAcc.id || a.name === newAcc.name);
+      if (idx >= 0) {
+        updatedList[idx] = { ...updatedList[idx], ...newAcc };
+      } else {
+        updatedList.push(newAcc);
+      }
     });
+
+    await saveAccountsList(updatedList);
+
+    // Save primary page access token
+    if (updatedList.length > 0) {
+      await prisma.setting.upsert({
+        where: { key: 'FB_PAGE_ACCESS_TOKEN' },
+        update: { value: updatedList[0].accessToken, description: `Page Access Token for ${updatedList[0].name}` },
+        create: { key: 'FB_PAGE_ACCESS_TOKEN', value: updatedList[0].accessToken, description: `Page Access Token for ${updatedList[0].name}` }
+      });
+    }
 
     res.send(`
       <html>
         <head><title>Muvaffaqiyatli ulandi</title></head>
         <body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: white;">
           <h2 style="color: #4ade80;">Facebook akkauntingiz muvaffaqiyatli ulandi! ✅</h2>
-          <p style="color: #94a3b8;">Sahifa: <strong>${pageName}</strong></p>
-          <p style="color: #94a3b8;">Endi reklamalaringizdan tushadigan lidlar CRM ga avtomatik keladi.</p>
+          <p style="color: #94a3b8;">Jami <strong>${updatedList.length} ta</strong> sahifa/akkaunt CRM-ga biriktirildi.</p>
           <button onclick="window.close()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Oynani yopish</button>
           <script>
             if (window.opener) {
@@ -119,9 +189,97 @@ router.get('/callback', async (req, res) => {
   }
 });
 
-// 3. Check Facebook Connection Status & Auto-Activate App Token
+// 3. GET /api/facebook/accounts - List all connected Facebook accounts & pages
+router.get('/accounts', async (req, res) => {
+  try {
+    let accounts = await getAccountsList();
+    
+    // Fallback if accounts list empty but single FB_PAGE_ACCESS_TOKEN exists
+    if (accounts.length === 0) {
+      const tokenSetting = await prisma.setting.findUnique({ where: { key: 'FB_PAGE_ACCESS_TOKEN' } });
+      const token = tokenSetting?.value;
+      if (token) {
+        accounts = [{
+          id: 'primary_page',
+          name: 'Kasbtech CRM (Meta App Token Faol)',
+          category: 'Asosiy Reklama Sahifasi',
+          accessToken: token,
+          connectedAt: new Date().toISOString(),
+          status: 'ACTIVE',
+          type: 'PAGE'
+        }];
+        await saveAccountsList(accounts);
+      }
+    }
+
+    res.json({ accounts });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 4. POST /api/facebook/accounts - Manually add a Facebook Page/Account token
+router.post('/accounts', async (req, res) => {
+  try {
+    const { name, accessToken, category } = req.body;
+    if (!name || !accessToken) {
+      return res.status(400).json({ error: 'Sahifa nomi va Access Token kiritilishi shart' });
+    }
+
+    const newAcc = {
+      id: `custom_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: name.trim(),
+      category: category || 'Qo\'lda ulangan reklama sahifasi',
+      accessToken: accessToken.trim(),
+      connectedAt: new Date().toISOString(),
+      status: 'ACTIVE',
+      type: 'CUSTOM'
+    };
+
+    const existing = await getAccountsList();
+    const updated = [...existing, newAcc];
+    await saveAccountsList(updated);
+
+    // Save as primary token if first account
+    await prisma.setting.upsert({
+      where: { key: 'FB_PAGE_ACCESS_TOKEN' },
+      update: { value: newAcc.accessToken, description: `Page Access Token for ${newAcc.name}` },
+      create: { key: 'FB_PAGE_ACCESS_TOKEN', value: newAcc.accessToken, description: `Page Access Token for ${newAcc.name}` }
+    });
+
+    res.json({ success: true, message: 'Yangi Facebook sahifasi muvaffaqiyatli qo\'shildi!', account: newAcc, accounts: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 5. DELETE /api/facebook/accounts/:id - Disconnect/remove a Facebook Account/Page
+router.delete('/accounts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await getAccountsList();
+    const updated = existing.filter(a => a.id !== id);
+    await saveAccountsList(updated);
+
+    // If remaining accounts exist, update primary token
+    if (updated.length > 0) {
+      await prisma.setting.upsert({
+        where: { key: 'FB_PAGE_ACCESS_TOKEN' },
+        update: { value: updated[0].accessToken, description: `Page Access Token for ${updated[0].name}` },
+        create: { key: 'FB_PAGE_ACCESS_TOKEN', value: updated[0].accessToken, description: `Page Access Token for ${updated[0].name}` }
+      });
+    }
+
+    res.json({ success: true, message: 'Facebook akkaunti o\'chirildi', accounts: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 6. Check Facebook Connection Status
 router.get('/status', async (req, res) => {
   try {
+    const accounts = await getAccountsList();
     let tokenSetting = await prisma.setting.findUnique({ where: { key: 'FB_PAGE_ACCESS_TOKEN' } });
     let token = tokenSetting?.value || process.env.FB_PAGE_ACCESS_TOKEN;
 
@@ -147,16 +305,15 @@ router.get('/status', async (req, res) => {
       }
     }
 
-    if (!token) {
-      return res.json({ connected: false, message: 'Token kiritilmagan' });
-    }
+    const isConnected = !!token || accounts.length > 0;
+    const activeName = accounts.length > 0 ? accounts[0].name : 'Kasbtech CRM (Meta App Token Faol)';
 
-    try {
-      const meRes = await axios.get(`https://graph.facebook.com/v19.0/me?access_token=${token}`);
-      return res.json({ connected: true, name: meRes.data.name || 'Kasbtech CRM Page', id: meRes.data.id });
-    } catch (e) {
-      return res.json({ connected: true, valid: true, name: 'Kasbtech CRM (Meta App Token Faol)', message: 'Token saqlangan va faol' });
-    }
+    return res.json({ 
+      connected: isConnected, 
+      name: activeName, 
+      accountsCount: accounts.length || (isConnected ? 1 : 0),
+      accounts 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

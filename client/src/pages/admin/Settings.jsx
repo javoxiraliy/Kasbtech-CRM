@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Clock, ShieldCheck, Loader2, Facebook, Bot } from 'lucide-react';
+import { Save, Clock, ShieldCheck, Loader2, Facebook, Bot, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 import api from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -12,17 +12,23 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const { addNotification } = useNotification();
 
-  const [fbStatus, setFbStatus] = useState({ connected: false, name: '' });
+  const [fbStatus, setFbStatus] = useState({ connected: false, name: '', accountsCount: 0, accounts: [] });
+  const [accounts, setAccounts] = useState([]);
   const [testingLead, setTestingLead] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newAccount, setNewAccount] = useState({ name: '', accessToken: '', category: '' });
+  const [addingAccount, setAddingAccount] = useState(false);
 
   useEffect(() => {
     fetchSettings();
     checkFbStatus();
+    fetchAccounts();
 
     const handleMessage = (event) => {
       if (event.data === 'FB_CONNECTED') {
         addNotification('success', "Facebook muvaffaqiyatli ulandi!");
         checkFbStatus();
+        fetchAccounts();
         fetchSettings();
       }
     };
@@ -34,8 +40,55 @@ export default function Settings() {
     try {
       const res = await api.get('/facebook/status');
       setFbStatus(res.data);
+      if (res.data.accounts) {
+        setAccounts(res.data.accounts);
+      }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await api.get('/facebook/accounts');
+      setAccounts(res.data.accounts || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddAccountSubmit = async (e) => {
+    e.preventDefault();
+    if (!newAccount.name || !newAccount.accessToken) {
+      addNotification('error', "Sahifa nomi va Token kiritilishi shart!");
+      return;
+    }
+
+    try {
+      setAddingAccount(true);
+      const res = await api.post('/facebook/accounts', newAccount);
+      addNotification('success', res.data.message || "Facebook sahifasi qo'shildi!");
+      setShowAddModal(false);
+      setNewAccount({ name: '', accessToken: '', category: '' });
+      fetchAccounts();
+      checkFbStatus();
+    } catch (e) {
+      addNotification('error', e.response?.data?.error || "Sahifani qo'shishda xatolik");
+    } finally {
+      setAddingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = async (id, name) => {
+    if (!window.confirm(`"${name}" Facebook sahifasini uzishni tasdiqlaysizmi?`)) return;
+
+    try {
+      const res = await api.delete(`/facebook/accounts/${id}`);
+      addNotification('success', res.data.message || "Facebook sahifasi o'chirildi!");
+      fetchAccounts();
+      checkFbStatus();
+    } catch (e) {
+      addNotification('error', "O'chirishda xatolik yuz berdi");
     }
   };
 
@@ -58,7 +111,6 @@ export default function Settings() {
   const fetchSettings = async () => {
     try {
       const res = await api.get('/settings');
-      // Merge with defaults in case they don't exist yet
       setSettings(prev => ({ ...prev, ...res.data.settings }));
     } catch (error) {
       addNotification('error', "Sozlamalarni yuklashda xatolik");
@@ -84,7 +136,6 @@ export default function Settings() {
     }
   };
 
-
   const handleSave = async (key) => {
     setSaving(key);
     try {
@@ -95,6 +146,7 @@ export default function Settings() {
       addNotification('success', "Sozlama saqlandi");
       if (key.startsWith('FB_')) {
         checkFbStatus();
+        fetchAccounts();
       }
     } catch (error) {
       addNotification('error', "Saqlashda xatolik yuz berdi");
@@ -118,7 +170,7 @@ export default function Settings() {
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-white mb-1">Tizim Sozlamalari</h1>
-        <p className="text-dark-400 text-sm">SLA taymerlari va global qoidalarni tahrirlash</p>
+        <p className="text-dark-400 text-sm">SLA taymerlari, Facebook ko'p-akkauntli integratsiya va global qoidalarni tahrirlash</p>
       </div>
 
       <div className="grid gap-6">
@@ -215,7 +267,7 @@ export default function Settings() {
                 <h3 className="text-lg font-semibold text-white">Gemini AI API Kaliti (Mentor Bot)</h3>
               </div>
               <p className="text-sm text-dark-400">
-                Mentor Kasbtech Bot talabalar savollariga Bilimlar Bazasi asosida javob berishi uchun Google AI Studio API kalitini kiritishingiz mumkin (masalan: <code className="text-primary-300">AIzaSy...</code>).
+                Mentor Kasbtech Bot talabalar savollariga Bilimlar Bazasi asosida javob berishi uchun Google AI Studio API kalitini kiritishingiz mumkin.
               </p>
               
               <div className="flex items-end gap-4 max-w-xl">
@@ -242,48 +294,104 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Facebook Integration */}
-        <div className="card glass relative overflow-hidden group">
+        {/* Facebook Multi-Account Integration */}
+        <div className="card glass relative overflow-hidden group border-blue-500/20">
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
             <Facebook className="w-32 h-32 text-blue-500" />
           </div>
           
-          <div className="relative z-10 flex flex-col sm:flex-row gap-6">
-            <div className="flex-1 space-y-5">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-2 text-blue-400">
-                  <Facebook className="w-5 h-5" />
-                  <h3 className="text-lg font-semibold text-white">Facebook Integratsiyasi (Lead Ads)</h3>
+          <div className="relative z-10 flex flex-col gap-6">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-3 border-b border-dark-800 pb-4">
+                <div>
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <Facebook className="w-6 h-6" />
+                    <h3 className="text-lg font-bold text-white">Facebook Integratsiyasi (Lead Ads)</h3>
+                  </div>
+                  <p className="text-xs text-dark-400 mt-1">
+                    Bir nechta Facebook va Instagram reklamalaridan tushadigan lidlarni CRM-ga bir vaqtda qabul qilish
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {fbStatus.connected ? (
-                    <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold px-3 py-1 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                      Ulangan ({fbStatus.name || 'Faol'})
+                    <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold px-3.5 py-1.5 flex items-center gap-2 text-xs">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                      Ulangan ({accounts.length || 1} ta sahifa faol)
                     </span>
                   ) : (
-                    <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-3 py-1">
+                    <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-3.5 py-1.5 text-xs">
                       Ulanmagan
                     </span>
                   )}
                 </div>
               </div>
 
-              <p className="text-sm text-dark-400 leading-relaxed">
-                Ushbu bo'lim orqali Facebook va Instagram lead forma reklamalaridan tushadigan lidlarni avtomatik tarzda CRM tizimiga tushirishni sozlaysiz.
-              </p>
+              {/* Connected Accounts List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Ulangan Facebook Akkauntlar va Sahifalar ({accounts.length})
+                  </h4>
 
-              {/* Quick Actions */}
-              <div className="flex flex-wrap gap-3 pt-1">
-                <button 
-                  onClick={handleFacebookConnect}
-                  className="btn-primary bg-blue-600 hover:bg-blue-700"
-                >
-                  <Facebook className="w-4 h-4 mr-1.5" />
-                  Facebook Akkauntga bog'lash (OAuth)
-                </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setShowAddModal(true)}
+                      className="btn-primary py-1.5 px-3 text-xs bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      + Yangi Sahifa Qo'shish
+                    </button>
 
+                    <button 
+                      onClick={handleFacebookConnect}
+                      className="btn-secondary py-1.5 px-3 text-xs border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                    >
+                      <Facebook className="w-3.5 h-3.5 text-blue-400" />
+                      OAuth orqali bog'lash
+                    </button>
+                  </div>
+                </div>
+
+                {accounts.length === 0 ? (
+                  <div className="p-5 bg-dark-950/60 rounded-xl border border-dark-800 text-center space-y-2">
+                    <p className="text-sm font-semibold text-white">Hozircha ulangan akkauntlar mavjud emas</p>
+                    <p className="text-xs text-dark-400">Yuqoridagi <strong>"OAuth orqali bog'lash"</strong> yoki <strong>"+ Yangi Sahifa Qo'shish"</strong> tugmalarini bosing.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {accounts.map((acc, idx) => (
+                      <div key={acc.id || idx} className="p-4 bg-dark-900/80 border border-dark-800 rounded-xl flex items-center justify-between gap-3 group/item hover:border-blue-500/40 transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold shrink-0">
+                            <Facebook className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h5 className="text-sm font-bold text-white truncate">{acc.name}</h5>
+                            <div className="flex items-center gap-2 text-[11px] text-dark-400">
+                              <span className="truncate">{acc.category || 'Business Page'}</span>
+                              <span>•</span>
+                              <span className="text-emerald-400 font-medium">🟢 Faol</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => handleDeleteAccount(acc.id, acc.name)}
+                          className="p-2 text-dark-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
+                          title="Akkauntni uzish"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 pt-2">
                 <button 
                   onClick={handleTestLead}
                   disabled={testingLead}
@@ -293,12 +401,12 @@ export default function Settings() {
                 </button>
               </div>
 
-              {/* Form Settings for Facebook Credentials */}
+              {/* Advanced Settings */}
               <div className="space-y-4 pt-4 border-t border-dark-800">
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider">Facebook API va Token Sozlamalari</h4>
 
                 <div>
-                  <label className="label">Page Access Token (Qo'lda kiritish muqobili)</label>
+                  <label className="label">Asosiy Page Access Token (Standart)</label>
                   <div className="flex gap-2">
                     <input 
                       type="password" 
@@ -345,7 +453,7 @@ export default function Settings() {
                       <input 
                         type="password" 
                         className="input text-xs font-mono" 
-                        placeholder="4341d2d..."
+                        placeholder="6b35de3e..."
                         value={settings.FB_APP_SECRET?.value || ''}
                         onChange={(e) => handleChange('FB_APP_SECRET', 'value', e.target.value)}
                       />
@@ -379,6 +487,82 @@ export default function Settings() {
         </div>
         
       </div>
+
+      {/* Add Account Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-dark-900 border border-dark-800 rounded-2xl p-6 max-w-md w-full glass space-y-5 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-dark-800 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Facebook className="w-5 h-5 text-blue-400" />
+                Yangi Facebook Sahifasini Bog'lash
+              </h3>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                className="text-dark-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddAccountSubmit} className="space-y-4">
+              <div>
+                <label className="label">Facebook Sahifa / Akkaunt Nomi</label>
+                <input 
+                  type="text" 
+                  required
+                  className="input" 
+                  placeholder="masalan: Kasbtech SMM Reklama Sahifasi"
+                  value={newAccount.name}
+                  onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="label">Page Access Token</label>
+                <input 
+                  type="password" 
+                  required
+                  className="input font-mono text-xs" 
+                  placeholder="EAA..."
+                  value={newAccount.accessToken}
+                  onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="label">Kategoriya / Izoh (Ixtiyoriy)</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="masalan: Target Reklama"
+                  value={newAccount.category}
+                  onChange={(e) => setNewAccount(prev => ({ ...prev, category: e.target.value }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddModal(false)}
+                  className="btn-secondary"
+                >
+                  Bekor qilish
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={addingAccount}
+                  className="btn-primary bg-blue-600 hover:bg-blue-700"
+                >
+                  {addingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Qo'shish
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
