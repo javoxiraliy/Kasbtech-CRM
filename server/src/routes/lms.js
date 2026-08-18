@@ -1725,7 +1725,8 @@ router.get('/leaderboard', authenticate, async (req, res) => {
           ? Math.round(validGrades.reduce((acc, curr) => acc + curr.grade, 0) / validGrades.length)
           : 0;
 
-        const totalCoins = student.coins.filter(c => !c.type || (!c.type.startsWith('KASBTON_') && !c.type.startsWith('GAME_'))).reduce((acc, curr) => acc + curr.amount, 0);
+        const rawCoins = (student.coins || []).filter(c => !c.type || (!c.type.startsWith('KASBTON_') && !c.type.startsWith('GAME_'))).reduce((acc, curr) => acc + curr.amount, 0);
+        const totalCoins = Math.max(0, rawCoins);
         const submissionsCount = student._count.homeworks;
 
         return {
@@ -1742,7 +1743,10 @@ router.get('/leaderboard', authenticate, async (req, res) => {
     } else {
       // 2. Specific Course Leaderboard
       const enrollments = await prisma.enrollment.findMany({
-        where: { courseId },
+        where: { 
+          courseId,
+          student: { role: 'STUDENT', isActive: true }
+        },
         include: {
           student: {
             select: {
@@ -1800,7 +1804,8 @@ router.get('/leaderboard', authenticate, async (req, res) => {
           ? Math.round(hwData.approvedGrades.reduce((acc, curr) => acc + curr, 0) / hwData.approvedGrades.length)
           : 0;
 
-        const totalCoins = student.coins.filter(c => !c.type || (!c.type.startsWith('KASBTON_') && !c.type.startsWith('GAME_'))).reduce((acc, curr) => acc + curr.amount, 0);
+        const rawCoins = (student.coins || []).filter(c => !c.type || (!c.type.startsWith('KASBTON_') && !c.type.startsWith('GAME_'))).reduce((acc, curr) => acc + curr.amount, 0);
+        const totalCoins = Math.max(0, rawCoins);
 
         return {
           id: student.id,
@@ -1815,8 +1820,7 @@ router.get('/leaderboard', authenticate, async (req, res) => {
       }).filter(Boolean);
     }
 
-    // Sort by progress/grade first
-    // For visual chart: sort descending, slice top 10, then reverse it (to show ascending left-to-right)
+    // Sort by performance (progress first, then avg grade) for visual chart display
     const byPerformance = [...studentsData]
       .sort((a, b) => {
         if (b.progress !== a.progress) {
@@ -1827,7 +1831,7 @@ router.get('/leaderboard', authenticate, async (req, res) => {
       .slice(0, 10)
       .reverse();
 
-    // Sort by activity: coins / submissionsCount
+    // Sort by activity (coins first, then submissions count) for visual chart display
     const byActivity = [...studentsData]
       .sort((a, b) => {
         if (b.coins !== a.coins) {
@@ -1838,15 +1842,18 @@ router.get('/leaderboard', authenticate, async (req, res) => {
       .slice(0, 10)
       .reverse();
 
-    // The full list sorted descending by progress for the leaderboard table
+    // The full leaderboard table sorted primarily by KasbCoins (rating), then avg grade, progress, and submissions
     const tableLeaderboard = [...studentsData].sort((a, b) => {
-      if (b.progress !== a.progress) {
-        return b.progress - a.progress;
-      }
       if (b.coins !== a.coins) {
         return b.coins - a.coins;
       }
-      return b.avgGrade - a.avgGrade;
+      if (b.avgGrade !== a.avgGrade) {
+        return b.avgGrade - a.avgGrade;
+      }
+      if (b.progress !== a.progress) {
+        return b.progress - a.progress;
+      }
+      return b.submissionsCount - a.submissionsCount;
     });
 
     res.json({
