@@ -724,8 +724,8 @@ router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req,
   try {
     const where = { status: 'PENDING' };
 
-    // Teachers and Mentors should only see homeworks for courses assigned to them
-    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
+    // Enforce teacherId filter unless Admin explicitly requests all=true
+    if (req.query.all !== 'true' || req.user.role !== 'ADMIN') {
       where.lesson = {
         module: {
           course: {
@@ -762,8 +762,8 @@ router.get('/homeworks/reviewed', authenticate, requireMentorOrAdmin, async (req
   try {
     const where = { status: { in: ['APPROVED', 'REJECTED'] } };
 
-    // Teachers and Mentors should only see reviewed homeworks for courses assigned to them
-    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
+    // Enforce teacherId filter unless Admin explicitly requests all=true
+    if (req.query.all !== 'true' || req.user.role !== 'ADMIN') {
       where.lesson = {
         module: {
           course: {
