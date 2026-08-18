@@ -123,14 +123,19 @@ router.get('/courses', authenticate, async (req, res) => {
 // POST /api/lms/courses - Create course
 router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), async (req, res) => {
   try {
-    const { title, description, price, isPublished, teacherId } = req.body;
+    const { title, description, price, isPublished, teacherId, thumbnail: textThumbnail } = req.body;
     if (!title || !description || !price) {
       return res.status(400).json({ error: 'Sarlavha, ta\'rif va narx kiritilishi shart' });
     }
 
     let thumbnailPath = null;
     if (req.file) {
-      thumbnailPath = `/uploads/${req.file.filename}`;
+      const mimeType = req.file.mimetype || 'image/jpeg';
+      const fileBuffer = fs.readFileSync(req.file.path);
+      thumbnailPath = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+      fs.unlink(req.file.path, () => {});
+    } else if (textThumbnail) {
+      thumbnailPath = textThumbnail;
     }
 
     const course = await prisma.course.create({
@@ -154,7 +159,7 @@ router.post('/courses', authenticate, requireAdmin, upload.single('thumbnail'), 
 // PUT /api/lms/courses/:id - Update course
 router.put('/courses/:id', authenticate, requireAdmin, upload.single('thumbnail'), async (req, res) => {
   try {
-    const { title, description, price, isPublished, teacherId } = req.body;
+    const { title, description, price, isPublished, teacherId, thumbnail: textThumbnail } = req.body;
     const updateData = {};
 
     if (title !== undefined) updateData.title = title;
@@ -162,8 +167,14 @@ router.put('/courses/:id', authenticate, requireAdmin, upload.single('thumbnail'
     if (price !== undefined) updateData.price = parseFloat(price);
     if (isPublished !== undefined) updateData.isPublished = isPublished === 'true' || isPublished === true;
     if (teacherId !== undefined) updateData.teacherId = teacherId || null;
+
     if (req.file) {
-      updateData.thumbnail = `/uploads/${req.file.filename}`;
+      const mimeType = req.file.mimetype || 'image/jpeg';
+      const fileBuffer = fs.readFileSync(req.file.path);
+      updateData.thumbnail = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+      fs.unlink(req.file.path, () => {});
+    } else if (textThumbnail !== undefined && textThumbnail !== 'null' && textThumbnail !== '') {
+      updateData.thumbnail = textThumbnail;
     }
 
     const course = await prisma.course.update({
