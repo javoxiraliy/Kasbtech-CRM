@@ -722,8 +722,21 @@ router.post('/lessons/:lessonId/homework', authenticate, upload.single('file'), 
 // GET /api/lms/homeworks/pending - Get pending homeworks for review (Teacher/Mentor/Admin)
 router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
+    const where = { status: 'PENDING' };
+
+    // Teachers and Mentors should only see homeworks for courses assigned to them
+    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
+      where.lesson = {
+        module: {
+          course: {
+            teacherId: req.user.id
+          }
+        }
+      };
+    }
+
     const homeworks = await prisma.homework.findMany({
-      where: { status: 'PENDING' },
+      where,
       include: {
         student: { select: { id: true, name: true, email: true, avatar: true } },
         lesson: {
@@ -747,8 +760,21 @@ router.get('/homeworks/pending', authenticate, requireMentorOrAdmin, async (req,
 // GET /api/lms/homeworks/reviewed - Get reviewed homeworks (Teacher/Mentor/Admin)
 router.get('/homeworks/reviewed', authenticate, requireMentorOrAdmin, async (req, res) => {
   try {
+    const where = { status: { in: ['APPROVED', 'REJECTED'] } };
+
+    // Teachers and Mentors should only see reviewed homeworks for courses assigned to them
+    if (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') {
+      where.lesson = {
+        module: {
+          course: {
+            teacherId: req.user.id
+          }
+        }
+      };
+    }
+
     const homeworks = await prisma.homework.findMany({
-      where: { status: { in: ['APPROVED', 'REJECTED'] } },
+      where,
       include: {
         student: { select: { id: true, name: true, email: true, avatar: true } },
         lesson: {
@@ -800,6 +826,15 @@ router.post('/homeworks/:homeworkId/review', authenticate, requireMentorOrAdmin,
 
     if (!homework) {
       return res.status(404).json({ error: 'Uy vazifasi topilmadi' });
+    }
+
+    // Permission check: Teachers and Mentors can only review homeworks for their assigned courses
+    if (
+      (req.user.role === 'TEACHER' || req.user.role === 'MENTOR') &&
+      homework.lesson?.module?.course?.teacherId &&
+      homework.lesson.module.course.teacherId !== req.user.id
+    ) {
+      return res.status(403).json({ error: 'Siz faqat o\'zingizga biriktirilgan kurs vazifalarini baholay olasiz' });
     }
 
     const updated = await prisma.homework.update({
